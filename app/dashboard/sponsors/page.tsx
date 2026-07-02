@@ -1,19 +1,26 @@
-import { DashboardShell, PlaceholderPanel } from "@/components/dashboard/DashboardShell";
+import {
+  DashboardShell,
+  DataTable,
+  IntegrationBanner,
+} from "@/components/dashboard/DashboardShell";
+import { PLACEHOLDER_SPONSORS } from "@/platform/engines/dashboard/placeholder-data";
 
 export default function DashboardSponsorsPage() {
   return (
     <DashboardShell
-      title="Sponsor pipeline"
-      description="Track sponsor tiers, enquiries, and deck distribution after packages are finalised."
+      title="Sponsor CRM"
+      description="Track sponsor tiers, enquiries, and partnership pipeline."
     >
-      <PlaceholderPanel
-        title="Sponsor tiers"
-        items={[
-          { label: "Platinum Patron", value: "0 confirmed" },
-          { label: "Gold Circle", value: "0 confirmed" },
-          { label: "Heritage Partner", value: "0 confirmed" },
-          { label: "Community Ally", value: "0 confirmed" },
-        ]}
+      <IntegrationBanner title="Sponsor CRM Engine">
+        {/* TODO(sponsor-crm): New table sponsor_enquiries + deal stages. */}
+        Placeholder pipeline. Tier names come from event config; deal values require business
+        approval.
+      </IntegrationBanner>
+
+      <DataTable
+        title="Sponsor pipeline"
+        columns={["tier", "status", "contact", "value"]}
+        rows={PLACEHOLDER_SPONSORS}
       />
     </DashboardShell>
   );

@@ -62,6 +62,7 @@ export function RSVP() {
     Partial<Record<keyof RsvpFormValues, string>>
   >({});
   const [isPending, setIsPending] = useState(false);
+  const [confirmationEmailQueued, setConfirmationEmailQueued] = useState(false);
 
   function clearMessages() {
     setSubmitError(null);
@@ -98,6 +99,7 @@ export function RSVP() {
       const result = await submitRsvp(serializable);
       if (result.ok) {
         setSubmitted(true);
+        setConfirmationEmailQueued(result.emailSent ?? false);
         setForm(initial);
         setFieldErrors({});
         setSubmitError(null);
@@ -170,6 +172,11 @@ export function RSVP() {
                       will reach out to the email you provided with ticketing and programme news as
                       soon as dates and venues are finalised.
                     </p>
+                    {confirmationEmailQueued ? (
+                      <p className="mx-auto mt-3 max-w-md font-sans text-xs text-cream/60">
+                        A confirmation email is on its way to your inbox.
+                      </p>
+                    ) : null}
                   </div>
                   <Button
                     type="button"
@@ -177,6 +184,7 @@ export function RSVP() {
                     className="mt-8"
                     onClick={() => {
                       setSubmitted(false);
+                      setConfirmationEmailQueued(false);
                       setForm(initial);
                       clearMessages();
                     }}
