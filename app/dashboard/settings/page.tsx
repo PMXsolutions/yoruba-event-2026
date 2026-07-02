@@ -41,9 +41,12 @@ export default function DashboardSettingsPage() {
               <dt className="text-mahogany/50">Location</dt>
               <dd className="font-medium text-mahogany">{SITE.location}</dd>
             </div>
-            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
-              <dt className="text-mahogany/50">Contact email</dt>
-              <dd className="min-w-0 truncate font-medium text-mahogany" title="info@yorubadaycanberra.org">
+            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <dt className="shrink-0 text-mahogany/50">Contact email</dt>
+              <dd
+                className="min-w-0 break-all font-medium text-mahogany sm:max-w-[65%] sm:text-right"
+                title="info@yorubadaycanberra.org"
+              >
                 info@yorubadaycanberra.org
               </dd>
             </div>

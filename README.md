@@ -28,6 +28,8 @@ Open [http://localhost:3000](http://localhost:3000) · Committee portal: [/dashb
 | [docs/PLATFORM.md](./docs/PLATFORM.md) | **Platform overview & engines** |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel + Supabase deploy |
+| [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Friday demo presentation flow |
+| [docs/DAMOLA_HANDOVER.md](./docs/DAMOLA_HANDOVER.md) | Deployment handover for Damola |
 | [docs/EMAIL.md](./docs/EMAIL.md) | Resend integration |
 | [docs/SMS.md](./docs/SMS.md) | Twilio architecture (future) |
 | [docs/AI.md](./docs/AI.md) | AI engine architecture (future) |

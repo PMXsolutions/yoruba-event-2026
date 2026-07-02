@@ -64,10 +64,19 @@ export function SectionHeader({
   );
 }
 
+/* ─── Column label helper ─── */
+function formatColumnLabel(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (s) => s.toUpperCase())
+    .replace(/\bFollow up\b/i, "Follow-up")
+    .replace(/\bId\b/, "ID");
+}
+
 /* ─── Page Toolbar ─── */
 export function PageToolbar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-mahogany/[0.06] bg-white px-4 py-3 shadow-sm">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-mahogany/[0.06] bg-white px-3 py-3 shadow-sm sm:px-4">
       {children}
     </div>
   );
@@ -110,7 +119,7 @@ export function ToolbarSearch({ placeholder = "Filter records…" }: { placehold
     <input
       type="search"
       placeholder={placeholder}
-      className="min-w-0 flex-1 rounded-lg border border-mahogany/10 bg-cream/30 px-3 py-2 font-sans text-sm text-mahogany outline-none placeholder:text-mahogany/35 focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10 sm:min-w-[12rem]"
+      className="w-full min-w-0 basis-full rounded-lg border border-mahogany/10 bg-cream/30 px-3 py-2 font-sans text-sm text-mahogany outline-none placeholder:text-mahogany/35 focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10 sm:basis-auto sm:min-w-[12rem] sm:flex-1"
       aria-label="Filter"
     />
   );
@@ -274,7 +283,7 @@ export function DataTable({
                       key={k}
                       className="px-5 py-3.5 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-mahogany/45 sm:px-6"
                     >
-                      {k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).replace(/Follow up/i, "Follow up")}
+                      {formatColumnLabel(k)}
                     </th>
                   ))}
                 </tr>
@@ -313,7 +322,7 @@ export function DataTable({
                 {keys.map((k) => (
                   <div key={k} className="flex items-start justify-between gap-3">
                     <span className="shrink-0 font-sans text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">
-                      {k}
+                      {formatColumnLabel(k)}
                     </span>
                     <span className="min-w-0 text-right font-sans text-sm text-mahogany/80">
                       {BADGE_COLUMNS.has(k) ? <StatusBadge status={row[k] ?? "—"} /> : (
@@ -387,10 +396,13 @@ export function IntegrationStatus({
       {items.map((item) => (
         <div key={item.name} className="flex flex-col gap-1 py-4 sm:flex-row sm:items-center sm:justify-between">
           <dt className="font-sans text-sm font-medium text-mahogany/60">{item.name}</dt>
-          <dd className="flex min-w-0 flex-col items-start gap-1 sm:items-end">
+          <dd className="flex min-w-0 flex-col items-start gap-1 sm:max-w-[55%] sm:items-end">
             <StatusBadge status={item.status} />
             {item.detail ? (
-              <span className="max-w-xs truncate font-sans text-xs text-mahogany/45" title={item.detail}>
+              <span
+                className="max-w-full text-left font-sans text-xs leading-snug text-mahogany/45 sm:text-right"
+                title={item.detail}
+              >
                 {item.detail}
               </span>
             ) : null}

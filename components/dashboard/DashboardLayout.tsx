@@ -219,6 +219,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 />
               </div>
 
+              <span className="hidden shrink-0 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-1 font-sans text-[0.58rem] font-bold uppercase tracking-[0.1em] text-amber-900 md:inline-flex">
+                Demo
+              </span>
+
               <span className="hidden shrink-0 rounded-full border border-gold/25 bg-gold/[0.08] px-3 py-1.5 font-sans text-[0.62rem] font-bold uppercase tracking-[0.12em] text-gold-deep lg:inline-flex">
                 {SITE.name}
               </span>
