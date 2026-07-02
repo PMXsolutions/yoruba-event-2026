@@ -1,8 +1,9 @@
 import {
-  DashboardShell,
+  DashboardCard,
   IntegrationBanner,
+  IntegrationStatus,
   StatGrid,
-} from "@/components/dashboard/DashboardShell";
+} from "@/components/dashboard/dashboard-ui";
 import { SITE } from "@/lib/site";
 import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
 import { getSmsEnvPresence } from "@/platform/engines/notifications/sms/twilio-stub";
@@ -14,52 +15,99 @@ export default function DashboardSettingsPage() {
   const sms = getSmsEnvPresence();
 
   return (
-    <DashboardShell
-      title="Settings"
-      description="Organisation profile, integrations, and platform configuration."
-    >
-      <IntegrationBanner title="Platform configuration">
-        Event slug: <code className="text-xs">yoruba-day-canberra-2026</code> (override with{" "}
-        <code className="text-xs">EVENT_SLUG</code> for future multi-event deployments).
+    <>
+      <IntegrationBanner title="Platform configuration" variant="info">
+        {/* TODO(platform-settings): Persist settings in platform_settings table after auth. */}
+        Event slug: <code>yoruba-day-canberra-2026</code> — override with{" "}
+        <code>EVENT_SLUG</code> for future multi-event deployments.
       </IntegrationBanner>
 
       <StatGrid
+        columns={2}
         stats={[
-          { label: "Organisation", value: SITE.presenter },
-          { label: "Contact email", value: "info@yorubadaycanberra.org" },
-          { label: "Auth provider", value: "Not configured" },
-          { label: "Platform", value: "Promax v1" },
+          { label: "Organisation", value: "YAC", change: SITE.presenter, icon: "◈" },
+          { label: "Platform version", value: "v1.0", change: "Promax Event Platform", icon: "⚙" },
         ]}
       />
 
-      <section className="rounded-2xl border border-mahogany/8 bg-white p-6 shadow-[var(--shadow-card-light)] sm:p-8">
-        <h2 className="font-display text-xl font-semibold text-mahogany">Integrations</h2>
-        <dl className="mt-6 space-y-4 font-sans text-sm">
-          <div className="flex justify-between border-b border-mahogany/8 pb-3">
-            <dt className="text-mahogany/60">Supabase</dt>
-            <dd className="font-semibold text-mahogany">
-              {supabase.allPresent ? "Env configured" : "Missing env vars"}
-            </dd>
-          </div>
-          <div className="flex justify-between border-b border-mahogany/8 pb-3">
-            <dt className="text-mahogany/60">Resend (email)</dt>
-            <dd className="font-semibold text-mahogany">
-              {email.ready ? "Ready" : email.hasResendKey ? "Missing FROM email" : "Add API key"}
-            </dd>
-          </div>
-          <div className="flex justify-between pb-1">
-            <dt className="text-mahogany/60">Twilio (SMS)</dt>
-            <dd className="font-semibold text-mahogany">
-              {sms.ready ? "Ready" : "Not configured"}
-            </dd>
-          </div>
-        </dl>
-        <p className="mt-6 font-sans text-xs leading-relaxed text-mahogany/50">
-          {/* TODO(platform-settings): Persist org settings in platform_settings table. */}
-          Integration status is read from environment variables only. See docs/EMAIL.md and
-          docs/SMS.md.
-        </p>
-      </section>
-    </DashboardShell>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DashboardCard title="Event configuration" description="Active deployment settings">
+          <dl className="space-y-4 font-sans text-sm">
+            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
+              <dt className="text-mahogany/50">Event name</dt>
+              <dd className="font-medium text-mahogany">{SITE.name}</dd>
+            </div>
+            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
+              <dt className="text-mahogany/50">Location</dt>
+              <dd className="font-medium text-mahogany">{SITE.location}</dd>
+            </div>
+            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
+              <dt className="text-mahogany/50">Contact email</dt>
+              <dd className="min-w-0 truncate font-medium text-mahogany" title="info@yorubadaycanberra.org">
+                info@yorubadaycanberra.org
+              </dd>
+            </div>
+            <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
+              <dt className="text-mahogany/50">Auth provider</dt>
+              <dd className="font-medium text-mahogany/60">Not configured</dd>
+            </div>
+          </dl>
+        </DashboardCard>
+
+        <DashboardCard title="Integrations" description="Connection status (env-based)">
+          <IntegrationStatus
+            items={[
+              {
+                name: "Supabase (database)",
+                status: supabase.allPresent ? "Configured" : "Missing vars",
+                ok: supabase.allPresent,
+                detail: supabase.allPresent ? "Env vars present" : "Add URL + keys",
+              },
+              {
+                name: "Resend (email)",
+                status: email.ready ? "Ready" : email.hasResendKey ? "Missing FROM" : "Not configured",
+                ok: email.ready,
+                detail: email.ready ? "Confirmation emails active" : "Add RESEND_API_KEY",
+              },
+              {
+                name: "Twilio (SMS)",
+                status: sms.ready ? "Ready" : "Not configured",
+                ok: sms.ready,
+                detail: "Future — see docs/SMS.md",
+              },
+              {
+                name: "Vercel (hosting)",
+                status: "Deployment ready",
+                ok: true,
+                detail: "Connect repo in Vercel dashboard",
+              },
+              {
+                name: "Authentication",
+                status: "Not configured",
+                ok: false,
+                detail: "Supabase Auth — Phase 2",
+              },
+            ]}
+          />
+        </DashboardCard>
+      </div>
+
+      <DashboardCard title="Demo & launch notes" description="Important before public access">
+        <ul className="space-y-3 font-sans text-sm leading-relaxed text-mahogany/65">
+          <li>
+            · This portal is currently in <strong>demo mode</strong> for committee and client
+            presentations.
+          </li>
+          <li>
+            · <strong>Authentication must be added</strong> before removing demo labels or sharing
+            publicly.
+          </li>
+          <li>
+            · Live RSVP data will appear after Supabase migration and protected server-side queries.
+          </li>
+          <li>· See <code className="text-xs">docs/PLATFORM.md</code> for the SaaS roadmap.</li>
+        </ul>
+      </DashboardCard>
+    </>
   );
 }

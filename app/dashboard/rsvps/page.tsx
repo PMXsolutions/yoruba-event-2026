@@ -1,34 +1,35 @@
 import {
-  DashboardShell,
   DataTable,
   IntegrationBanner,
-} from "@/components/dashboard/DashboardShell";
+  PageToolbar,
+  ToolbarButton,
+  ToolbarSearch,
+} from "@/components/dashboard/dashboard-ui";
 import { PLACEHOLDER_RSVPS } from "@/platform/engines/dashboard/placeholder-data";
 
 export default function DashboardRsvpsPage() {
   return (
-    <DashboardShell
-      title="RSVP management"
-      description="View, search, and export interest registrations from the Promax RSVP Engine."
-      actions={
-        <span className="inline-flex cursor-not-allowed items-center rounded-full border border-white/10 bg-white/5 px-5 py-2.5 font-sans text-xs font-semibold uppercase tracking-[0.14em] text-cream/40">
-          Export CSV — soon
-        </span>
-      }
-    >
-      <IntegrationBanner title="RSVP Engine">
-        {/* TODO(rsvp-engine): Query public.rsvps with pagination once auth is enabled. */}
-        Live data connects via Supabase service role (server-side only). Run migration in{" "}
-        <code className="text-xs">supabase/migrations/</code> then refresh. Confirmation emails
-        activate with <code className="text-xs">RESEND_API_KEY</code>.
+    <>
+      <IntegrationBanner title="RSVP Engine — demo data" variant="info">
+        {/* TODO(rsvp-engine): Replace placeholder rows with authenticated Supabase queries. */}
+        Showing sample records for presentation. Live data connects after migration and auth. No
+        secrets are exposed in this view.
       </IntegrationBanner>
 
       <DataTable
-        title="Recent registrations"
-        columns={["name", "email", "guests", "ticket", "date"]}
+        title="Interest registrations"
+        description="Manage Register Interest submissions from the public site"
+        columns={["name", "email", "guests", "ticket", "date", "status"]}
         rows={PLACEHOLDER_RSVPS}
-        emptyMessage="No live rows until Supabase migration is applied and auth is configured."
+        emptyMessage="Live Supabase data will replace placeholder rows once migration and auth are configured."
+        toolbar={
+          <PageToolbar>
+            <ToolbarSearch placeholder="Search by name or email…" />
+            <ToolbarButton disabled>Filter</ToolbarButton>
+            <ToolbarButton disabled>Export CSV</ToolbarButton>
+          </PageToolbar>
+        }
       />
-    </DashboardShell>
+    </>
   );
 }

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@source "../components/**/*.{ts,tsx}";
+@source "../app/**/*.{ts,tsx}";
+@source "../platform/**/*.{ts,tsx}";
+
 :root {
   --cream: #faf6ef;
   --cream-warm: #f3ebe0;
@@ -117,4 +121,23 @@ body {
 ::selection {
   background: color-mix(in srgb, var(--gold) 38%, transparent);
   color: var(--espresso);
+}
+
+/* Committee portal — enterprise surface tokens */
+.dashboard-root {
+  --dashboard-sidebar-width: 16rem;
+  --dashboard-content-max: 80rem;
+}
+
+.dashboard-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--gold) 30%, transparent) transparent;
+}
+
+.dashboard-content-grid {
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% -20%,
+    color-mix(in srgb, var(--gold) 6%, transparent),
+    transparent
+  );
 }
