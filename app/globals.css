@@ -1,26 +1,120 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cream: #faf6ef;
+  --cream-warm: #f3ebe0;
+  --cream-deep: #e8dfd0;
+  --espresso: #0f0806;
+  --mahogany: #24150f;
+  --cocoa: #3a2419;
+  --gold: #c9a227;
+  --gold-bright: #e4c76a;
+  --gold-light: #f0e0a8;
+  --gold-muted: #8a6f38;
+  --gold-deep: #7a5c1e;
+
+  --shadow-glow-gold: 0 0 80px -20px rgba(201, 162, 39, 0.45);
+  --shadow-card-dark: 0 32px 64px -28px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(201, 162, 39, 0.08);
+  --shadow-card-light: 0 28px 56px -32px rgba(36, 21, 15, 0.35),
+    0 0 0 1px rgba(58, 36, 25, 0.06);
+  --shadow-elevated: 0 24px 48px -16px rgba(0, 0, 0, 0.55);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-cream: var(--cream);
+  --color-cream-warm: var(--cream-warm);
+  --color-cream-deep: var(--cream-deep);
+  --color-espresso: var(--espresso);
+  --color-mahogany: var(--mahogany);
+  --color-cocoa: var(--cocoa);
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
+  --color-gold-light: var(--gold-light);
+  --color-gold-muted: var(--gold-muted);
+  --color-gold-deep: var(--gold-deep);
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), ui-serif, "Georgia", serif;
+
+  --default-font-family: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* African geometric + textile-inspired motifs (very subtle) */
+.bg-motif-geo {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cg fill='none' stroke='%23c9a227' stroke-opacity='0.14' stroke-width='0.5'%3E%3Cpath d='M44 4L84 44 44 84 4 44z'/%3E%3Cpath d='M44 18L70 44 44 70 18 44z'/%3E%3Ccircle cx='44' cy='44' r='3' fill='%23c9a227' fill-opacity='0.08'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 88px 88px;
+}
+
+.bg-motif-textile {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M0 60 Q30 20 60 60 T120 60' fill='none' stroke='%2324150f' stroke-opacity='0.06' stroke-width='1'/%3E%3Cpath d='M0 30 Q40 80 80 30 T120 30' fill='none' stroke='%23c9a227' stroke-opacity='0.07' stroke-width='0.75'/%3E%3Cpath d='M60 0v120M30 0v120M90 0v120' stroke='%2324150f' stroke-opacity='0.04' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+.bg-motif-textile-light {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 50 Q25 15 50 50 T100 50' fill='none' stroke='%233a2419' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M50 0 L75 50 50 100 25 50z' fill='none' stroke='%23c9a227' stroke-opacity='0.08' stroke-width='0.4'/%3E%3C/svg%3E");
+  background-size: 100px 100px;
+}
+
+@keyframes ambient-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: translate(3%, -2%) scale(1.06);
   }
 }
 
+@keyframes float-gentle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes bg-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-bg-shimmer {
+  animation: bg-shimmer 2.8s ease-in-out infinite;
+}
+
+.animate-ambient-glow {
+  animation: ambient-glow 14s ease-in-out infinite;
+}
+
+.animate-float-gentle {
+  animation: float-gentle 7s ease-in-out infinite;
+}
+
+.animate-float-gentle-delayed {
+  animation: float-gentle 8s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--espresso);
+  color: var(--cream);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--gold) 38%, transparent);
+  color: var(--espresso);
 }
