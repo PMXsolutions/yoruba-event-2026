@@ -194,7 +194,6 @@ export function IntegrationBanner({
 
 /** @deprecated Use StatGrid — kept for backward compatibility */
 export function PlaceholderPanel({
-  title: _title,
   items,
 }: {
   title: string;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { NAV_ITEMS, SITE } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
+import { CommitteePortalLink } from "@/components/layout/CommitteePortalLink";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -48,7 +49,7 @@ export function Navbar() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-0.5 lg:flex">
+        <nav className="hidden items-center gap-2 lg:flex">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
@@ -59,6 +60,8 @@ export function Navbar() {
               <span className="absolute inset-x-3 bottom-1.5 h-px origin-center scale-x-0 bg-gradient-to-r from-transparent via-gold-bright to-transparent transition-transform duration-500 group-hover/nav:scale-x-100" />
             </Link>
           ))}
+          {/* TODO(platform-auth): Hide until /dashboard is protected with Supabase Auth. */}
+          <CommitteePortalLink variant="navbar-desktop" />
         </nav>
 
         <button
@@ -112,6 +115,18 @@ export function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+              <motion.div
+                initial={{ opacity: 0, x: -14 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.04 * NAV_ITEMS.length, ease: EASE_LUX }}
+                className="mt-2 px-4"
+              >
+                {/* TODO(platform-auth): Hide until /dashboard is protected with Supabase Auth. */}
+                <CommitteePortalLink
+                  variant="navbar-mobile"
+                  onNavigate={() => setOpen(false)}
+                />
+              </motion.div>
               <p className="mt-6 border-t border-white/5 px-4 pt-6 font-sans text-sm text-cream/50">
                 {SITE.location}
               </p>

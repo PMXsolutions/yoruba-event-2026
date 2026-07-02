@@ -1,4 +1,5 @@
 import { SITE } from "@/lib/site";
+import { CommitteePortalLink } from "@/components/layout/CommitteePortalLink";
 
 const social = [
   { label: "Instagram" },
@@ -44,6 +45,19 @@ export function Footer() {
             </div>
           </div>
           <div className="flex flex-col gap-10 sm:flex-row sm:justify-end md:flex-col md:items-end">
+            <div className="w-full sm:text-right">
+              <p className="font-sans text-[0.65rem] font-bold uppercase tracking-[0.32em] text-gold-bright">
+                Committee
+              </p>
+              <div className="mt-5 flex flex-col items-start gap-3 sm:items-end">
+                {/* TODO(platform-auth): Remove public link before launch; gate /dashboard with Supabase Auth. */}
+                <CommitteePortalLink variant="footer" />
+                <p className="max-w-xs font-sans text-xs leading-relaxed text-cream/40">
+                  Demo access for planning committee preview. Authentication required before
+                  public launch.
+                </p>
+              </div>
+            </div>
             <div>
               <p className="font-sans text-[0.65rem] font-bold uppercase tracking-[0.32em] text-gold-bright">
                 Follow
