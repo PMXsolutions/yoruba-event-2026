@@ -73,9 +73,9 @@ lib/                    Legacy re-exports + Supabase clients
 
 Routes under `/dashboard/*` — **Event Command Centre** with enterprise UI.
 
-**Current status:** Demo/scaffold mode with rich placeholder data for stakeholder presentations. Accessible via nav/footer links marked "Committee demo".
+**Current status:** RSVP management at `/dashboard/rsvps` reads live Supabase data (server-side). Other modules use placeholder data. **Not authenticated** — protect before public launch.
 
-**Before public launch:**
+**Next staged modules:** Sponsors CRM, Volunteers, Tasks, Programme — see `docs/PHASE_2_SPEC.md`.
 - Add Supabase Auth + RBAC middleware on all `/dashboard/*` routes
 - Replace placeholder data with protected server-side queries
 - Remove or hide public demo links

@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 /* ─── Status Badge ─── */
 const STATUS_STYLES: Record<string, string> = {
   Confirmed: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
+  New: "bg-sky-50 text-sky-800 ring-sky-200/60",
+  Contacted: "bg-violet-50 text-violet-800 ring-violet-200/60",
   Published: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
   Done: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
   done: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
@@ -86,29 +88,44 @@ export function ToolbarButton({
   children,
   disabled,
   primary,
+  onClick,
 }: {
   children: ReactNode;
   disabled?: boolean;
   primary?: boolean;
+  onClick?: () => void;
 }) {
   const base =
     "inline-flex items-center gap-2 rounded-lg px-4 py-2 font-sans text-xs font-semibold transition-all";
   if (disabled) {
     return (
-      <span className={`${base} cursor-not-allowed border border-mahogany/8 bg-cream/50 text-mahogany/35`}>
+      <span
+        aria-disabled="true"
+        className={`${base} cursor-not-allowed border border-mahogany/8 bg-cream/50 text-mahogany/35`}
+      >
         {children}
       </span>
     );
   }
   if (primary) {
     return (
-      <button type="button" className={`${base} border border-gold/30 bg-espresso text-gold-light hover:bg-mahogany`}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={`${base} border border-gold/30 bg-espresso text-gold-light hover:bg-mahogany disabled:cursor-not-allowed disabled:opacity-45`}
+      >
         {children}
       </button>
     );
   }
   return (
-    <button type="button" className={`${base} border border-mahogany/10 bg-white text-mahogany/75 hover:border-gold/25 hover:bg-cream/60`}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`${base} border border-mahogany/10 bg-white text-mahogany/75 hover:border-gold/25 hover:bg-cream/60 disabled:cursor-not-allowed disabled:opacity-45`}
+    >
       {children}
     </button>
   );
@@ -281,6 +298,7 @@ export function DataTable({
                   {keys.map((k) => (
                     <th
                       key={k}
+                      scope="col"
                       className="px-5 py-3.5 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-mahogany/45 sm:px-6"
                     >
                       {formatColumnLabel(k)}
@@ -295,7 +313,7 @@ export function DataTable({
                       <td key={k} className="max-w-[14rem] px-5 py-4 sm:px-6">
                         {k === "progress" ? (
                           <ProgressBar value={Number(row[k]) || 0} />
-                        ) : BADGE_COLUMNS.has(k) || k === "status" ? (
+                        ) : BADGE_COLUMNS.has(k) ? (
                           <StatusBadge status={row[k] ?? "—"} />
                         ) : k === "email" ? (
                           <span className="block truncate text-mahogany/75" title={row[k]}>
@@ -593,14 +611,4 @@ export function TrendChart({
       </svg>
     </DashboardCard>
   );
-}
-
-/** @deprecated */
-export function PlaceholderPanel({
-  items,
-}: {
-  title: string;
-  items: readonly { label: string; value: string }[];
-}) {
-  return <StatGrid stats={items.map((i) => ({ label: i.label, value: i.value }))} />;
 }

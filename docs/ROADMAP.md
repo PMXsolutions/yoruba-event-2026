@@ -45,7 +45,7 @@ See [PHASE_2_SPEC.md](./PHASE_2_SPEC.md).
 
 | Item | Status |
 |------|--------|
-| Email on new RSVP (Resend / SendGrid) | ❌ Not started |
+| Email on new RSVP (Resend) | ⚠️ Scaffold — activates with `RESEND_API_KEY` + `RESEND_FROM_EMAIL` |
 | Admin notification preferences | ❌ Not started |
 | Analytics (Plausible / GA4) | ❌ Not started |
 | SEO (sitemap, OG images) | ❌ Not started |

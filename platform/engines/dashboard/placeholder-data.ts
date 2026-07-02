@@ -10,7 +10,7 @@ export type DashboardNavItem = {
 
 export const DASHBOARD_NAV: readonly DashboardNavItem[] = [
   { href: "/dashboard", label: "Overview", description: "Executive command centre", icon: "◈" },
-  { href: "/dashboard/rsvps", label: "RSVPs", description: "Interest registrations", icon: "✉", badge: "Demo" },
+  { href: "/dashboard/rsvps", label: "RSVPs", description: "Interest registrations", icon: "✉" },
   { href: "/dashboard/sponsors", label: "Sponsors", description: "Partnership CRM", icon: "★" },
   { href: "/dashboard/volunteers", label: "Volunteers", description: "Roster & shifts", icon: "◎" },
   { href: "/dashboard/tasks", label: "Tasks", description: "Committee board", icon: "☑" },

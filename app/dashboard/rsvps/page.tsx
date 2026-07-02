@@ -1,35 +1,21 @@
-import {
-  DataTable,
-  IntegrationBanner,
-  PageToolbar,
-  ToolbarButton,
-  ToolbarSearch,
-} from "@/components/dashboard/dashboard-ui";
-import { PLACEHOLDER_RSVPS } from "@/platform/engines/dashboard/placeholder-data";
+import { RsvpManagementPanel } from "@/components/dashboard/RsvpManagementPanel";
+import { demoDashboardRsvps } from "@/platform/engines/dashboard/rsvp/demo-data";
+import { fetchDashboardRsvps } from "@/platform/engines/dashboard/rsvp/queries";
 
-export default function DashboardRsvpsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DashboardRsvpsPage() {
+  const result = await fetchDashboardRsvps();
+
+  const source = result.ok ? "live" : "demo";
+  const records = result.ok ? result.records : demoDashboardRsvps();
+  const fallbackMessage = result.ok ? undefined : result.message;
+
   return (
-    <>
-      <IntegrationBanner title="RSVP Engine — demo data" variant="info">
-        {/* TODO(rsvp-engine): Replace placeholder rows with authenticated Supabase queries. */}
-        Showing sample records for presentation. Live data connects after migration and auth. No
-        secrets are exposed in this view.
-      </IntegrationBanner>
-
-      <DataTable
-        title="Interest registrations"
-        description="Manage Register Interest submissions from the public site"
-        columns={["name", "email", "guests", "ticket", "date", "status"]}
-        rows={PLACEHOLDER_RSVPS}
-        emptyMessage="Live Supabase data will replace placeholder rows once migration and auth are configured."
-        toolbar={
-          <PageToolbar>
-            <ToolbarSearch placeholder="Search by name or email…" />
-            <ToolbarButton disabled>Filter</ToolbarButton>
-            <ToolbarButton disabled>Export CSV</ToolbarButton>
-          </PageToolbar>
-        }
-      />
-    </>
+    <RsvpManagementPanel
+      records={records}
+      source={source}
+      fallbackMessage={fallbackMessage}
+    />
   );
 }

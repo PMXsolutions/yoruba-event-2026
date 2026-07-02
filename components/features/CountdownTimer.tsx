@@ -49,7 +49,11 @@ export function CountdownTimer() {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-start sm:gap-3 md:gap-4">
+    <div
+      className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-start sm:gap-3 md:gap-4"
+      role="group"
+      aria-label="Countdown to celebration"
+    >
       {units.map((u, index) => (
         <motion.div
           key={u.label}

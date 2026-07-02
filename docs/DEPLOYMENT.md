@@ -22,17 +22,14 @@ Complete these steps **before** testing RSVP on production.
 2. **New project** → choose region close to users (e.g. Sydney).
 3. Save the database password securely.
 
-### 2. Run migration
+### 2. Run migrations
 
-1. Open **SQL Editor** → **New query**.
-2. Copy the full contents of:
+Run **both** migration files in order in the **SQL Editor**:
 
-   ```
-   supabase/migrations/20260112000000_create_rsvps.sql
-   ```
+1. `supabase/migrations/20260112000000_create_rsvps.sql`
+2. `supabase/migrations/20260702100000_rsvp_management_columns.sql`
 
-3. Click **Run**.
-4. Confirm success — no errors in the output panel.
+The second migration adds committee workflow columns: `status`, `internal_notes`, `contacted_at`.
 
 ### 3. Verify table
 

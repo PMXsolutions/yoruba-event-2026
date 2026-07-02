@@ -20,6 +20,8 @@ Give Yoruba Association Canberra committee members a secure internal dashboard t
 | `/dashboard/sponsors` | Sponsor pipeline and tier tracking |
 | `/dashboard/volunteers` | Volunteer roster and shift scheduling |
 | `/dashboard/tasks` | Committee task board |
+| `/dashboard/programme` | Run of show management |
+| `/dashboard/announcements` | Comms hub |
 | `/dashboard/analytics` | Traffic and conversion metrics |
 | `/dashboard/settings` | Org profile and integrations |
 
@@ -38,12 +40,18 @@ Give Yoruba Association Canberra committee members a secure internal dashboard t
 
 ### 2. RSVP data access
 
-- [ ] Server-side read using service role or RLS policies for authenticated users
-- [ ] Paginated list with search (name, email)
-- [ ] CSV export (admin only)
+- [x] Server-side read using service role (`platform/engines/dashboard/rsvp/queries.ts`)
+- [x] Search and status filter (client-side on loaded records)
+- [x] CSV export from dashboard UI
+- [x] Status workflow: New → Contacted → Confirmed
+- [x] Internal notes column (`internal_notes`)
+- [ ] **Authentication required** before public launch
+- [ ] Paginated list for large datasets
 - [ ] **Do not** expose RSVP data via public API
 
-### 3. Sponsor pipeline
+**Migration required:** Run both SQL files in `supabase/migrations/` including `20260702100000_rsvp_management_columns.sql`.
+
+### 3. Sponsor pipeline (next)
 
 - [ ] CRUD for sponsor enquiries (new table or external CRM)
 - [ ] Link to final tier packages when announced
@@ -62,10 +70,14 @@ Give Yoruba Association Canberra committee members a secure internal dashboard t
 
 ## TODO markers in code
 
-Search for `TODO(phase-2)` in:
+Search for `TODO(` in:
 
-- `components/dashboard/DashboardShell.tsx`
-- `app/dashboard/page.tsx`
+- `components/layout/CommitteePortalLink.tsx` — remove public demo link before launch
+- `components/layout/Navbar.tsx` / `Footer.tsx` — hide Committee Portal until auth
+- `app/dashboard/*/page.tsx` — connect live data per engine
+- `docs/PHASE_2_SPEC.md` — this file
+
+Full list: run `rg 'TODO\\(' --glob '*.{tsx,ts}'` from repo root.
 
 ---
 
