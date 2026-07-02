@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
+import { ACTIVE_EVENT } from "@/lib/site";
+import EventJsonLd from "@/components/seo/EventJsonLd";
 import "./globals.css";
 
 const heading = Cormorant_Garamond({
@@ -16,14 +18,47 @@ const body = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+const siteUrl = ACTIVE_EVENT.canonicalUrl;
+
 export const metadata: Metadata = {
-  title: "Yoruba Day Canberra 2026 | Premium Cultural Celebration",
-  description:
-    "November 2026 in Canberra, ACT—Yoruba Day celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity. Presented by Yoruba Association Canberra.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${ACTIVE_EVENT.name} | Premium Cultural Celebration`,
+    template: `%s | ${ACTIVE_EVENT.name}`,
+  },
+  description: ACTIVE_EVENT.tagline,
+  keywords: [
+    "Yoruba Day",
+    "Canberra",
+    "Yoruba culture",
+    "African heritage",
+    "cultural event",
+    "2026",
+  ],
+  authors: [{ name: ACTIVE_EVENT.organisation }],
+  creator: ACTIVE_EVENT.organisation,
+  alternates: {
+    canonical: siteUrl,
+  },
   openGraph: {
-    title: "Yoruba Day Canberra 2026",
-    description:
-      "An elevated, welcoming celebration of Yoruba culture in the ACT—elders, youth, families, and friends together.",
+    type: "website",
+    locale: "en_AU",
+    url: siteUrl,
+    siteName: ACTIVE_EVENT.name,
+    title: ACTIVE_EVENT.name,
+    description: ACTIVE_EVENT.tagline,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: ACTIVE_EVENT.name }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: ACTIVE_EVENT.name,
+    description: ACTIVE_EVENT.tagline,
+    images: ["/opengraph-image"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
   },
 };
 
@@ -37,7 +72,10 @@ export default function RootLayout({
       lang="en"
       className={`${heading.variable} ${body.variable} h-full scroll-smooth antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-espresso text-cream">{children}</body>
+      <body className="min-h-full flex flex-col bg-espresso text-cream">
+        <EventJsonLd />
+        {children}
+      </body>
     </html>
   );
 }

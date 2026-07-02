@@ -1,33 +1,41 @@
 import {
   DashboardShell,
   DataTable,
-  IntegrationBanner,
   StatGrid,
 } from "@/components/dashboard/DashboardShell";
-import {
-  EXECUTIVE_STATS,
-  PLACEHOLDER_TASKS,
-} from "@/platform/engines/dashboard/placeholder-data";
+import { fetchDashboardStats, fetchRecentActivity } from "@/lib/data/public-content";
+import { getAuthUser } from "@/lib/auth/rbac";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [stats, activity, user] = await Promise.all([
+    fetchDashboardStats(),
+    fetchRecentActivity(8),
+    getAuthUser(),
+  ]);
+
   return (
     <DashboardShell
       title="Executive dashboard"
-      description="At-a-glance view of registrations, partnerships, volunteers, and committee progress."
+      description={`Welcome${user?.fullName ? `, ${user.fullName}` : ""}. At-a-glance view of registrations, partnerships, volunteers, and committee progress.`}
     >
-      <IntegrationBanner title="Integration status" variant="warning">
-        {/* TODO(platform-auth): Protect /dashboard with Supabase Auth + RBAC before production use. */}
-        Authentication is not yet enabled. Connect Supabase migration and Resend to activate live
-        data and confirmation emails. See <code className="text-xs">docs/PLATFORM.md</code>.
-      </IntegrationBanner>
-
-      <StatGrid stats={EXECUTIVE_STATS} />
+      <StatGrid
+        stats={[
+          { label: "Total RSVPs", value: String(stats.totalRsvps), change: `${stats.todayRsvps} today` },
+          { label: "Sponsors", value: String(stats.totalSponsors), change: `${stats.pendingSponsors} pending` },
+          { label: "Volunteers", value: String(stats.totalVolunteers) },
+          { label: "Announcements", value: String(stats.publishedAnnouncements), change: "Published" },
+        ]}
+      />
 
       <DataTable
-        title="Priority committee tasks"
-        columns={["task", "owner", "due", "status"]}
-        rows={PLACEHOLDER_TASKS}
-        emptyMessage="TODO(phase-2): Sync with task engine and assignee notifications."
+        title="Recent activity"
+        columns={["action", "entity_type", "created_at"]}
+        rows={activity.map((a) => ({
+          action: a.action,
+          entity_type: a.entity_type ?? "—",
+          created_at: new Date(a.created_at).toLocaleString("en-AU"),
+        }))}
+        emptyMessage="Activity will appear here as committee members take actions."
       />
     </DashboardShell>
   );

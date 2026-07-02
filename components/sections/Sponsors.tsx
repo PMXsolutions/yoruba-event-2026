@@ -1,10 +1,14 @@
 "use client";
 
+import { type FormEvent, useState } from "react";
 import { motion } from "framer-motion";
+import { submitSponsor } from "@/app/actions/sponsor";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { SPONSOR_TIERS, LAUNCH_COPY } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
+import { sponsorFormSchema, type SponsorFormValues } from "@/lib/validation/sponsor";
 
 const tierAccent = {
   platinum: "from-white/90 via-cream/40 to-transparent",
@@ -20,7 +24,76 @@ const tierBadge = {
   community: "Community",
 } as const;
 
+const labelClass =
+  "mb-2 block font-sans text-[0.62rem] font-bold uppercase tracking-[0.24em] text-mahogany/55";
+const inputClass =
+  "w-full rounded-xl border border-mahogany/12 bg-cream px-4 py-3 font-sans text-sm text-mahogany outline-none transition-colors focus:border-gold/50 focus:ring-2 focus:ring-gold/15";
+
 export function Sponsors() {
+  const [submitted, setSubmitted] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof SponsorFormValues, string>>>({});
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+
+    const form = new FormData(e.currentTarget);
+    const payload = {
+      company: String(form.get("company") ?? ""),
+      contactPerson: String(form.get("contactPerson") ?? ""),
+      email: String(form.get("email") ?? ""),
+      phone: String(form.get("phone") ?? ""),
+      website: String(form.get("website") ?? ""),
+      package: String(form.get("package") ?? ""),
+      message: String(form.get("message") ?? ""),
+      logoDataUrl: String(form.get("logoDataUrl") ?? ""),
+    };
+
+    const parsed = sponsorFormSchema.safeParse(payload);
+    if (!parsed.success) {
+      const errs: Partial<Record<keyof SponsorFormValues, string>> = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0];
+        if (typeof key === "string" && !errs[key as keyof SponsorFormValues]) {
+          errs[key as keyof SponsorFormValues] = issue.message;
+        }
+      }
+      setFieldErrors(errs);
+      setError("Please correct the highlighted fields.");
+      return;
+    }
+
+    setIsPending(true);
+    try {
+      const result = await submitSponsor(parsed.data);
+      if (result.ok) {
+        setSubmitted(true);
+        e.currentTarget.reset();
+        return;
+      }
+      setError(result.error);
+      if (result.fieldErrors) setFieldErrors(result.fieldErrors);
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const hidden = document.getElementById("logoDataUrl") as HTMLInputElement | null;
+      if (hidden && typeof reader.result === "string") {
+        hidden.value = reader.result;
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   return (
     <AnimatedSection
       id="sponsors"
@@ -28,20 +101,16 @@ export function Sponsors() {
     >
       <div className="pointer-events-none absolute inset-0 bg-motif-textile-light opacity-60" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-deep/35 to-transparent" />
-      <div className="pointer-events-none absolute left-1/2 top-24 h-72 w-[min(90vw,40rem)] -translate-x-1/2 rounded-full bg-gold/10 blur-[100px]" />
 
       <div className="relative mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
         <SectionHeading
           surface="onLight"
           eyebrow="Partners in excellence"
           title="Sponsor the most anticipated cultural evening of the year"
-          subtitle="Stand alongside a community-led celebration of Yoruba excellence in Canberra—visible, meaningful, and crafted with warmth for guests and partners alike."
+          subtitle="Stand alongside a community-led celebration of Yoruba excellence in Canberra—visible, meaningful, and crafted with warmth."
         />
-        <p className="mx-auto mb-10 max-w-2xl rounded-2xl border border-gold/25 bg-cream/80 px-6 py-4 text-center font-sans text-sm leading-relaxed text-mahogany/75 shadow-[var(--shadow-card-light)] sm:mb-12 sm:text-[0.95rem]">
-          {LAUNCH_COPY.sponsorshipAnnouncedSoon} Enquire below to express early interest—our team
-          will share the sponsorship deck when packages are finalised.
-        </p>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-7">
+
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-7">
           {SPONSOR_TIERS.map((s, index) => (
             <motion.article
               key={s.name}
@@ -49,48 +118,115 @@ export function Sponsors() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-8%" }}
               transition={{ delay: index * 0.08, duration: 0.7, ease: EASE_LUX }}
-              whileHover={{ y: -8, transition: { duration: 0.4, ease: EASE_LUX } }}
-              className="group relative flex flex-col overflow-hidden rounded-[1.35rem] border border-mahogany/10 bg-cream/90 shadow-[var(--shadow-card-light)] transition-shadow duration-500 hover:shadow-[0_40px_80px_-44px_rgba(58,36,25,0.38),0_0_0_1px_rgba(201,162,39,0.12)]"
+              whileHover={{ y: -8 }}
+              className="group relative flex flex-col overflow-hidden rounded-[1.35rem] border border-mahogany/10 bg-cream/90 shadow-[var(--shadow-card-light)]"
             >
               <div
-                className={`relative flex h-40 flex-col items-center justify-center overflow-hidden border-b border-mahogany/10 bg-gradient-to-br ${tierAccent[s.tier]} px-6 ring-1 ring-inset ring-white/10`}
+                className={`relative flex h-28 flex-col items-center justify-center overflow-hidden border-b border-mahogany/10 bg-gradient-to-br ${tierAccent[s.tier]} px-6`}
               >
-                <div className="absolute inset-0 bg-[linear-gradient(125deg,transparent_35%,rgba(255,255,255,0.5)_50%,transparent_65%)] opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
-                <p className="relative z-10 mb-4 font-sans text-[0.62rem] font-bold uppercase tracking-[0.28em] text-mahogany/55">
+                <p className="font-sans text-[0.62rem] font-bold uppercase tracking-[0.28em] text-mahogany/55">
                   {tierBadge[s.tier]}
                 </p>
-                <motion.div
-                  className="relative z-10 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-mahogany/12 bg-gradient-to-b from-cream to-cream-deep shadow-[0_12px_32px_-16px_rgba(36,21,15,0.35),inset_0_1px_0_rgba(255,255,255,0.9)]"
-                  whileHover={{ scale: 1.06, rotate: -1.5 }}
-                  transition={{ type: "spring", stiffness: 320, damping: 22 }}
-                >
-                  <motion.span
-                    className="font-display text-[0.65rem] font-bold uppercase tracking-[0.22em] text-mahogany/35"
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    Logo
-                  </motion.span>
-                  <motion.div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-gold/0 transition-all duration-500 group-hover:ring-gold/35"
-                  />
-                </motion.div>
+                <p className="mt-2 font-display text-lg font-semibold text-mahogany">{s.pricePlaceholder}</p>
               </div>
-              <div className="flex flex-1 flex-col p-6 sm:p-7">
-                <h3 className="font-display text-lg font-semibold leading-snug text-mahogany sm:text-xl">
-                  {s.name}
-                </h3>
-                <p className="mt-3 flex-1 font-sans text-sm leading-relaxed text-mahogany/68 sm:text-[0.95rem]">
-                  Join us in elevating Yoruba Day with dignified visibility across print, digital,
-                  and on-site moments that guests and families will remember.
-                </p>
-                <p className="mt-5 font-sans text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-gold-deep">
-                  Packages announced soon
-                </p>
+              <div className="flex flex-1 flex-col p-6">
+                <h3 className="font-display text-lg font-semibold text-mahogany">{s.name}</h3>
+                <ul className="mt-4 flex-1 space-y-2">
+                  {s.benefits.map((b) => (
+                    <li key={b} className="flex gap-2 font-sans text-sm text-mahogany/68">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-gold" aria-hidden />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+                <ButtonLink href="#sponsor-form" variant="outline" className="mt-6 w-full justify-center text-xs">
+                  Enquire now
+                </ButtonLink>
               </div>
             </motion.article>
           ))}
         </div>
+
+        <motion.div
+          id="sponsor-form"
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-10%" }}
+          transition={{ duration: 0.75, ease: EASE_LUX }}
+          className="relative mt-20 scroll-mt-28 rounded-[1.75rem] border border-mahogany/10 bg-cream/95 p-6 shadow-[var(--shadow-card-light)] sm:p-10"
+        >
+          <h3 className="font-display text-2xl font-semibold text-mahogany sm:text-3xl">
+            Sponsorship registration
+          </h3>
+          <p className="mt-3 max-w-2xl font-sans text-sm leading-relaxed text-mahogany/70">
+            {LAUNCH_COPY.sponsorshipAnnouncedSoon} Complete the form below and our partnerships team will be in touch.
+          </p>
+
+          {submitted ? (
+            <div className="mt-8 rounded-2xl border border-gold/25 bg-gold/5 p-8 text-center">
+              <p className="font-display text-2xl font-semibold text-mahogany">Thank you for your enquiry</p>
+              <p className="mx-auto mt-3 max-w-md font-sans text-sm text-mahogany/70">
+                Your sponsorship application has been received. A confirmation email is on its way, and our team will respond within 3–5 business days.
+              </p>
+              <Button type="button" variant="outline" className="mt-6" onClick={() => setSubmitted(false)}>
+                Submit another enquiry
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              {error ? (
+                <div role="alert" className="rounded-xl border border-red-300/50 bg-red-50 px-4 py-3 text-sm text-red-900">
+                  {error}
+                </div>
+              ) : null}
+              <input type="hidden" id="logoDataUrl" name="logoDataUrl" defaultValue="" />
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="company" className={labelClass}>Company</label>
+                  <input id="company" name="company" required className={inputClass} />
+                  {fieldErrors.company ? <p className="mt-1 text-xs text-red-600">{fieldErrors.company}</p> : null}
+                </div>
+                <div>
+                  <label htmlFor="contactPerson" className={labelClass}>Contact person</label>
+                  <input id="contactPerson" name="contactPerson" required className={inputClass} />
+                  {fieldErrors.contactPerson ? <p className="mt-1 text-xs text-red-600">{fieldErrors.contactPerson}</p> : null}
+                </div>
+                <div>
+                  <label htmlFor="email" className={labelClass}>Email</label>
+                  <input id="email" name="email" type="email" required className={inputClass} />
+                  {fieldErrors.email ? <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p> : null}
+                </div>
+                <div>
+                  <label htmlFor="phone" className={labelClass}>Phone</label>
+                  <input id="phone" name="phone" type="tel" className={inputClass} />
+                </div>
+                <div>
+                  <label htmlFor="website" className={labelClass}>Website</label>
+                  <input id="website" name="website" type="url" placeholder="https://" className={inputClass} />
+                </div>
+                <div>
+                  <label htmlFor="package" className={labelClass}>Package</label>
+                  <select id="package" name="package" required className={inputClass}>
+                    {SPONSOR_TIERS.map((t) => (
+                      <option key={t.tier} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="logo" className={labelClass}>Logo upload</label>
+                <input id="logo" name="logo" type="file" accept="image/*" className={inputClass} onChange={handleLogoChange} />
+              </div>
+              <div>
+                <label htmlFor="message" className={labelClass}>Message</label>
+                <textarea id="message" name="message" rows={4} className={inputClass} />
+              </div>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Submitting…" : "Submit sponsorship enquiry"}
+              </Button>
+            </form>
+          )}
+        </motion.div>
       </div>
     </AnimatedSection>
   );

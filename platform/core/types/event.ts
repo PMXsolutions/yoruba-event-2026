@@ -12,6 +12,8 @@ export type ExperienceItem = {
 export type SponsorTier = {
   name: string;
   tier: "platinum" | "gold" | "heritage" | "community";
+  benefits: readonly string[];
+  pricePlaceholder: string;
 };
 
 export type EventBranding = {
@@ -24,30 +26,56 @@ export type EventContact = {
   phone: string | null;
 };
 
+export type EventSocialLink = {
+  label: string;
+  href: string;
+  platform: "instagram" | "facebook" | "x" | "youtube" | "linkedin";
+};
+
+export type EventVenue = {
+  name: string;
+  fullAddress: string;
+  mapsUrl: string;
+  mapsEmbedUrl: string;
+};
+
 export type EventLaunchCopy = {
   comingSoonNote: string;
   registerInterest: string;
   becomeSponsor: string;
   sponsorshipAnnouncedSoon: string;
+  saveTheDate: string;
+};
+
+export type GalleryItem = {
+  id: string;
+  title: string;
+  mediaType: "image" | "video";
+  url: string;
+  thumbnailUrl?: string;
 };
 
 /** Full configuration for a single event deployment. */
 export type EventConfig = {
-  /** Unique slug — future multi-tenant key */
   slug: string;
   name: string;
   tagline: string;
   eventIso: string;
   heroDateLine: string;
+  heroDateDisplay: string;
   heroPlaceLine: string;
   location: string;
+  venue: EventVenue;
   presenter: string;
   organisation: string;
+  canonicalUrl: string;
   launchCopy: EventLaunchCopy;
   navItems: readonly NavItem[];
   experienceItems: readonly ExperienceItem[];
   sponsorTiers: readonly SponsorTier[];
   ticketTypes: readonly string[];
   contact: EventContact;
+  socialLinks: readonly EventSocialLink[];
+  galleryFallback: readonly GalleryItem[];
   branding?: EventBranding;
 };

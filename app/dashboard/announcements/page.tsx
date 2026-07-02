@@ -1,42 +1,33 @@
-import {
-  DashboardShell,
-  DataTable,
-  IntegrationBanner,
-} from "@/components/dashboard/DashboardShell";
-import { PLACEHOLDER_ANNOUNCEMENTS } from "@/platform/engines/dashboard/placeholder-data";
-import { AI_CAPABILITIES } from "@/platform/engines/ai/capabilities";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { AnnouncementForm } from "@/components/dashboard/AnnouncementForm";
+import { fetchAllAnnouncements } from "@/lib/data/public-content";
 
-export default function DashboardAnnouncementsPage() {
+export default async function DashboardAnnouncementsPage() {
+  const announcements = await fetchAllAnnouncements();
+
   return (
     <DashboardShell
       title="Announcements"
-      description="Draft and publish updates to the website, email list, and social channels."
+      description="Publish updates visible on the homepage banner."
     >
-      <IntegrationBanner title="Notification Engine">
-        {/* TODO(notification-engine): announcements table + publish workflow. */}
-        Email via Resend; SMS via Twilio (future). AI drafting available when AI engine is
-        activated — see docs/AI.md.
-      </IntegrationBanner>
-
-      <DataTable
-        title="Announcement queue"
-        columns={["title", "status", "channel", "date"]}
-        rows={PLACEHOLDER_ANNOUNCEMENTS}
-      />
-
-      <section className="rounded-2xl border border-mahogany/8 bg-white p-6 shadow-[var(--shadow-card-light)]">
-        <h2 className="font-display text-xl font-semibold text-mahogany">AI drafting (planned)</h2>
-        <ul className="mt-4 space-y-2 font-sans text-sm text-mahogany/75">
-          {AI_CAPABILITIES.filter((c) => c.id.includes("announcement") || c.id.includes("social")).map(
-            (c) => (
-              <li key={c.id} className="flex gap-2">
-                <span className="text-gold-deep">·</span>
-                {c.name} — <span className="text-mahogany/50">{c.status}</span>
-              </li>
-            ),
-          )}
-        </ul>
-      </section>
+      <AnnouncementForm />
+      <div className="space-y-4">
+        {announcements.map((a) => (
+          <article key={a.id} className="rounded-2xl border border-mahogany/8 bg-white p-5 shadow-[var(--shadow-card-light)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display text-lg font-semibold text-mahogany">{a.title}</h3>
+                <p className="mt-2 font-sans text-sm text-mahogany/70">{a.content}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-3 py-1 font-sans text-xs font-bold uppercase ${
+                a.is_published ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+              }`}>
+                {a.is_published ? "Published" : "Draft"}
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
     </DashboardShell>
   );
 }

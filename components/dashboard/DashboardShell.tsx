@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { signOut } from "@/app/actions/dashboard";
 import { DASHBOARD_NAV } from "@/platform/engines/dashboard/placeholder-data";
 import { SITE } from "@/lib/site";
 
@@ -18,6 +19,13 @@ export function DashboardShell({
   actions?: ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f3ec] text-mahogany">
@@ -41,6 +49,13 @@ export function DashboardShell({
             >
               ← Public site
             </Link>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="inline-flex items-center rounded-full border border-white/15 px-5 py-2.5 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-cream/70 transition-colors hover:border-red-400/40 hover:text-red-200"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>

@@ -5,13 +5,13 @@ import {
 } from "@/components/dashboard/DashboardShell";
 import { SITE } from "@/lib/site";
 import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
-import { getSmsEnvPresence } from "@/platform/engines/notifications/sms/twilio-stub";
 import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getAuthUser } from "@/lib/auth/rbac";
 
-export default function DashboardSettingsPage() {
+export default async function DashboardSettingsPage() {
   const supabase = getSupabaseEnvPresence();
   const email = getEmailEnvPresence();
-  const sms = getSmsEnvPresence();
+  const user = await getAuthUser();
 
   return (
     <DashboardShell
@@ -26,8 +26,8 @@ export default function DashboardSettingsPage() {
       <StatGrid
         stats={[
           { label: "Organisation", value: SITE.presenter },
-          { label: "Contact email", value: "info@yorubadaycanberra.org" },
-          { label: "Auth provider", value: "Not configured" },
+          { label: "Contact email", value: SITE.organisation ? "info@yorubadaycanberra.org" : "—" },
+          { label: "Auth", value: user ? `${user.role}` : "Not signed in" },
           { label: "Platform", value: "Promax v1" },
         ]}
       />
@@ -38,27 +38,22 @@ export default function DashboardSettingsPage() {
           <div className="flex justify-between border-b border-mahogany/8 pb-3">
             <dt className="text-mahogany/60">Supabase</dt>
             <dd className="font-semibold text-mahogany">
-              {supabase.allPresent ? "Env configured" : "Missing env vars"}
+              {supabase.allPresent ? "Configured" : "Missing env vars"}
             </dd>
           </div>
           <div className="flex justify-between border-b border-mahogany/8 pb-3">
-            <dt className="text-mahogany/60">Resend (email)</dt>
+            <dt className="text-mahogany/60">SMTP (email)</dt>
             <dd className="font-semibold text-mahogany">
-              {email.ready ? "Ready" : email.hasResendKey ? "Missing FROM email" : "Add API key"}
+              {email.ready ? "Ready" : "Configure SMTP_* and MAIL_FROM"}
             </dd>
           </div>
           <div className="flex justify-between pb-1">
-            <dt className="text-mahogany/60">Twilio (SMS)</dt>
+            <dt className="text-mahogany/60">Supabase Auth</dt>
             <dd className="font-semibold text-mahogany">
-              {sms.ready ? "Ready" : "Not configured"}
+              {supabase.hasAnonKey ? "Enabled" : "Missing anon key"}
             </dd>
           </div>
         </dl>
-        <p className="mt-6 font-sans text-xs leading-relaxed text-mahogany/50">
-          {/* TODO(platform-settings): Persist org settings in platform_settings table. */}
-          Integration status is read from environment variables only. See docs/EMAIL.md and
-          docs/SMS.md.
-        </p>
       </section>
     </DashboardShell>
   );

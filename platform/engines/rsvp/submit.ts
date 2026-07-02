@@ -12,7 +12,7 @@ import { mapConfigError, mapSupabaseRsvpError } from "@/platform/engines/rsvp/er
 import type { EventConfig } from "@/platform/core/types/event";
 
 export type SubmitRsvpResult =
-  | { ok: true; record: ReturnType<typeof toRsvpRecord> }
+  | { ok: true; record: ReturnType<typeof toRsvpRecord>; registrationReference: string }
   | {
       ok: false;
       error: string;
@@ -62,7 +62,7 @@ export async function submitRsvpToDatabase(
       return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
     }
 
-    return { ok: true, record };
+    return { ok: true, record, registrationReference: record.registration_reference };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[rsvp-engine] Unexpected error:", msg);

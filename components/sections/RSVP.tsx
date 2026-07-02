@@ -3,6 +3,8 @@
 import { type FormEvent, useState } from "react";
 import { motion } from "framer-motion";
 import { submitRsvp } from "@/app/actions/rsvp";
+import type { RsvpConfirmationData } from "@/app/actions/rsvp";
+import { RsvpConfirmation } from "@/components/features/RsvpConfirmation";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -47,8 +49,6 @@ const selectClass = `${inputNormal} cursor-pointer appearance-none bg-[length:1.
 const errText = "mt-2 font-sans text-xs leading-snug text-red-300/95";
 const alertBox =
   "rounded-2xl border border-red-400/35 bg-red-950/35 px-5 py-4 font-sans text-sm leading-relaxed text-red-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
-const successBox =
-  "rounded-2xl border border-gold/25 bg-gold/[0.08] px-5 py-4 font-sans text-sm leading-relaxed text-cream/90";
 
 function inputClass(err?: string) {
   return err ? inputError : inputNormal;
@@ -56,7 +56,7 @@ function inputClass(err?: string) {
 
 export function RSVP() {
   const [form, setForm] = useState<FormState>(initial);
-  const [submitted, setSubmitted] = useState(false);
+  const [confirmation, setConfirmation] = useState<RsvpConfirmationData | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof RsvpFormValues, string>>
@@ -98,7 +98,7 @@ export function RSVP() {
       };
       const result = await submitRsvp(serializable);
       if (result.ok) {
-        setSubmitted(true);
+        setConfirmation(result.confirmation);
         setConfirmationEmailQueued(result.emailSent ?? false);
         setForm(initial);
         setFieldErrors({});
@@ -161,37 +161,17 @@ export function RSVP() {
               <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-motif-geo opacity-[0.1]" />
               <div className="pointer-events-none absolute -right-24 top-0 h-72 w-72 rounded-full bg-gold-bright/10 blur-[100px]" />
 
-              {submitted ? (
-                <div className="relative py-10 text-center sm:py-14">
-                  <div className={successBox}>
-                    <p className="font-display text-2xl font-medium text-cream sm:text-3xl">
-                      Thank you — you are on the list
-                    </p>
-                    <p className="mx-auto mt-4 max-w-md font-sans text-sm leading-relaxed text-cream/78 sm:text-base">
-                      Your interest has been received and stored securely. Our planning committee
-                      will reach out to the email you provided with ticketing and programme news as
-                      soon as dates and venues are finalised.
-                    </p>
-                    {confirmationEmailQueued ? (
-                      <p className="mx-auto mt-3 max-w-md font-sans text-xs text-cream/60">
-                        A confirmation email is on its way to your inbox.
-                      </p>
-                    ) : null}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="mt-8"
-                    onClick={() => {
-                      setSubmitted(false);
-                      setConfirmationEmailQueued(false);
-                      setForm(initial);
-                      clearMessages();
-                    }}
-                  >
-                    Register another guest
-                  </Button>
-                </div>
+              {confirmation ? (
+                <RsvpConfirmation
+                  data={confirmation}
+                  emailSent={confirmationEmailQueued}
+                  onRegisterAnother={() => {
+                    setConfirmation(null);
+                    setConfirmationEmailQueued(false);
+                    setForm(initial);
+                    clearMessages();
+                  }}
+                />
               ) : (
                 <form onSubmit={handleSubmit} className="relative space-y-6 sm:space-y-7">
                   {submitError ? (

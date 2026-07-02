@@ -9,6 +9,8 @@ export {
   EXPERIENCE_ITEMS,
   SPONSOR_TIERS,
   TICKET_TYPES,
+  SOCIAL_LINKS,
+  GALLERY_FALLBACK,
 } from "@/config/events/yoruba-day-canberra-2026";
 
 export { yorubaDayCanberra2026 as ACTIVE_EVENT } from "@/config/events/yoruba-day-canberra-2026";

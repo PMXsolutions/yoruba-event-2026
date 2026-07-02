@@ -1,9 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { normalizeSupabaseProjectUrl } from "@/lib/supabase/normalize-url";
 
 /**
- * Browser Supabase client (anon key). Safe for public reads when RLS allows.
- * RSVP writes use the server action with the service role client instead.
+ * Browser Supabase client with session persistence for committee auth.
  */
 export function createBrowserSupabaseClient() {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,7 +13,5 @@ export function createBrowserSupabaseClient() {
     );
   }
   const url = normalizeSupabaseProjectUrl(rawUrl);
-  return createClient(url, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  return createBrowserClient(url, anonKey);
 }

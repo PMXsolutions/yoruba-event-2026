@@ -1,27 +1,16 @@
-import {
-  DashboardShell,
-  DataTable,
-  IntegrationBanner,
-} from "@/components/dashboard/DashboardShell";
-import { PLACEHOLDER_SPONSORS } from "@/platform/engines/dashboard/placeholder-data";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { SponsorManagement } from "@/components/dashboard/SponsorManagement";
+import { fetchAllSponsors } from "@/lib/data/public-content";
 
-export default function DashboardSponsorsPage() {
+export default async function DashboardSponsorsPage() {
+  const sponsors = await fetchAllSponsors();
+
   return (
     <DashboardShell
-      title="Sponsor CRM"
-      description="Track sponsor tiers, enquiries, and partnership pipeline."
+      title="Sponsor management"
+      description="Review applications, approve partners, and export sponsor data."
     >
-      <IntegrationBanner title="Sponsor CRM Engine">
-        {/* TODO(sponsor-crm): New table sponsor_enquiries + deal stages. */}
-        Placeholder pipeline. Tier names come from event config; deal values require business
-        approval.
-      </IntegrationBanner>
-
-      <DataTable
-        title="Sponsor pipeline"
-        columns={["tier", "status", "contact", "value"]}
-        rows={PLACEHOLDER_SPONSORS}
-      />
+      <SponsorManagement initialSponsors={sponsors} />
     </DashboardShell>
   );
 }

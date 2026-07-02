@@ -80,7 +80,13 @@ export type RsvpRecord = {
   number_of_attendees: number;
   ticket_type: string;
   notes: string | null;
+  registration_reference: string;
 };
+
+export function generateRegistrationReference(): string {
+  const segment = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+  return `YDC-2026-${segment}`;
+}
 
 export function toRsvpRecord(data: RsvpFormValues): RsvpRecord {
   return {
@@ -90,5 +96,6 @@ export function toRsvpRecord(data: RsvpFormValues): RsvpRecord {
     number_of_attendees: data.attendees,
     ticket_type: data.ticketType,
     notes: data.notes ?? null,
+    registration_reference: generateRegistrationReference(),
   };
 }
