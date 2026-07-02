@@ -1,8 +1,11 @@
-# Yoruba Day Canberra 2026
+# Promax Event Platform
 
-Premium marketing site for **Yoruba Day Canberra 2026**, presented by **Yoruba Association Canberra**. Built with [Next.js](https://nextjs.org) (App Router), TypeScript, Tailwind CSS v4, and [Framer Motion](https://www.framer.com/motion/).
+**Version 1** — reusable event management SaaS  
+**First deployment:** [Yoruba Day Canberra 2026](https://github.com/PMXsolutions/yoruba-event-2026)
 
-**Repository:** https://github.com/PMXsolutions/yoruba-event-2026
+Built with Next.js 16, TypeScript, Tailwind CSS v4, Supabase, and Framer Motion.
+
+> This repository is the **Promax Event Platform**, not a one-off website. Yoruba Day Canberra 2026 is the first customer configuration under `config/events/`.
 
 ---
 
@@ -10,13 +13,11 @@ Premium marketing site for **Yoruba Day Canberra 2026**, presented by **Yoruba A
 
 ```bash
 npm install
-cp .env.example .env.local   # fill Supabase values
-npm run preview              # recommended — build + serve on :3000
+cp .env.example .env.local   # Supabase + optional Resend
+npm run preview              # recommended local preview
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-> **Note:** `npm run dev` may hang on first Turbopack compile. Use `npm run preview` for reliable local testing.
+Open [http://localhost:3000](http://localhost:3000) · Committee portal: [/dashboard](http://localhost:3000/dashboard)
 
 ---
 
@@ -24,43 +25,25 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Doc | Description |
 |-----|-------------|
-| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel + Supabase deploy steps |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design and data flow |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases 1–4, risks, launch checklist |
-| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Dev workflow, Git, Cursor |
-| [docs/PHASE_2_SPEC.md](./docs/PHASE_2_SPEC.md) | Dashboard scaffold spec |
-| [docs/PHASE_3_SPEC.md](./docs/PHASE_3_SPEC.md) | Email, analytics, SEO spec |
+| [docs/PLATFORM.md](./docs/PLATFORM.md) | **Platform overview & engines** |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design |
+| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel + Supabase deploy |
+| [docs/EMAIL.md](./docs/EMAIL.md) | Resend integration |
+| [docs/SMS.md](./docs/SMS.md) | Twilio architecture (future) |
+| [docs/AI.md](./docs/AI.md) | AI engine architecture (future) |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases 1–4 |
+| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Dev workflow |
 
 ---
 
-## Prerequisites
+## Platform structure
 
-- Node.js 20+
-- npm
-- [Supabase](https://supabase.com) project (free tier)
-
----
-
-## Environment variables
-
-Copy `.env.example` → `.env.local` and set:
-
-| Variable | Usage |
-|----------|--------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Project URL (`https://<ref>.supabase.co` only) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Server only** — RSVP inserts |
-
-Never commit `.env.local` or expose the service role key.
-
----
-
-## Supabase setup
-
-1. Create a Supabase project.
-2. Run [`supabase/migrations/20260112000000_create_rsvps.sql`](./supabase/migrations/20260112000000_create_rsvps.sql) in the SQL Editor.
-3. Add keys to `.env.local` and restart the server.
-4. Verify: `curl http://localhost:3000/api/health` → `{"status":"ok",...}`
+```
+config/events/     Per-customer branding & content
+platform/          Reusable engines (RSVP, notifications, dashboard, AI)
+app/               Next.js routes
+components/        Public UI + committee portal
+```
 
 ---
 
@@ -68,37 +51,38 @@ Never commit `.env.local` or expose the service role key.
 
 | Command | Purpose |
 |---------|---------|
-| `npm run dev` | Dev server (Turbopack) |
 | `npm run preview` | Production build + start |
+| `npm run dev` | Dev server (Turbopack) |
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
 
 ---
 
-## Project structure
+## Environment variables
 
-```
-app/                 App Router pages, actions, API routes
-app/dashboard/       Phase 2 scaffold (placeholder, no auth)
-components/          UI sections, layout, dashboard shell
-lib/                 Site content, Supabase clients, validation
-supabase/migrations/ SQL for rsvps table
-docs/                Architecture, deployment, roadmap
-```
+See [`.env.example`](./.env.example). Minimum for RSVP:
 
----
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-## Damola — deploy checklist
+Optional for confirmation emails:
 
-1. Import repo in Vercel
-2. Set 3 Supabase env vars (see [DEPLOYMENT.md](./docs/DEPLOYMENT.md))
-3. Deploy and verify `/api/health`
-4. Test **Register Interest** on live site
-5. Do **not** link `/dashboard` publicly until Phase 2 auth
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
 
 ---
 
-## Learn more
+## Deploy checklist (Damola)
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Supabase + Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)
+1. Push latest to GitHub
+2. Import in Vercel · set env vars
+3. Run Supabase migration
+4. Verify `/api/health` → `ok`
+5. Test Register Interest + optional email
+
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md).
+
+---
+
+**Promax IT Solutions** · Event Management SaaS

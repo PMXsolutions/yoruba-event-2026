@@ -1,6 +1,7 @@
 {
-  "name": "yoruba-event-2026",
-  "version": "0.1.0",
+  "name": "promax-event-platform",
+  "version": "1.0.0",
+  "description": "Promax Event Platform v1 — first deployment: Yoruba Day Canberra 2026",
   "private": true,
   "scripts": {
     "dev": "next dev",
