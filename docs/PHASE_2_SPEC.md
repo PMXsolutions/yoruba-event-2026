@@ -1,7 +1,32 @@
 # Phase 2 Specification — Organiser Dashboard
 
-**Status:** Scaffold only (July 2026)  
-**Blocked on:** Authentication + business approval for organiser roles
+**Status:** RSVP CRM live (July 2026) — other modules scaffold only  
+**Blocked on:** Authentication before public launch
+
+---
+
+## RSVP business workflow (v1)
+
+**This is not an approval workflow.** Guests register interest; the committee manages follow-up and segmentation.
+
+```
+Register Interest (public site)
+  → automatic confirmation email (if Resend configured)
+  → appears in dashboard as New
+  → Committee follow-up (Contacted)
+  → relationship management (tags, committee notes)
+  → Confirmed (intent to attend)
+  → Cancelled (if no longer attending)
+```
+
+**Future journey (not built yet):**
+
+```
+Register Interest → New → Contacted → Ticket Invited → Paid → Confirmed → Checked In → Completed
+```
+
+Statuses (v1): `New`, `Contacted`, `Confirmed`, `Cancelled`  
+Tags (classification): VIP, Sponsor Lead, Volunteer, Performer, Vendor, Media, Committee, General Attendee
 
 ---
 
@@ -25,7 +50,7 @@ Give Yoruba Association Canberra committee members a secure internal dashboard t
 | `/dashboard/analytics` | Traffic and conversion metrics |
 | `/dashboard/settings` | Org profile and integrations |
 
-**Current state:** Placeholder UI with static data. **Not authenticated.**
+**Current state:** `/dashboard/rsvps` is a live Event CRM module (server-side Supabase). Other routes use placeholder data. **Not authenticated.**
 
 ---
 
@@ -38,20 +63,26 @@ Give Yoruba Association Canberra committee members a secure internal dashboard t
 - [ ] Protect all `/dashboard/*` routes via middleware
 - [ ] Redirect unauthenticated users to login
 
-### 2. RSVP data access
+### 2. RSVP CRM (`/dashboard/rsvps`) — **implemented**
 
-- [x] Server-side read using service role (`platform/engines/dashboard/rsvp/queries.ts`)
-- [x] Search and status filter (client-side on loaded records)
-- [x] CSV export from dashboard UI
-- [x] Status workflow: New → Contacted → Confirmed
-- [x] Internal notes column (`internal_notes`)
+- [x] Server-side read via service role
+- [x] KPI cards, search, status/ticket/tag filters, CSV export
+- [x] Status workflow: New → Contacted → Confirmed → Cancelled
+- [x] Classification tags (multi-tag per registrant)
+- [x] Committee Notes field
+- [x] Detail panel, row actions, demo mode fallback
 - [ ] **Authentication required** before public launch
+- [ ] Manual Register Guest form
+- [ ] Edit RSVP, date range filter, activity timeline (live events)
 - [ ] Paginated list for large datasets
-- [ ] **Do not** expose RSVP data via public API
 
-**Migration required:** Run both SQL files in `supabase/migrations/` including `20260702100000_rsvp_management_columns.sql`.
+**Migrations required (run in order):**
 
-### 3. Sponsor pipeline (next)
+1. `20260112000000_create_rsvps.sql`
+2. `20260702100000_rsvp_management_columns.sql`
+3. `20260703100000_rsvp_crm_enhancements.sql`
+
+### 3. Sponsor pipeline (next module)
 
 - [ ] CRUD for sponsor enquiries (new table or external CRM)
 - [ ] Link to final tier packages when announced

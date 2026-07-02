@@ -5,6 +5,7 @@ const STATUS_STYLES: Record<string, string> = {
   Confirmed: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
   New: "bg-sky-50 text-sky-800 ring-sky-200/60",
   Contacted: "bg-violet-50 text-violet-800 ring-violet-200/60",
+  Cancelled: "bg-cream text-mahogany/55 ring-mahogany/15",
   Published: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
   Done: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
   done: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
@@ -39,6 +40,15 @@ export function StatusBadge({ status }: { status: string }) {
       className={`inline-flex max-w-full truncate rounded-full px-2.5 py-1 text-[0.68rem] font-semibold ring-1 ring-inset ${style}`}
     >
       {status}
+    </span>
+  );
+}
+
+/** Classification tag pill for RSVP CRM. */
+export function TagBadge({ tag }: { tag: string }) {
+  return (
+    <span className="inline-flex max-w-full truncate rounded-md bg-cream/80 px-2 py-0.5 font-sans text-[0.65rem] font-semibold text-mahogany/70 ring-1 ring-mahogany/10">
+      {tag}
     </span>
   );
 }

@@ -6,7 +6,10 @@ import {
   type DashboardRsvpRecord,
   type FetchDashboardRsvpsResult,
   type RsvpStatus,
+  type RsvpTag,
   isRsvpStatus,
+  isRsvpTag,
+  normalizeTags,
 } from "@/platform/engines/dashboard/rsvp/types";
 
 type RsvpRow = {
@@ -19,9 +22,14 @@ type RsvpRow = {
   notes: string | null;
   created_at: string;
   status: string | null;
-  internal_notes: string | null;
+  committee_notes?: string | null;
+  internal_notes?: string | null;
   contacted_at: string | null;
+  tags?: string[] | null;
 };
+
+const RSVP_SELECT =
+  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags";
 
 function mapRow(row: RsvpRow): DashboardRsvpRecord {
   const status = row.status && isRsvpStatus(row.status) ? row.status : "new";
@@ -35,8 +43,9 @@ function mapRow(row: RsvpRow): DashboardRsvpRecord {
     notes: row.notes,
     createdAt: row.created_at,
     status,
-    internalNotes: row.internal_notes,
+    committeeNotes: row.committee_notes ?? row.internal_notes ?? null,
     contactedAt: row.contacted_at,
+    tags: normalizeTags(row.tags),
   };
 }
 
@@ -48,19 +57,20 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
       ok: false,
       source: "demo",
       reason: "table_missing",
-      message: "The rsvps table is missing. Run Supabase migrations before using live RSVP data.",
+      message: "Table missing",
     };
   }
 
   const columnsMissing =
-    /column.*does not exist|internal_notes|contacted_at|rsvps\.status/i.test(message);
+    /column.*does not exist|committee_notes|internal_notes|contacted_at|tags|rsvps\.status/i.test(
+      message,
+    );
   if (columnsMissing) {
     return {
       ok: false,
       source: "demo",
       reason: "columns_missing",
-      message:
-        "RSVP management columns are missing. Run supabase/migrations/20260702100000_rsvp_management_columns.sql.",
+      message: "CRM columns missing",
     };
   }
 
@@ -69,7 +79,7 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
     ok: false,
     source: "demo",
     reason: "query_failed",
-    message: "Could not load RSVP data. Showing demo records until the issue is resolved.",
+    message: "Query failed",
   };
 }
 
@@ -84,7 +94,7 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
       ok: false,
       source: "demo",
       reason: "missing_env",
-      message: "Supabase is not configured. Add env vars to load live RSVP submissions.",
+      message: "Env missing",
     };
   }
 
@@ -92,9 +102,7 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
     const supabase = createServiceRoleClient();
     const { data, error } = await supabase
       .from("rsvps")
-      .select(
-        "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, internal_notes, contacted_at",
-      )
+      .select(RSVP_SELECT)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -113,21 +121,21 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
 }
 
 function contactedAtForStatus(status: RsvpStatus, existing: string | null): string | null {
-  if (status === "new") return null;
+  if (status === "new" || status === "cancelled") return null;
   if (status === "contacted") return new Date().toISOString();
   return existing;
 }
 
-/** Update RSVP workflow status — server-only. */
+/** Update RSVP follow-up status — server-only. */
 export async function updateDashboardRsvpStatus(
   id: string,
   status: RsvpStatus,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!id) return { ok: false, error: "Missing RSVP id." };
+  if (!id) return { ok: false, error: "Record not found." };
 
   const env = getSupabaseEnvPresence();
   if (!env.allPresent) {
-    return { ok: false, error: "Supabase is not configured." };
+    return { ok: false, error: "Database not connected." };
   }
 
   try {
@@ -139,12 +147,8 @@ export async function updateDashboardRsvpStatus(
       .eq("id", id)
       .maybeSingle();
 
-    if (fetchError) {
-      console.error("[dashboard-rsvp] Status fetch error:", fetchError.message);
-      return { ok: false, error: "Could not find this RSVP." };
-    }
-    if (!existing) {
-      return { ok: false, error: "RSVP not found." };
+    if (fetchError || !existing) {
+      return { ok: false, error: "Record not found." };
     }
 
     const contacted_at = contactedAtForStatus(
@@ -159,50 +163,99 @@ export async function updateDashboardRsvpStatus(
 
     if (error) {
       console.error("[dashboard-rsvp] Status update error:", error.message);
-      return { ok: false, error: "Could not update status. Check migrations are applied." };
+      return { ok: false, error: "Could not update status." };
     }
 
     return { ok: true };
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error("[dashboard-rsvp] Status update failed:", message);
-    return { ok: false, error: "Unexpected error updating status." };
+    console.error("[dashboard-rsvp] Status update failed:", e);
+    return { ok: false, error: "Could not update status." };
   }
 }
 
-/** Update internal committee notes — server-only. */
-export async function updateDashboardRsvpInternalNote(
+/** Update committee notes — server-only. */
+export async function updateDashboardRsvpCommitteeNote(
   id: string,
-  internalNotes: string,
+  committeeNotes: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!id) return { ok: false, error: "Missing RSVP id." };
+  if (!id) return { ok: false, error: "Record not found." };
 
-  const trimmed = internalNotes.trim();
+  const trimmed = committeeNotes.trim();
   if (trimmed.length > 4000) {
-    return { ok: false, error: "Internal note is too long (maximum 4000 characters)." };
+    return { ok: false, error: "Committee note is too long (maximum 4,000 characters)." };
   }
 
   const env = getSupabaseEnvPresence();
   if (!env.allPresent) {
-    return { ok: false, error: "Supabase is not configured." };
+    return { ok: false, error: "Database not connected." };
   }
 
   try {
     const supabase = createServiceRoleClient();
-    const { error } = await supabase
-      .from("rsvps")
-      .update({ internal_notes: trimmed.length > 0 ? trimmed : null })
-      .eq("id", id);
+    const payload = { committee_notes: trimmed.length > 0 ? trimmed : null };
+
+    let { error } = await supabase.from("rsvps").update(payload).eq("id", id);
+
+    if (error && /committee_notes/i.test(error.message)) {
+      ({ error } = await supabase
+        .from("rsvps")
+        .update({ internal_notes: payload.committee_notes })
+        .eq("id", id));
+    }
 
     if (error) {
       console.error("[dashboard-rsvp] Note update error:", error.message);
-      return { ok: false, error: "Could not save internal note." };
+      return { ok: false, error: "Could not save committee note." };
     }
 
     return { ok: true };
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error("[dashboard-rsvp] Note update failed:", message);
-    return { ok: false, error: "Unexpected error saving note." };
+    console.error("[dashboard-rsvp] Note update failed:", e);
+    return { ok: false, error: "Could not save committee note." };
+  }
+}
+
+/** Toggle a classification tag — server-only. */
+export async function toggleDashboardRsvpTag(
+  id: string,
+  tag: RsvpTag,
+): Promise<{ ok: true; tags: RsvpTag[] } | { ok: false; error: string }> {
+  if (!id || !isRsvpTag(tag)) {
+    return { ok: false, error: "Invalid tag." };
+  }
+
+  const env = getSupabaseEnvPresence();
+  if (!env.allPresent) {
+    return { ok: false, error: "Database not connected." };
+  }
+
+  try {
+    const supabase = createServiceRoleClient();
+    const { data: existing, error: fetchError } = await supabase
+      .from("rsvps")
+      .select("tags")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError || !existing) {
+      return { ok: false, error: "Record not found." };
+    }
+
+    const current = normalizeTags((existing as { tags: string[] | null }).tags);
+    const next = current.includes(tag)
+      ? current.filter((t) => t !== tag)
+      : [...current, tag];
+
+    const { error } = await supabase.from("rsvps").update({ tags: next }).eq("id", id);
+
+    if (error) {
+      console.error("[dashboard-rsvp] Tag update error:", error.message);
+      return { ok: false, error: "Could not update tags." };
+    }
+
+    return { ok: true, tags: next };
+  } catch (e) {
+    console.error("[dashboard-rsvp] Tag update failed:", e);
+    return { ok: false, error: "Could not update tags." };
   }
 }

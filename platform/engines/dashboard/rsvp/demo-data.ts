@@ -1,26 +1,93 @@
 import type { DashboardRsvpRecord } from "@/platform/engines/dashboard/rsvp/types";
-import { PLACEHOLDER_RSVPS } from "@/platform/engines/dashboard/placeholder-data";
 
-const STATUS_MAP: Record<string, DashboardRsvpRecord["status"]> = {
-  New: "new",
-  Pending: "new",
-  Contacted: "contacted",
-  Confirmed: "confirmed",
-};
-
-/** Demo fallback records when Supabase is unavailable. */
+/** Polished demo records for committee and client presentations. */
 export function demoDashboardRsvps(): DashboardRsvpRecord[] {
-  return PLACEHOLDER_RSVPS.map((row, index) => ({
-    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-    fullName: row.name,
-    email: row.email,
-    phone: null,
-    numberOfAttendees: Number.parseInt(row.guests, 10) || 1,
-    ticketType: row.ticket,
-    notes: null,
-    createdAt: new Date(Date.UTC(2026, 6, 12 - index)).toISOString(),
-    status: STATUS_MAP[row.status] ?? "new",
-    internalNotes: null,
-    contactedAt: row.status === "Confirmed" ? new Date(Date.UTC(2026, 6, 10)).toISOString() : null,
-  }));
+  const base = new Date(Date.UTC(2026, 6, 12, 10, 30));
+
+  return [
+    {
+      id: "00000000-0000-4000-8000-000000000001",
+      fullName: "Adewale Ogundimu",
+      email: "adewale.o@example.com",
+      phone: "+61 412 345 678",
+      numberOfAttendees: 2,
+      ticketType: "General admission",
+      notes: "Looking forward to bringing my partner.",
+      createdAt: new Date(base.getTime() - 86400000).toISOString(),
+      status: "contacted",
+      committeeNotes: "Called 11 Jul — confirmed interest, prefers evening seating.",
+      contactedAt: new Date(Date.UTC(2026, 6, 11, 14, 0)).toISOString(),
+      tags: ["VIP", "General Attendee"],
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000002",
+      fullName: "Folake Adeyemi",
+      email: "folake.adeyemi@example.com",
+      phone: "+61 423 111 222",
+      numberOfAttendees: 4,
+      ticketType: "Family bundle",
+      notes: "Two children under 10.",
+      createdAt: new Date(base.getTime() - 172800000).toISOString(),
+      status: "confirmed",
+      committeeNotes: "Family table requested near stage.",
+      contactedAt: new Date(Date.UTC(2026, 6, 10, 9, 30)).toISOString(),
+      tags: ["General Attendee"],
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000003",
+      fullName: "Chidi Okonkwo",
+      email: "chidi.ok@example.com",
+      phone: null,
+      numberOfAttendees: 1,
+      ticketType: "VIP experience",
+      notes: null,
+      createdAt: new Date(base.getTime() - 259200000).toISOString(),
+      status: "new",
+      committeeNotes: null,
+      contactedAt: null,
+      tags: ["Sponsor Lead", "VIP"],
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000004",
+      fullName: "Sarah Mitchell",
+      email: "s.mitchell@example.com",
+      phone: "+61 400 999 888",
+      numberOfAttendees: 2,
+      ticketType: "General admission",
+      notes: "First time attending Yoruba Day.",
+      createdAt: new Date(base.getTime() - 345600000).toISOString(),
+      status: "confirmed",
+      committeeNotes: null,
+      contactedAt: new Date(Date.UTC(2026, 6, 8, 16, 0)).toISOString(),
+      tags: ["General Attendee", "Media"],
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000005",
+      fullName: "Tunde Bakare",
+      email: "t.bakare@example.com",
+      phone: "+61 411 222 333",
+      numberOfAttendees: 1,
+      ticketType: "Corporate table",
+      notes: "Enquiring on behalf of employer.",
+      createdAt: new Date(base.getTime() - 432000000).toISOString(),
+      status: "contacted",
+      committeeNotes: "Follow up with sponsorship deck.",
+      contactedAt: new Date(Date.UTC(2026, 6, 7, 11, 0)).toISOString(),
+      tags: ["Sponsor Lead"],
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000006",
+      fullName: "Amaka Nwosu",
+      email: "amaka.n@example.com",
+      phone: "+61 422 333 444",
+      numberOfAttendees: 1,
+      ticketType: "General admission",
+      notes: null,
+      createdAt: new Date(base.getTime() - 518400000).toISOString(),
+      status: "cancelled",
+      committeeNotes: "Unable to attend — asked to remain on mailing list.",
+      contactedAt: new Date(Date.UTC(2026, 6, 6, 10, 0)).toISOString(),
+      tags: ["General Attendee"],
+    },
+  ];
 }

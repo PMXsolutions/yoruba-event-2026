@@ -68,9 +68,13 @@ Mention the **Demo mode** banner — auth required before public launch.
 
 ### 6. RSVP management (`/dashboard/rsvps`)
 
-- Show professional table with search/filter/export placeholders.
-- Explain: live rows appear after Supabase migration + protected queries.
-- If migration is done, cross-check Supabase **Table Editor → rsvps** for the demo submission.
+- Show **Demo Mode** or **Live RSVP Data** banner (professional — not an error state).
+- Walk through KPI cards: Total Registrations, New Today, Contacted, Confirmed, Expected Guests, Pending Follow Up.
+- Demonstrate search, status/ticket/tag filters, and **Export CSV**.
+- Open **View Details** on a row — show contact info, tags, committee notes, activity timeline placeholder.
+- Explain workflow: **Register Interest is not approval** — committee follows up, tags for segmentation, status for relationship stage.
+- Mention future journey: Ticket Invited → Paid → Checked In (Phase 4 ticketing).
+- If live: submit a test registration on the public site and refresh to show the new row.
 
 ### 7. Sponsor CRM (`/dashboard/sponsors`)
 

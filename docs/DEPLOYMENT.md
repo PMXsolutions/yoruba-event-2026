@@ -26,10 +26,11 @@ Complete these steps **before** testing RSVP on production.
 
 Run **both** migration files in order in the **SQL Editor**:
 
+The second migration adds committee workflow columns. The third adds `committee_notes`, `tags`, and `cancelled` status.
+
 1. `supabase/migrations/20260112000000_create_rsvps.sql`
 2. `supabase/migrations/20260702100000_rsvp_management_columns.sql`
-
-The second migration adds committee workflow columns: `status`, `internal_notes`, `contacted_at`.
+3. `supabase/migrations/20260703100000_rsvp_crm_enhancements.sql`
 
 ### 3. Verify table
 

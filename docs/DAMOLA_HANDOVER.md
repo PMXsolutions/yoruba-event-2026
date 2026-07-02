@@ -13,7 +13,7 @@
 |------|--------|
 | Public landing page | ✅ Presentation-ready |
 | Register Interest form | ✅ Wired to Supabase (needs migration) |
-| Committee Portal (`/dashboard/*`) | ✅ Enterprise UI — **demo mode**, placeholder data |
+| Committee Portal (`/dashboard/*`) | ✅ Enterprise UI — RSVP CRM live; other modules demo |
 | Email (Resend) | ⚠️ Optional — activates with env vars |
 | Authentication | ❌ Not implemented — Phase 2 |
 | GitHub push | ⚠️ May need manual push via GitHub Desktop |
@@ -25,7 +25,7 @@
 - Premium public site (Hero, About, Experience, Sponsors, RSVP)
 - Server action RSVP insert via Supabase service role
 - Health endpoint at `/api/health`
-- Enterprise Committee Portal (9 dashboard routes)
+- Live RSVP CRM at `/dashboard/rsvps` (KPIs, filters, export, committee workflow)
 - Demo script: [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
 - Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md)
 - Platform architecture docs in `docs/`
@@ -36,12 +36,12 @@
 
 | Item | Owner | Priority |
 |------|-------|----------|
-| Supabase migration (`rsvps` table) | Damola | **P0 — before RSVP works** |
+| Supabase migrations (3 SQL files) | Damola | **P0** |
 | Vercel env vars | Damola | **P0** |
 | Push latest commits to GitHub | Joshua | P0 |
 | Resend API key (confirmation emails) | Damola | P1 — optional |
 | Supabase Auth + dashboard protection | Phase 2 | P2 — after demo |
-| Live dashboard data (replace placeholders) | Phase 2 | P2 |
+| Live dashboard data (replace placeholders) | Phase 2 | P2 — Sponsors next |
 
 ---
 
@@ -59,9 +59,11 @@ If commits are only local, Joshua pushes first via GitHub Desktop.
 
 1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project.
 2. Go to **SQL Editor** → **New query**.
-3. Paste contents of `supabase/migrations/20260112000000_create_rsvps.sql`.
-4. Click **Run**.
-5. Confirm table exists: **Table Editor → rsvps**.
+3. Paste and run **all three** migration files in order:
+   - `supabase/migrations/20260112000000_create_rsvps.sql`
+   - `supabase/migrations/20260702100000_rsvp_management_columns.sql`
+   - `supabase/migrations/20260703100000_rsvp_crm_enhancements.sql`
+4. Confirm table exists: **Table Editor → rsvps** (with `status`, `committee_notes`, `tags` columns).
 
 ### 3. Vercel — deploy
 
