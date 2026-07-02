@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { CountdownTimer } from "@/components/features/CountdownTimer";
 import { ButtonLink } from "@/components/ui/Button";
-import { SITE } from "@/lib/site";
+import { SITE, LAUNCH_COPY } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 
 const container = {
@@ -122,6 +122,12 @@ export function Hero() {
           >
             {SITE.tagline}
           </motion.p>
+          <motion.p
+            variants={item}
+            className="mt-5 max-w-2xl rounded-2xl border border-gold/15 bg-mahogany/30 px-5 py-4 font-sans text-sm leading-relaxed text-cream/72 backdrop-blur-sm sm:text-[0.95rem]"
+          >
+            {LAUNCH_COPY.comingSoonNote}
+          </motion.p>
         </motion.div>
 
         <motion.div
@@ -146,9 +152,9 @@ export function Hero() {
           className="mt-12 flex flex-col gap-5 sm:mt-14"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
-            <ButtonLink href="#rsvp">RSVP Now</ButtonLink>
+            <ButtonLink href="#rsvp">{LAUNCH_COPY.registerInterest}</ButtonLink>
             <ButtonLink href="#sponsors" variant="outline">
-              Become a Sponsor
+              {LAUNCH_COPY.becomeSponsor}
             </ButtonLink>
           </div>
           <p className="max-w-xl font-sans text-[0.7rem] font-medium uppercase tracking-[0.26em] text-gold-muted/90 sm:text-[0.72rem] sm:tracking-[0.3em]">

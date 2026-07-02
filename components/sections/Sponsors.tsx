@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { SPONSOR_TIERS } from "@/lib/site";
+import { SPONSOR_TIERS, LAUNCH_COPY } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 
 const tierAccent = {
@@ -37,6 +37,10 @@ export function Sponsors() {
           title="Sponsor the most anticipated cultural evening of the year"
           subtitle="Stand alongside a community-led celebration of Yoruba excellence in Canberra—visible, meaningful, and crafted with warmth for guests and partners alike."
         />
+        <p className="mx-auto mb-10 max-w-2xl rounded-2xl border border-gold/25 bg-cream/80 px-6 py-4 text-center font-sans text-sm leading-relaxed text-mahogany/75 shadow-[var(--shadow-card-light)] sm:mb-12 sm:text-[0.95rem]">
+          {LAUNCH_COPY.sponsorshipAnnouncedSoon} Enquire below to express early interest—our team
+          will share the sponsorship deck when packages are finalised.
+        </p>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-7">
           {SPONSOR_TIERS.map((s, index) => (
             <motion.article
@@ -81,7 +85,7 @@ export function Sponsors() {
                   and on-site moments that guests and families will remember.
                 </p>
                 <p className="mt-5 font-sans text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-gold-deep">
-                  Enquire for deck
+                  Packages announced soon
                 </p>
               </div>
             </motion.article>

@@ -12,6 +12,15 @@ export const SITE = {
   presenter: "Yoruba Association Canberra",
 } as const;
 
+/** Early public-launch copy — ticketing and sponsorship not yet finalised */
+export const LAUNCH_COPY = {
+  comingSoonNote:
+    "Ticketing, sponsorship packages, and the full programme will be announced soon.",
+  registerInterest: "Register Interest",
+  becomeSponsor: "Become a Sponsor",
+  sponsorshipAnnouncedSoon: "Sponsorship packages will be announced soon.",
+} as const;
+
 export type NavItem = { label: string; href: string };
 
 export const NAV_ITEMS: readonly NavItem[] = [
@@ -19,38 +28,50 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "About", href: "#about" },
   { label: "Experience", href: "#experience" },
   { label: "Sponsors", href: "#sponsors" },
-  { label: "RSVP", href: "#rsvp" },
+  { label: "Register", href: "#rsvp" },
   { label: "Contact", href: "#contact" },
 ] as const;
 
 export const EXPERIENCE_ITEMS = [
   {
     title: "Talking drum & Yoruba-led music",
+    accent: "♪",
+    accentLabel: "Talking drum",
     description:
       "From the pulse of the gangan and dùndún to Fuji, apala-inspired sets, and contemporary Afrobeats—sound as language, calling the community to dance and remembrance.",
   },
   {
     title: "Eyo showcase",
+    accent: "◎",
+    accentLabel: "Eyo procession",
     description:
       "A reverent nod to Lagos’s Adamu Orisha play—colour, procession, and pageantry presented respectfully for Canberra audiences, old and new.",
   },
   {
     title: "Yoruba cuisine & shared tables",
+    accent: "◇",
+    accentLabel: "Yoruba cuisine",
     description:
       "Àmàlà, ofada-style rice, rich stews, and small plates that carry home flavours—served so families and friends can break bread together.",
   },
   {
     title: "Aso Oke, gele & Yoruba fashion",
+    accent: "✦",
+    accentLabel: "Aso Oke and gele",
     description:
       "Handwoven Aso Oke, gele artistry, and tailored silhouettes that celebrate craftsmanship—walking the line between tradition and today’s diaspora style.",
   },
   {
     title: "Performances & intergenerational storytelling",
+    accent: "◆",
+    accentLabel: "Elders and youth",
     description:
       "Poetry, dance, and stage moments that lift oral tradition, honour elders, and make space for youth voices on the same programme.",
   },
   {
     title: "Family, unity & community connection",
+    accent: "◈",
+    accentLabel: "Family and community",
     description:
       "A programme built for òmò wọ́n àti àgbà—children, parents, and grandparents—so Canberra’s Yoruba community and friends can strengthen bonds in one room.",
   },

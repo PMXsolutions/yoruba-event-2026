@@ -6,7 +6,7 @@ import { submitRsvp } from "@/app/actions/rsvp";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { TICKET_TYPES } from "@/lib/site";
+import { LAUNCH_COPY, TICKET_TYPES } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 import {
   fieldErrorsFromZod,
@@ -16,9 +16,6 @@ import {
 
 const RSVP_SUBTITLE =
   "Register your interest and our planning committee will share ticketing and event updates as details are confirmed.";
-
-const RSVP_ANNOUNCEMENT_NOTE =
-  "Ticket options and sponsorship packages will be announced soon.";
 
 type FormState = {
   fullName: string;
@@ -50,6 +47,8 @@ const selectClass = `${inputNormal} cursor-pointer appearance-none bg-[length:1.
 const errText = "mt-2 font-sans text-xs leading-snug text-red-300/95";
 const alertBox =
   "rounded-2xl border border-red-400/35 bg-red-950/35 px-5 py-4 font-sans text-sm leading-relaxed text-red-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+const successBox =
+  "rounded-2xl border border-gold/25 bg-gold/[0.08] px-5 py-4 font-sans text-sm leading-relaxed text-cream/90";
 
 function inputClass(err?: string) {
   return err ? inputError : inputNormal;
@@ -85,7 +84,7 @@ export function RSVP() {
     const local = rsvpFormSchema.safeParse(payload);
     if (!local.success) {
       setFieldErrors(fieldErrorsFromZod(local.error));
-      setSubmitError("Please correct the highlighted fields.");
+      setSubmitError("Please correct the highlighted fields below—we are almost there.");
       return;
     }
 
@@ -116,7 +115,7 @@ export function RSVP() {
   return (
     <AnimatedSection
       id="rsvp"
-      className="relative scroll-mt-24 overflow-hidden bg-gradient-to-b from-espresso via-mahogany to-espresso py-20 sm:py-28 md:py-32"
+      className="relative scroll-mt-24 overflow-x-clip bg-gradient-to-b from-espresso via-mahogany to-espresso py-20 pb-24 sm:py-28 sm:pb-32 md:py-32 md:pb-36"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_85%_15%,rgba(201,162,39,0.14),transparent_50%)]" />
       <div className="pointer-events-none absolute inset-0 bg-motif-textile opacity-35 mix-blend-soft-light" />
@@ -127,8 +126,8 @@ export function RSVP() {
           <div className="lg:pt-4">
             <SectionHeading
               align="left"
-              eyebrow="Reserve your place"
-              title="RSVP for an evening draped in gold and grace"
+              eyebrow="Register your interest"
+              title="Join us for an evening draped in gold and grace"
               subtitle={RSVP_SUBTITLE}
             />
             <ul className="mt-8 space-y-5 font-sans text-sm leading-relaxed text-cream/75 sm:mt-10 sm:text-[0.95rem]">
@@ -144,7 +143,7 @@ export function RSVP() {
               ))}
             </ul>
             <p className="mt-8 rounded-2xl border border-gold/20 bg-mahogany/40 px-5 py-4 font-sans text-xs leading-relaxed text-cream/70 shadow-inner backdrop-blur-sm sm:mt-10 sm:text-sm">
-              {RSVP_ANNOUNCEMENT_NOTE}
+              {LAUNCH_COPY.comingSoonNote}
             </p>
           </div>
 
@@ -153,38 +152,40 @@ export function RSVP() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-10%" }}
             transition={{ duration: 0.75, ease: EASE_LUX }}
-            className="relative"
+            className="relative min-w-0"
           >
             <div className="pointer-events-none absolute -inset-px rounded-[1.75rem] bg-gradient-to-br from-gold-bright/25 via-gold/10 to-transparent opacity-70 blur-sm sm:rounded-[2rem]" />
-            <div className="relative overflow-hidden rounded-[1.75rem] border border-gold/20 bg-gradient-to-b from-mahogany/80 to-espresso/95 p-6 shadow-[var(--shadow-card-dark)] backdrop-blur-xl sm:rounded-[2rem] sm:p-10 md:p-12">
-              <div className="pointer-events-none absolute inset-0 bg-motif-geo opacity-[0.1]" />
+            <div className="relative overflow-visible rounded-[1.75rem] border border-gold/20 bg-gradient-to-b from-mahogany/80 to-espresso/95 p-6 shadow-[var(--shadow-card-dark)] backdrop-blur-xl sm:rounded-[2rem] sm:p-8 md:p-10">
+              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-motif-geo opacity-[0.1]" />
               <div className="pointer-events-none absolute -right-24 top-0 h-72 w-72 rounded-full bg-gold-bright/10 blur-[100px]" />
 
               {submitted ? (
-                <div className="relative py-12 text-center sm:py-16">
-                  <p className="font-display text-3xl font-medium text-cream sm:text-4xl">
-                    Thank you — you are on the list
-                  </p>
-                  <p className="mx-auto mt-5 max-w-md font-sans text-sm leading-relaxed text-cream/78 sm:text-base">
-                    Your RSVP has been received and stored securely. Our planning committee will
-                    reach out to the email you provided with ticketing and programme news as soon
-                    as dates and venues are finalised.
-                  </p>
+                <div className="relative py-10 text-center sm:py-14">
+                  <div className={successBox}>
+                    <p className="font-display text-2xl font-medium text-cream sm:text-3xl">
+                      Thank you — you are on the list
+                    </p>
+                    <p className="mx-auto mt-4 max-w-md font-sans text-sm leading-relaxed text-cream/78 sm:text-base">
+                      Your interest has been received and stored securely. Our planning committee
+                      will reach out to the email you provided with ticketing and programme news as
+                      soon as dates and venues are finalised.
+                    </p>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
-                    className="mt-10"
+                    className="mt-8"
                     onClick={() => {
                       setSubmitted(false);
                       setForm(initial);
                       clearMessages();
                     }}
                   >
-                    Submit another
+                    Register another guest
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="relative space-y-7 sm:space-y-8">
+                <form onSubmit={handleSubmit} className="relative space-y-6 sm:space-y-7">
                   {submitError ? (
                     <div role="alert" className={alertBox}>
                       {submitError}
@@ -212,7 +213,7 @@ export function RSVP() {
                       <p className={errText}>{fieldErrors.fullName}</p>
                     ) : null}
                   </div>
-                  <div className="grid gap-7 sm:grid-cols-2 sm:gap-8">
+                  <div className="grid gap-6 sm:grid-cols-2 sm:gap-7">
                     <div className={fieldWrap}>
                       <label htmlFor="email" className={labelClass}>
                         Email
@@ -257,7 +258,7 @@ export function RSVP() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="grid gap-7 sm:grid-cols-2 sm:gap-8">
+                  <div className="grid gap-6 sm:grid-cols-2 sm:gap-7">
                     <div className={fieldWrap}>
                       <label htmlFor="attendees" className={labelClass}>
                         Number of attendees
@@ -282,7 +283,7 @@ export function RSVP() {
                     </div>
                     <div className={fieldWrap}>
                       <label htmlFor="ticketType" className={labelClass}>
-                        Ticket type
+                        Preferred ticket type
                       </label>
                       <select
                         id="ticketType"
@@ -320,7 +321,7 @@ export function RSVP() {
                       id="notes"
                       name="notes"
                       rows={4}
-                      className={`${inputClass(fieldErrors.notes)} min-h-[7rem] resize-y`}
+                      className={`${inputClass(fieldErrors.notes)} min-h-[6.5rem] resize-y sm:min-h-[7rem]`}
                       placeholder="Dietary needs, accessibility, or a short message for the committee…"
                       value={form.notes}
                       onChange={(e) => {
@@ -333,13 +334,17 @@ export function RSVP() {
                     ) : null}
                   </div>
                   <div className="rounded-2xl border border-gold/15 bg-espresso/40 px-4 py-3 font-sans text-xs leading-relaxed text-cream/60 sm:text-[0.8rem]">
-                    {RSVP_ANNOUNCEMENT_NOTE}
+                    {LAUNCH_COPY.comingSoonNote}
                   </div>
-                  <div className="border-t border-white/10 pt-4 sm:pt-6">
-                    <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
-                      {isPending ? "Sending…" : "Submit RSVP"}
+                  <div className="border-t border-white/10 pt-6 pb-2 sm:pt-7">
+                    <Button
+                      type="submit"
+                      className="w-full min-h-[3.25rem] sm:w-auto sm:min-w-[14rem]"
+                      disabled={isPending}
+                    >
+                      {isPending ? "Sending…" : LAUNCH_COPY.registerInterest}
                     </Button>
-                    <p className="mt-5 max-w-lg font-sans text-xs leading-relaxed text-cream/45 sm:text-[0.8rem]">
+                    <p className="mt-4 max-w-lg font-sans text-xs leading-relaxed text-cream/45 sm:mt-5 sm:text-[0.8rem]">
                       By submitting, you agree to be contacted about Yoruba Day Canberra 2026.
                       This form registers interest only; ticketing will open separately once
                       confirmed.

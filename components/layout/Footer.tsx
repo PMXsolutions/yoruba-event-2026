@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { SITE } from "@/lib/site";
 
 const social = [
-  { label: "Instagram", href: "#" },
-  { label: "Facebook", href: "#" },
-  { label: "X", href: "#" },
-  { label: "YouTube", href: "#" },
+  { label: "Instagram" },
+  { label: "Facebook" },
+  { label: "X" },
+  { label: "YouTube" },
 ] as const;
 
 export function Footer() {
@@ -49,15 +48,17 @@ export function Footer() {
               <p className="font-sans text-[0.65rem] font-bold uppercase tracking-[0.32em] text-gold-bright">
                 Follow
               </p>
-              <ul className="mt-5 flex flex-wrap gap-2.5 sm:justify-end">
+              <ul className="mt-5 flex flex-wrap gap-2.5 sm:justify-end" aria-label="Social channels coming soon">
                 {social.map((s) => (
                   <li key={s.label}>
-                    <Link
-                      href={s.href}
-                      className="inline-flex rounded-full border border-gold/20 bg-white/[0.03] px-5 py-2.5 font-sans text-sm text-cream/85 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-gold-bright/45 hover:bg-gold/[0.08] hover:text-cream hover:shadow-[0_12px_32px_-8px_rgba(201,162,39,0.2)]"
+                    <span
+                      role="listitem"
+                      aria-label={`${s.label} — coming soon`}
+                      className="inline-flex cursor-not-allowed rounded-full border border-gold/15 bg-white/[0.02] px-5 py-2.5 font-sans text-sm text-cream/45 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]"
+                      title={`${s.label} — coming soon`}
                     >
                       {s.label}
-                    </Link>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -71,12 +72,12 @@ export function Footer() {
           <p className="font-sans text-xs text-cream/45">
             © {new Date().getFullYear()} Yoruba Day Canberra · {SITE.presenter}
           </p>
-          <Link
+          <a
             href="#home"
             className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold-muted transition-colors hover:text-gold-bright"
           >
             Back to top
-          </Link>
+          </a>
         </div>
       </div>
     </footer>
