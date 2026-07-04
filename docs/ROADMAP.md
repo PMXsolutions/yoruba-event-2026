@@ -97,10 +97,14 @@ See [PHASE_3_SPEC.md](./PHASE_3_SPEC.md).
 
 ## Friday launch checklist
 
-- [ ] Supabase migration applied
-- [ ] Vercel env vars set (3 Supabase vars)
+- [ ] Push latest commits to GitHub (`main`)
+- [ ] All three Supabase migrations applied
+- [ ] Vercel env vars set (3 Supabase vars minimum)
 - [ ] `GET /api/health` returns `{ "status": "ok" }`
 - [ ] Register Interest form submits successfully
+- [ ] RSVP dashboard (`/dashboard/rsvps`) shows live data when connected
+- [ ] Rehearse demo — [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
 - [ ] Damola reviews site on mobile and desktop
 - [ ] Custom domain configured (if ready)
-- [ ] Committee approves placeholder vs final content
+
+Full morning checklist: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).

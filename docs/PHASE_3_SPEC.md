@@ -83,3 +83,9 @@ Notify organisers when interest is registered, measure site engagement, and impr
 - Ticketing emails (Phase 4)
 - SMS notifications
 - Marketing automation / newsletters
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+Pre-launch verification: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).

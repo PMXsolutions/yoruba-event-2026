@@ -24,7 +24,7 @@ Complete these steps **before** testing RSVP on production.
 
 ### 2. Run migrations
 
-Run **both** migration files in order in the **SQL Editor**:
+Run **all three** migration files in order in the **SQL Editor**:
 
 The second migration adds committee workflow columns. The third adds `committee_notes`, `tags`, and `cancelled` status.
 
@@ -36,7 +36,7 @@ The second migration adds committee workflow columns. The third adds `committee_
 
 1. Go to **Table Editor**.
 2. Confirm `public.rsvps` exists with columns:
-   - `id`, `full_name`, `email`, `phone`, `number_of_attendees`, `ticket_type`, `notes`, `created_at`
+   - `id`, `full_name`, `email`, `phone`, `number_of_attendees`, `ticket_type`, `notes`, `status`, `committee_notes`, `tags`, `created_at`
 
 ### 4. Copy API credentials
 
@@ -134,16 +134,16 @@ On a phone (or browser dev tools):
 - Navbar mobile menu
 - Committee Portal sidebar drawer (`/dashboard`)
 
-### 6. Confirm dashboard demo pages
+### 6. Confirm dashboard pages
 
-Visit these routes — all should load with placeholder data:
+Visit these routes — all should load:
 
-- `/dashboard` — Event Command Centre
-- `/dashboard/rsvps`
-- `/dashboard/sponsors`
-- `/dashboard/settings`
+- `/dashboard` — Event Command Centre (demo KPIs)
+- `/dashboard/rsvps` — **Live** when migrations + env vars are set; demo sample data otherwise
+- `/dashboard/sponsors` — placeholder demo data
+- `/dashboard/settings` — integration status
 
-Each page shows a **demo mode** banner. Dashboard is **not authenticated** — do not promote publicly beyond **Committee demo** links.
+Dashboard is **not authenticated** — share only via **Committee demo** links until Phase 2 auth.
 
 ### 7. Optional — custom domain
 
@@ -204,3 +204,27 @@ Vercel → **Deployments** → select previous deployment → **Promote to Produ
 
 - **Presenter script:** [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
 - **Damola handover:** [DAMOLA_HANDOVER.md](./DAMOLA_HANDOVER.md)
+- **Quality audit:** [QUALITY_AUDIT.md](./QUALITY_AUDIT.md)
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+Use this before the Friday demo or any production cutover. Full detail: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).
+
+| Step | Joshua | Damola |
+|------|--------|--------|
+| Push latest commits to GitHub | ✓ | |
+| Run all 3 Supabase migrations | | ✓ |
+| Verify `/api/health` → `ok` | | ✓ |
+| Deploy to Vercel (or confirm auto-deploy) | | ✓ |
+| Set env vars in Vercel | | ✓ |
+| Test **Register Interest** on production | ✓ | ✓ |
+| Test **RSVP dashboard** (`/dashboard/rsvps`) | ✓ | ✓ |
+| Rehearse demo ([DEMO_SCRIPT.md](./DEMO_SCRIPT.md)) | ✓ | |
+
+Local verification before push:
+
+```bash
+npm run lint && npm run build && npm run preview
+```

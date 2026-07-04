@@ -52,7 +52,7 @@ export const EXECUTIVE_STATS: readonly StatMetric[] = [
 ];
 
 export const RECENT_ACTIVITY: readonly ActivityItem[] = [
-  { id: "1", type: "rsvp", title: "New RSVP received", detail: "Awaiting live Supabase connection", time: "Demo", },
+  { id: "1", type: "rsvp", title: "RSVP CRM active", detail: "Manage live registrations at RSVPs", time: "Live" },
   { id: "2", type: "sponsor", title: "Sponsor prospect added", detail: "Heritage Partner tier — enquiry pending", time: "2h ago" },
   { id: "3", type: "volunteer", title: "Volunteer role opened", detail: "Registration desk shift published", time: "5h ago" },
   { id: "4", type: "programme", title: "Programme item updated", detail: "Talking drum showcase — 15:15 slot", time: "1d ago" },
@@ -67,13 +67,6 @@ export const UPCOMING_MILESTONES: readonly MilestoneItem[] = [
 ];
 
 export type TableRow = Record<string, string>;
-
-export const PLACEHOLDER_RSVPS: readonly TableRow[] = [
-  { name: "Adewale Ogundimu", email: "adewale.o@example.com", guests: "2", ticket: "General admission", date: "12 Jul 2026", status: "Confirmed" },
-  { name: "Folake Adeyemi", email: "folake.adeyemi@example.com", guests: "4", ticket: "Family bundle", date: "11 Jul 2026", status: "Confirmed" },
-  { name: "Chidi Okonkwo", email: "chidi.ok@example.com", guests: "1", ticket: "VIP experience", date: "10 Jul 2026", status: "Pending" },
-  { name: "Sarah Mitchell", email: "s.mitchell@example.com", guests: "2", ticket: "General admission", date: "9 Jul 2026", status: "Confirmed" },
-];
 
 export const PLACEHOLDER_SPONSORS: readonly TableRow[] = [
   { name: "Canberra Community Bank", contact: "Partnerships team", tier: "Platinum Patron", status: "Prospect", followUp: "15 Jul", value: "TBC" },

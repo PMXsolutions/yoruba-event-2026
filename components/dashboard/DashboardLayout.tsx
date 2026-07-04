@@ -206,16 +206,18 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <MenuIcon />
               </button>
 
-              {/* Search */}
+              {/* Global search — module-specific search lives on each page (e.g. RSVPs) */}
               <div className="relative hidden min-w-0 flex-1 sm:block sm:max-w-xs lg:max-w-md">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mahogany/35">
                   <SearchIcon />
                 </span>
                 <input
                   type="search"
-                  placeholder="Search portal…"
-                  className="w-full rounded-xl border border-mahogany/10 bg-cream/40 py-2.5 pl-10 pr-4 font-sans text-sm text-mahogany outline-none transition-all placeholder:text-mahogany/35 focus:border-gold/40 focus:bg-white focus:ring-2 focus:ring-gold/15"
-                  aria-label="Search dashboard"
+                  disabled
+                  placeholder="Search portal — coming soon"
+                  title="Global portal search is not yet available. Use filters on each module page."
+                  className="w-full cursor-not-allowed rounded-xl border border-mahogany/10 bg-cream/40 py-2.5 pl-10 pr-4 font-sans text-sm text-mahogany/45 outline-none placeholder:text-mahogany/30"
+                  aria-label="Search dashboard (coming soon)"
                 />
               </div>
 
@@ -230,11 +232,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="ml-auto flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
-                  className="relative rounded-xl border border-mahogany/10 p-2.5 text-mahogany/70 transition-colors hover:border-gold/25 hover:bg-cream hover:text-mahogany"
-                  aria-label="Notifications"
+                  disabled
+                  title="Notifications — coming soon"
+                  className="relative cursor-not-allowed rounded-xl border border-mahogany/10 p-2.5 text-mahogany/40 opacity-70"
+                  aria-label="Notifications (coming soon)"
                 >
                   <BellIcon />
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-gold-bright ring-2 ring-white" />
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-gold-bright/50 ring-2 ring-white" aria-hidden />
                 </button>
 
                 <div className="hidden h-8 w-px bg-mahogany/10 sm:block" aria-hidden />
@@ -300,16 +304,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
 
           {/* Page content */}
-          <main className="dashboard-content-grid flex-1 bg-cream-warm px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <main id="main-content" className="dashboard-content-grid flex-1 bg-cream-warm px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <div className="mx-auto max-w-7xl space-y-6">{children}</div>
           </main>
         </div>
       </div>
     </div>
   );
-}
-
-/** Optional slot for page-level actions rendered above main content. */
-export function DashboardPageActions({ children }: { children: ReactNode }) {
-  return <div className="-mt-2 mb-2 flex flex-wrap gap-3">{children}</div>;
 }

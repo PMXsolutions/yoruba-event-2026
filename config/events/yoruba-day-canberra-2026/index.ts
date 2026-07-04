@@ -101,6 +101,7 @@ export const SITE = {
   heroPlaceLine: yorubaDayCanberra2026.heroPlaceLine,
   location: yorubaDayCanberra2026.location,
   presenter: yorubaDayCanberra2026.presenter,
+  contactEmail: yorubaDayCanberra2026.contact.email,
 } as const;
 
 export const LAUNCH_COPY = yorubaDayCanberra2026.launchCopy;

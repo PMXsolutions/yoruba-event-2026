@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, type HTMLMotionProps } from "framer-motion";
-import { EASE_LUX } from "@/lib/motion";
+import { motion, useReducedMotion, type HTMLMotionProps } from "framer-motion";
+import { EASE_LUX, reducedMotionTransition } from "@/lib/motion";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 44 },
@@ -10,6 +10,11 @@ const fadeUp = {
     y: 0,
     transition: { duration: 0.82, ease: EASE_LUX },
   },
+};
+
+const fadeUpReduced = {
+  hidden: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0, transition: reducedMotionTransition },
 };
 
 type AnimatedSectionProps = HTMLMotionProps<"section"> & {
@@ -22,12 +27,14 @@ export function AnimatedSection({
   className,
   ...props
 }: AnimatedSectionProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <motion.section
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-12% 0px -8% 0px" }}
-      variants={fadeUp}
+      variants={prefersReducedMotion ? fadeUpReduced : fadeUp}
       className={className}
       {...props}
     >

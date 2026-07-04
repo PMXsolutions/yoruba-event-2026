@@ -106,7 +106,7 @@ export function ToolbarButton({
   onClick?: () => void;
 }) {
   const base =
-    "inline-flex items-center gap-2 rounded-lg px-4 py-2 font-sans text-xs font-semibold transition-all";
+    "inline-flex items-center gap-2 rounded-lg px-4 py-2 font-sans text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/30 focus-visible:ring-offset-2";
   if (disabled) {
     return (
       <span
@@ -138,17 +138,6 @@ export function ToolbarButton({
     >
       {children}
     </button>
-  );
-}
-
-export function ToolbarSearch({ placeholder = "Filter records…" }: { placeholder?: string }) {
-  return (
-    <input
-      type="search"
-      placeholder={placeholder}
-      className="w-full min-w-0 basis-full rounded-lg border border-mahogany/10 bg-cream/30 px-3 py-2 font-sans text-sm text-mahogany outline-none placeholder:text-mahogany/35 focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10 sm:basis-auto sm:min-w-[12rem] sm:flex-1"
-      aria-label="Filter"
-    />
   );
 }
 
@@ -259,7 +248,14 @@ export function ProgressBar({ value, label }: { value: number; label?: string })
       {label ? (
         <p className="mb-1 font-sans text-[0.65rem] font-medium text-mahogany/45">{label}</p>
       ) : null}
-      <div className="h-1.5 overflow-hidden rounded-full bg-cream">
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={label ?? `Progress ${pct}%`}
+        className="h-1.5 overflow-hidden rounded-full bg-cream"
+      >
         <div
           className="h-full rounded-full bg-gradient-to-r from-gold-deep to-gold-bright transition-all"
           style={{ width: `${pct}%` }}

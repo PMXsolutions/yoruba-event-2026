@@ -9,7 +9,7 @@ export default async function DashboardRsvpsPage() {
   const source = result.ok ? "live" : "demo";
   const records = result.ok ? result.records : demoDashboardRsvps();
 
-  if (!result.ok) {
+  if (!result.ok && process.env.NODE_ENV === "development") {
     console.info("[dashboard/rsvps] Using demo data:", result.reason);
   }
 

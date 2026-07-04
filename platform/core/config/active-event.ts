@@ -27,8 +27,3 @@ export function getActiveEventConfig(): EventConfig {
   }
   return config;
 }
-
-/** Client-safe event config (public fields only). */
-export function getPublicEventConfig(): EventConfig {
-  return getActiveEventConfig();
-}

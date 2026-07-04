@@ -34,10 +34,15 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="en-AU"
       className={`${heading.variable} ${body.variable} h-full scroll-smooth antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-espresso text-cream">{children}</body>
+      <body className="min-h-full flex flex-col bg-espresso text-cream">
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

@@ -35,6 +35,7 @@ Open [http://localhost:3000](http://localhost:3000) · Committee portal: [/dashb
 | [docs/AI.md](./docs/AI.md) | AI engine architecture (future) |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases 1–4 |
 | [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Dev workflow |
+| [docs/QUALITY_AUDIT.md](./docs/QUALITY_AUDIT.md) | Quality audit & morning checklist |
 
 ---
 
@@ -79,11 +80,27 @@ Optional for confirmation emails:
 
 1. Push latest to GitHub
 2. Import in Vercel · set env vars
-3. Run Supabase migration
+3. Run Supabase migrations (3 files)
 4. Verify `/api/health` → `ok`
 5. Test Register Interest + optional email
+6. Test RSVP dashboard at `/dashboard/rsvps`
+7. Rehearse demo — [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)
 
-See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md).
+See [docs/QUALITY_AUDIT.md](./docs/QUALITY_AUDIT.md) for the full morning checklist.
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+- [ ] Push latest commits to GitHub
+- [ ] Run Supabase migrations (3 files)
+- [ ] Verify `/api/health`
+- [ ] Deploy to Vercel · set env vars
+- [ ] Test Register Interest
+- [ ] Test RSVP dashboard
+- [ ] Rehearse demo — [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)
+
+Full Joshua and Damola sub-checklists: [docs/QUALITY_AUDIT.md § Morning Checklist](./docs/QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola)
 
 ---
 

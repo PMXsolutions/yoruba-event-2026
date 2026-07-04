@@ -92,3 +92,10 @@ See `docs/PHASE_2_SPEC.md` for auth roadmap.
 - [AI.md](./AI.md)
 - [DEPLOYMENT.md](./DEPLOYMENT.md)
 - [ROADMAP.md](./ROADMAP.md)
+- [QUALITY_AUDIT.md](./QUALITY_AUDIT.md)
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+See [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).

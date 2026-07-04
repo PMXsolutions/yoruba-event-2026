@@ -66,8 +66,10 @@ export function Navbar() {
 
         <button
           type="button"
+          id="mobile-nav-toggle"
           className="relative z-[60] flex h-11 w-11 items-center justify-center rounded-full border border-gold/25 bg-mahogany/60 text-cream shadow-inner backdrop-blur-sm transition-colors hover:border-gold-bright/40 hover:bg-mahogany/80 lg:hidden"
           aria-expanded={open}
+          aria-controls="mobile-nav-panel"
           aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((v) => !v)}
         >
@@ -92,6 +94,7 @@ export function Navbar() {
       <AnimatePresence>
         {open ? (
           <motion.div
+            id="mobile-nav-panel"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}

@@ -14,7 +14,7 @@
 3. Verify health: `curl https://<your-domain>/api/health` → expect `{"status":"ok",...}`.
 4. Open two browser tabs: **public site** and **Committee Portal** (`/dashboard`).
 
-> **Note:** Dashboard links in the nav/footer are labelled **Committee demo**. The portal uses placeholder data until auth is added (Phase 2).
+> **Note:** Dashboard links in the nav/footer are labelled **Committee demo**. RSVP Management at `/dashboard/rsvps` uses **live Supabase data** when migrations and env vars are applied; other portal modules use placeholder data until Phase 2. Auth is not yet implemented.
 
 ---
 
@@ -109,7 +109,8 @@ Mention the **Demo mode** banner — auth required before public launch.
 | Form submit fails | Check `/api/health` — run Supabase migration |
 | Health returns `RSVPS_TABLE_MISSING` | Run SQL from `supabase/migrations/20260112000000_create_rsvps.sql` |
 | Health returns `MISSING_ENV_VARS` | Add Supabase env vars in Vercel |
-| Dashboard shows only placeholder data | Expected — live dashboard queries are Phase 2 |
+| RSVP dashboard shows demo sample data | Run migrations + env vars; expect green **Live** banner when connected |
+| Non-RSVP dashboard modules show placeholder | Expected until Phase 2 |
 | Dev server hangs | Use `npm run preview` instead of `npm run dev` |
 
 ---
@@ -122,3 +123,9 @@ Mention the **Demo mode** banner — auth required before public launch.
 - Real authentication (login)
 
 See [DAMOLA_HANDOVER.md](./DAMOLA_HANDOVER.md) for deployment steps.
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+Before presenting: push commits, run migrations, verify `/api/health`, deploy, test Register Interest and `/dashboard/rsvps`, rehearse this script. Details: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).

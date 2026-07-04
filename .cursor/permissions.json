@@ -1,0 +1,23 @@
+{
+  "mcpAllowlist": ["*:*"],
+  "terminalAllowlist": [
+    "git",
+    "npm",
+    "npx",
+    "node",
+    "curl",
+    "lsof",
+    "kill",
+    "cd",
+    "npm run lint",
+    "npm run build",
+    "npm run preview",
+    "npm run dev"
+  ],
+  "autoRun": {
+    "allow_instructions": [
+      "Development commands for the Promax Event Platform repo are approved: lint, build, preview, git status, git add, git commit, curl health checks.",
+      "Read-only file inspection and MCP browser tools for QA are approved."
+    ]
+  }
+}

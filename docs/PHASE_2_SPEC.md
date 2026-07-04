@@ -137,3 +137,9 @@ Full list: run `rg 'TODO\\(' --glob '*.{tsx,ts}'` from repo root.
 - Payments
 - Public ticket sales
 - Email/SMS sending (see Phase 3)
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+Deploy and demo readiness: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).

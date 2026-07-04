@@ -66,7 +66,7 @@ Promax Event Platform — technical architecture (v1)
 
 ## Committee portal
 
-`/dashboard/*` — Dashboard Engine UI with placeholder data. Auth required before production (Phase 2).
+`/dashboard/*` — Dashboard Engine UI. **RSVP CRM** (`/dashboard/rsvps`) reads live Supabase data when migrations and env vars are configured; other modules use placeholder demo data until Phase 2. Auth required before production (Phase 2).
 
 Modules: Executive, RSVPs, Sponsors, Volunteers, Tasks, Programme, Announcements, Analytics, Settings.
 
@@ -86,3 +86,10 @@ Modules: Executive, RSVPs, Sponsors, Volunteers, Tasks, Programme, Announcements
 - [PLATFORM.md](./PLATFORM.md) — engine catalogue
 - [EMAIL.md](./EMAIL.md) — Resend
 - [PHASE_2_SPEC.md](./PHASE_2_SPEC.md) — auth + live dashboard
+- [QUALITY_AUDIT.md](./QUALITY_AUDIT.md) — quality audit & morning checklist
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+See [QUALITY_AUDIT.md § Morning Checklist](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola) for the full shared, Joshua, and Damola checklists (push, migrations, `/api/health`, Vercel deploy, Register Interest, RSVP dashboard, demo rehearsal).

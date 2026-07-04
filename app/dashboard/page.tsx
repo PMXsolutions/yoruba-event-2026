@@ -20,10 +20,11 @@ import {
 export default function DashboardPage() {
   return (
     <>
-      <IntegrationBanner title="Demo mode — committee portal" variant="warning">
+      <IntegrationBanner title="Committee portal — presentation mode" variant="info">
         {/* TODO(platform-auth): Protect /dashboard with Supabase Auth + RBAC before public launch. */}
-        Authentication is not yet enabled. Placeholder data is shown for stakeholder demos. Connect
-        Supabase migration and Resend to activate live metrics.
+        Executive metrics and most modules use sample data for stakeholder demos. Live Register
+        Interest records are managed at <strong>/dashboard/rsvps</strong> when Supabase is
+        connected. Authentication is required before public launch.
       </IntegrationBanner>
 
       <StatGrid stats={EXECUTIVE_STATS} columns={6} />
@@ -33,7 +34,7 @@ export default function DashboardPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <BarChart
               title="Registration funnel"
-              subtitle="Preview data — live metrics after Supabase migration"
+              subtitle="Preview data — live RSVP metrics on /dashboard/rsvps"
               data={[...FUNNEL_CHART]}
             />
             <TrendChart

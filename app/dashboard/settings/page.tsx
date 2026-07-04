@@ -45,9 +45,9 @@ export default function DashboardSettingsPage() {
               <dt className="shrink-0 text-mahogany/50">Contact email</dt>
               <dd
                 className="min-w-0 break-all font-medium text-mahogany sm:max-w-[65%] sm:text-right"
-                title="info@yorubadaycanberra.org"
+                title={SITE.contactEmail}
               >
-                info@yorubadaycanberra.org
+                {SITE.contactEmail}
               </dd>
             </div>
             <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
@@ -106,7 +106,8 @@ export default function DashboardSettingsPage() {
             publicly.
           </li>
           <li>
-            · Live RSVP data will appear after Supabase migration and protected server-side queries.
+            · Live RSVP data appears on <strong>/dashboard/rsvps</strong> once Supabase migrations
+            are applied and env vars are set. Until auth is added, the portal remains in demo mode.
           </li>
           <li>· See <code className="text-xs">docs/PLATFORM.md</code> for the SaaS roadmap.</li>
         </ul>

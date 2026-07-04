@@ -162,7 +162,7 @@ export function RSVP() {
               <div className="pointer-events-none absolute -right-24 top-0 h-72 w-72 rounded-full bg-gold-bright/10 blur-[100px]" />
 
               {submitted ? (
-                <div className="relative py-10 text-center sm:py-14">
+                <div className="relative py-10 text-center sm:py-14" role="status" aria-live="polite">
                   <div className={successBox}>
                     <p className="font-display text-2xl font-medium text-cream sm:text-3xl">
                       Thank you — you are on the list

@@ -29,6 +29,8 @@ import {
   formatRsvpDateShort,
   formatRsvpStatusLabel,
 } from "@/platform/engines/dashboard/rsvp/types";
+import { downloadCsvFile } from "@/lib/export/csv";
+import { ModalShell } from "@/components/dashboard/ModalShell";
 
 type StatusFilter = "all" | RsvpStatus;
 type TagFilter = "all" | RsvpTag;
@@ -37,22 +39,6 @@ type RsvpManagementPanelProps = {
   records: DashboardRsvpRecord[];
   source: RsvpDataSource;
 };
-
-function escapeCsv(value: string): string {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
-}
-
-function downloadCsv(filename: string, rows: string[][]) {
-  const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 function RsvpStatusBanner({ source }: { source: RsvpDataSource }) {
   if (source === "live") {
@@ -129,6 +115,7 @@ function ActionMenu({
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-mahogany/10 bg-white px-3 py-1.5 font-sans text-xs font-semibold text-mahogany/75 transition-colors hover:border-gold/25 hover:bg-cream/60 disabled:cursor-not-allowed disabled:opacity-45"
+        aria-label={`Actions for ${record.fullName}`}
         aria-expanded={open}
         aria-haspopup="menu"
       >
@@ -190,14 +177,13 @@ function CommitteeNoteDialog({
   const [note, setNote] = useState(record.committeeNotes ?? "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
-      <button type="button" className="absolute inset-0 bg-espresso/40 backdrop-blur-sm" aria-label="Close" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-mahogany/[0.08] bg-white p-6 shadow-xl">
-        <h3 className="font-display text-lg font-semibold text-mahogany">Committee Notes</h3>
+    <ModalShell title="Committee Notes" showTitle onClose={onClose}>
         <p className="mt-1 truncate font-sans text-sm text-mahogany/55">
           {record.fullName} · {record.email}
         </p>
         <textarea
+          id={`committee-note-${record.id}`}
+          aria-label="Committee notes"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={5}
@@ -212,17 +198,13 @@ function CommitteeNoteDialog({
             {saving ? "Saving…" : "Save"}
           </ToolbarButton>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
 function RegisterGuestDialog({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
-      <button type="button" className="absolute inset-0 bg-espresso/40 backdrop-blur-sm" aria-label="Close" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-mahogany/[0.08] bg-white p-6 shadow-xl">
-        <h3 className="font-display text-lg font-semibold text-mahogany">Register Guest</h3>
+    <ModalShell title="Register Guest" showTitle onClose={onClose} className="max-w-md">
         <p className="mt-3 font-sans text-sm leading-relaxed text-mahogany/65">
           Manual phone and walk-in registrations will be added here. Committee members will be able
           to create attendee records directly from the dashboard.
@@ -233,8 +215,7 @@ function RegisterGuestDialog({ onClose }: { onClose: () => void }) {
         <div className="mt-5 flex justify-end">
           <ToolbarButton primary onClick={onClose}>Close</ToolbarButton>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -247,19 +228,25 @@ function RsvpDetailModal({
   onClose: () => void;
   onEditNote: (r: DashboardRsvpRecord) => void;
 }) {
+  const headingId = `rsvp-detail-${record.id}`;
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <button type="button" className="absolute inset-0 bg-espresso/40 backdrop-blur-sm" aria-label="Close" onClick={onClose} />
-      <aside className="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-mahogany/[0.08] bg-white shadow-2xl sm:max-w-lg">
+    <ModalShell
+      variant="drawer"
+      title={record.fullName}
+      labelledBy={headingId}
+      onClose={onClose}
+    >
         <div className="border-b border-mahogany/[0.06] px-6 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="truncate font-display text-xl font-semibold text-mahogany">{record.fullName}</h3>
+              <h3 id={headingId} className="truncate font-display text-xl font-semibold text-mahogany">{record.fullName}</h3>
               <p className="mt-1 truncate font-sans text-sm text-mahogany/55">{record.email}</p>
             </div>
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close registration details"
               className="rounded-lg border border-mahogany/10 px-2.5 py-1.5 font-sans text-xs font-semibold text-mahogany/60 hover:bg-cream/60"
             >
               Close
@@ -326,8 +313,7 @@ function RsvpDetailModal({
             </ul>
           </div>
         </div>
-      </aside>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -372,7 +358,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
       r.contactedAt ? formatRsvpDate(r.contactedAt) : "",
       r.committeeNotes ?? "", r.notes ?? "", formatRsvpDate(r.createdAt),
     ]);
-    downloadCsv(`yoruba-day-rsvps-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows]);
+    downloadCsvFile(`yoruba-day-rsvps-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows]);
   }
 
   function runAction(fn: () => Promise<{ ok: boolean; error?: string }>) {
@@ -388,8 +374,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
     <div className="space-y-6">
       <RsvpStatusBanner source={source} />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div />
+      <div className="flex justify-end">
         <ToolbarButton primary onClick={() => setRegisterGuestOpen(true)}>
           + Register Guest
         </ToolbarButton>
@@ -413,7 +398,10 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-mahogany/[0.06] bg-white shadow-[0_1px_2px_rgba(36,21,15,0.04),0_8px_24px_-8px_rgba(36,21,15,0.08)]">
+      <section
+        className="overflow-hidden rounded-2xl border border-mahogany/[0.06] bg-white shadow-[0_1px_2px_rgba(36,21,15,0.04),0_8px_24px_-8px_rgba(36,21,15,0.08)]"
+        aria-busy={isPending}
+      >
         <div className="border-b border-mahogany/[0.05] px-5 py-4 sm:px-6">
           <SectionHeader
             title="Interest registrations"
@@ -475,7 +463,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
               </ToolbarButton>
             </PageToolbar>
           </div>
-          <p className="mt-3 font-sans text-xs text-mahogany/45">
+          <p className="mt-3 font-sans text-xs text-mahogany/45" aria-live="polite">
             Showing {filtered.length} of {records.length} registration{records.length === 1 ? "" : "s"}
             {isPending ? " · Saving…" : ""}
           </p>

@@ -97,10 +97,10 @@ If `MISSING_ENV_VARS` → check Vercel env settings and redeploy.
 3. Submit a test entry.
 4. Confirm row in Supabase **Table Editor → rsvps**.
 
-### 6. Test dashboard demo pages
+### 6. Test dashboard
 
-Visit `/dashboard` and spot-check RSVPs, Sponsors, Settings.  
-Dashboard uses **placeholder data** — this is expected.
+Visit `/dashboard` and spot-check **RSVPs** (live when migrations applied), **Sponsors**, and **Settings**.  
+Non-RSVP modules use **placeholder data** — this is expected until Phase 2.
 
 ### 7. Mobile check
 
@@ -113,7 +113,7 @@ Test on phone: landing page form + dashboard sidebar drawer.
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | `/dashboard` is public (no auth) | Anyone with URL can view demo portal | Only share via **Committee demo** links; add auth in Phase 2 |
-| Placeholder dashboard data | Numbers not live | Explain during demo — see [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) |
+| Placeholder dashboard data (non-RSVP modules) | Sponsors/tasks not live | Explain during demo — see [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) |
 | `npm run dev` may hang (Turbopack) | Local dev friction | Use `npm run preview` |
 | Service role key in Vercel | Security if leaked | Never prefix with `NEXT_PUBLIC_`; never commit to git |
 | Migration skipped | RSVP form fails | Always verify `/api/health` first |
@@ -150,6 +150,7 @@ npm run preview       # local production preview on :3000
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Full Supabase + Vercel steps |
 | [PLATFORM.md](./PLATFORM.md) | SaaS architecture overview |
 | [PHASE_2_SPEC.md](./PHASE_2_SPEC.md) | Auth + live dashboard roadmap |
+| [QUALITY_AUDIT.md](./QUALITY_AUDIT.md) | Overnight quality audit & scores |
 
 ---
 
@@ -159,3 +160,22 @@ npm run preview       # local production preview on :3000
 2. Remove or hide public Committee Portal links.
 3. Connect dashboard to protected server-side queries.
 4. Optional: Resend for confirmation emails, custom domain.
+
+---
+
+## Morning Checklist for Joshua and Damola
+
+Full shared checklist: [QUALITY_AUDIT.md § Morning Checklist](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola)
+
+### Joshua
+- [ ] Push latest commits via GitHub Desktop (if agent push failed)
+- [ ] Verify production after Damola deploys
+- [ ] Test Register Interest + RSVP dashboard
+- [ ] Rehearse [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
+
+### Damola
+- [ ] Pull latest · run all 3 Supabase migrations
+- [ ] Set Vercel env vars · deploy
+- [ ] Verify `/api/health` → `ok`
+- [ ] Test Register Interest · confirm row in Supabase Table Editor
+- [ ] Test RSVP CRM (`/dashboard/rsvps`) · mobile smoke test

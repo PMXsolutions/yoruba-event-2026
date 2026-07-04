@@ -35,10 +35,10 @@ export function Footer() {
             <div className="mt-8 flex flex-col gap-2 font-sans text-sm text-cream/85 sm:text-base">
               <span className="text-cream/50">Email</span>
               <a
-                href="mailto:info@yorubadaycanberra.org"
-                className="w-fit text-gold-light transition-colors hover:text-gold-bright"
+                href={`mailto:${SITE.contactEmail}`}
+                className="w-fit break-all text-gold-light transition-colors hover:text-gold-bright"
               >
-                info@yorubadaycanberra.org
+                {SITE.contactEmail}
               </a>
               <span className="mt-3 text-cream/50">Phone</span>
               <span className="text-cream/75">To be confirmed</span>
@@ -66,7 +66,6 @@ export function Footer() {
                 {social.map((s) => (
                   <li key={s.label}>
                     <span
-                      role="listitem"
                       aria-label={`${s.label} — coming soon`}
                       className="inline-flex cursor-not-allowed rounded-full border border-gold/15 bg-white/[0.02] px-5 py-2.5 font-sans text-sm text-cream/45 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)]"
                       title={`${s.label} — coming soon`}
