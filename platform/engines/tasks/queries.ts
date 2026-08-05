@@ -128,3 +128,14 @@ export async function updateTask(
     return { ok: false, error: "Could not update task." };
   }
 }
+
+export async function deleteTask(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const supabase = createServiceRoleClient();
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) return { ok: false, error: "Could not delete task." };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not delete task." };
+  }
+}

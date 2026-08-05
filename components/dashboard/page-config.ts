@@ -16,8 +16,19 @@ export const DASHBOARD_PAGE_META: Record<string, DashboardPageMeta> = {
   "/dashboard/rsvps": {
     title: "RSVP management",
     description:
-      "View, search, and export interest registrations from the Promax RSVP Engine.",
+      "View, search, and export interest registrations for this event.",
     breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "RSVPs" }],
+  },
+  "/dashboard/seating": {
+    title: "Seating MVP",
+    description:
+      "Upload floor plan references, define tables and zones, assign seats, and prepare QR check-in.",
+    breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "Seating" }],
+  },
+  "/dashboard/check-in": {
+    title: "Guest check-in",
+    description: "Search guests, mark arrived, undo check-in, and export a printable steward list.",
+    breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "Check-in" }],
   },
   "/dashboard/sponsors": {
     title: "Sponsor CRM",
@@ -63,7 +74,7 @@ export function getDashboardPageMeta(pathname: string): DashboardPageMeta {
   return (
     DASHBOARD_PAGE_META[pathname] ?? {
       title: "Committee portal",
-      description: "Promax Event Platform administration.",
+      description: "Committee portal administration.",
       breadcrumbs: [{ label: "Portal" }],
     }
   );

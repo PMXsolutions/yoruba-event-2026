@@ -1,10 +1,12 @@
 import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
 import { SponsorManagementPanel } from "@/components/dashboard/SponsorManagementPanel";
 import { fetchSponsors } from "@/platform/engines/sponsors/queries";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardSponsorsPage() {
+  await requireDashboardPage("sponsor.read");
   const result = await fetchSponsors();
 
   if (!result.ok) {

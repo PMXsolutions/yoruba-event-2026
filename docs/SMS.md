@@ -1,52 +1,48 @@
-# SMS — Twilio Integration (Future)
+# SMS — Twilio foundation
 
-Promax Notification Engine · SMS channel — **not implemented in v1**
+Promax Notification Engine · SMS channel
 
----
-
-## Overview
-
-SMS will complement email for:
-- RSVP confirmation (opt-in)
-- Day-of event reminders
-- Volunteer shift alerts
-- Urgent announcements
-
-Architecture stub: `platform/engines/notifications/sms/twilio-stub.ts`
+**Do not activate production SMS without Twilio credentials and consent rules.**
 
 ---
 
-## Planned environment variables
+## Status
+
+| Item | State |
+|------|-------|
+| Feature flags `SMS_ENABLED` / `NOTIFY_SMS_ENABLED` | Present (default **false**) |
+| Dispatch hook `platform/engines/notifications/sms/dispatch.ts` | Foundation — no real Twilio send |
+| Env presence helper `twilio-stub.ts` | Live |
+| Opt-in checkbox on Register Interest | Live (records `[SMS consent: yes]` in notes) |
+| Real Twilio API client | Future |
+
+---
+
+## Planned uses
+
+- Guest ticket and seat information
+- Event reminders
+- Committee alerts
+- VIP registration alerts
+- Doors opening reminders
+
+---
+
+## Environment
 
 ```bash
-TWILIO_ACCOUNT_SID=ACxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxx
-TWILIO_FROM_NUMBER=+61xxxxxxxx
-NOTIFY_SMS_ENABLED=false   # feature flag
+SMS_ENABLED=false
+NOTIFY_SMS_ENABLED=false
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM_NUMBER=
+SMS_CONSENT_ASSUMED=false   # never set true without legal/consent review
 ```
 
----
+## Activation checklist (committee + Damola)
 
-## Activation steps (when ready)
-
-1. Create Twilio account and purchase AU number
-2. Add env vars to Vercel
-3. Implement `platform/engines/notifications/sms/twilio-client.ts`
-4. Wire into `dispatchRsvpNotifications()` behind `NOTIFY_SMS_ENABLED`
-5. Add opt-in checkbox on RSVP form (consent required)
-6. Update privacy policy
-
----
-
-## Design principles
-
-- **Opt-in only** — never send SMS without explicit consent
-- **Non-blocking** — same as email; RSVP succeeds if SMS fails
-- **Rate limited** — prevent abuse
-- **Per-event config** — message templates from EventConfig
-
----
-
-## Estimated effort
-
-0.5–1 day after Twilio credentials and legal copy approved.
+1. Twilio AU number + credentials in Vercel
+2. Privacy policy / consent copy approved
+3. Prefer per-guest consent column (migration) over `SMS_CONSENT_ASSUMED`
+4. Implement `twilio-client.ts` and wire behind flags
+5. Keep sends non-blocking (never invalidate RSVP on SMS failure)

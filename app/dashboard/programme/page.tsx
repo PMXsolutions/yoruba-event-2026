@@ -1,10 +1,12 @@
 import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
 import { ProgrammeManagementPanel } from "@/components/dashboard/ProgrammeManagementPanel";
 import { fetchProgrammeItems } from "@/platform/engines/programme/queries";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardProgrammePage() {
+  await requireDashboardPage("programme.read");
   const result = await fetchProgrammeItems();
 
   if (!result.ok) {

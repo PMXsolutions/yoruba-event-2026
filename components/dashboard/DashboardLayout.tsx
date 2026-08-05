@@ -7,6 +7,7 @@ import { signOutAction } from "@/app/actions/dashboard";
 import { DASHBOARD_NAV } from "@/platform/engines/dashboard/nav";
 import { SITE } from "@/lib/site";
 import { getDashboardPageMeta } from "@/components/dashboard/page-config";
+import type { Permission } from "@/lib/auth/permissions";
 
 function ChevronIcon({ className = "" }: { className?: string }) {
   return (
@@ -78,9 +79,12 @@ export type DashboardAdminInfo = {
 export function DashboardLayout({
   children,
   admin,
+  permissions,
 }: {
   children: ReactNode;
   admin?: DashboardAdminInfo | null;
+  /** Permissions of the signed-in user; omit or leave undefined to show all nav items (e.g. logged-out state). */
+  permissions?: readonly Permission[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -89,6 +93,10 @@ export function DashboardLayout({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isSigningOut, startSignOut] = useTransition();
   const closeMobileNav = () => setMobileNavOpen(false);
+
+  const visibleNav = permissions
+    ? DASHBOARD_NAV.filter((item) => !item.permission || permissions.includes(item.permission))
+    : DASHBOARD_NAV;
 
   const displayName = admin?.fullName?.trim() || admin?.email || "Committee Member";
   const initials = displayName
@@ -154,7 +162,7 @@ export function DashboardLayout({
             aria-label="Committee portal"
             className="flex-1 space-y-1 overflow-y-auto px-2 py-4"
           >
-            {DASHBOARD_NAV.map((item) => {
+            {visibleNav.map((item) => {
               const active =
                 pathname === item.href ||
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -328,7 +336,7 @@ export function DashboardLayout({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
                 <p className="font-sans text-[0.62rem] font-bold uppercase tracking-[0.32em] text-gold-muted">
-                  Promax Event Platform · Event Command Centre
+                  {SITE.name} · Committee Portal
                 </p>
                 <h1 className="mt-1 font-display text-2xl font-semibold text-mahogany sm:text-3xl">
                   {meta.title}

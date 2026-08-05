@@ -161,3 +161,86 @@ export async function updateVolunteerAssignment(
     return { ok: false, error: "Could not save volunteer profile." };
   }
 }
+
+export type VolunteerDetailsPatch = {
+  fullName?: string;
+  email?: string;
+  phone?: string | null;
+  areaOfInterest?: string | null;
+  availability?: string | null;
+  skills?: string[];
+};
+
+export async function updateVolunteerDetails(
+  id: string,
+  patch: VolunteerDetailsPatch,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const payload: Record<string, unknown> = {};
+  if (patch.fullName !== undefined) payload.full_name = patch.fullName.trim();
+  if (patch.email !== undefined) payload.email = patch.email.trim().toLowerCase();
+  if (patch.phone !== undefined) payload.phone = patch.phone?.trim() || null;
+  if (patch.areaOfInterest !== undefined) payload.area_of_interest = patch.areaOfInterest?.trim() || null;
+  if (patch.availability !== undefined) payload.availability = patch.availability?.trim() || null;
+  if (patch.skills !== undefined) payload.skills = patch.skills;
+
+  if (Object.keys(payload).length === 0) return { ok: false, error: "Nothing to update." };
+
+  try {
+    const supabase = createServiceRoleClient();
+    const { error } = await supabase.from("volunteers").update(payload).eq("id", id);
+    if (error) return { ok: false, error: "Could not update volunteer details." };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not update volunteer details." };
+  }
+}
+
+export type CreateCommitteeVolunteerInput = {
+  fullName: string;
+  email: string;
+  phone?: string;
+  areaOfInterest?: string;
+  availability?: string;
+  skills?: string[];
+  assignedRole?: string;
+  status?: VolunteerStatus;
+  committeeNotes?: string;
+};
+
+/** Committee-initiated volunteer record (e.g. walk-up sign-up at a planning meeting). */
+export async function createCommitteeVolunteer(
+  input: CreateCommitteeVolunteerInput,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const fullName = input.fullName.trim();
+  const email = input.email.trim().toLowerCase();
+  if (!fullName || !email) return { ok: false, error: "Name and email are required." };
+
+  const event = getActiveEventConfig();
+  try {
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase
+      .from("volunteers")
+      .insert({
+        event_slug: event.slug,
+        full_name: fullName,
+        email,
+        phone: input.phone?.trim() || null,
+        skills: input.skills ?? [],
+        availability: input.availability?.trim() || null,
+        area_of_interest: input.areaOfInterest?.trim() || null,
+        assigned_role: input.assignedRole?.trim() || null,
+        status: input.status ?? "new",
+        committee_notes: input.committeeNotes?.trim() || null,
+      })
+      .select("id")
+      .single();
+    if (error || !data) {
+      console.error("[volunteers] Committee create failed:", error?.message);
+      return { ok: false, error: "Could not create volunteer record." };
+    }
+    return { ok: true, id: data.id as string };
+  } catch (e) {
+    console.error("[volunteers] Unexpected:", e);
+    return { ok: false, error: "Could not create volunteer record." };
+  }
+}

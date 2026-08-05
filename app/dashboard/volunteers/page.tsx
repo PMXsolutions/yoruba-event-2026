@@ -1,10 +1,12 @@
 import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
 import { VolunteerManagementPanel } from "@/components/dashboard/VolunteerManagementPanel";
 import { fetchVolunteers } from "@/platform/engines/volunteers/queries";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardVolunteersPage() {
+  await requireDashboardPage("volunteer.read");
   const result = await fetchVolunteers();
 
   if (!result.ok) {

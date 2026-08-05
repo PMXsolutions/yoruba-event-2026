@@ -29,7 +29,7 @@ function formatEventDate(event: EventConfig): string {
 }
 
 /**
- * Professional HTML confirmation email — Promax Event branded.
+ * Professional HTML confirmation email — event-branded with platform footer attribution.
  * Responsive table layout for Gmail / Outlook / Apple Mail.
  */
 export function buildRsvpConfirmationEmail({
@@ -40,7 +40,8 @@ export function buildRsvpConfirmationEmail({
   html: string;
   text: string;
 } {
-  const brand = event.platformBrand;
+  const brand = event.name;
+  const platformAttribution = event.platformBrand;
   const dateLabel = formatEventDate(event);
   const location = event.venue.fullAddress || event.location;
   const mapsUrl = event.venue.mapsUrl;
@@ -48,14 +49,18 @@ export function buildRsvpConfirmationEmail({
   const status = "New";
   const saveTheDateUrl = event.seo.canonicalUrl;
 
-  const subject = `Registration confirmed — ${event.name}`;
+  const subject = `Interest received — ${event.name}`;
 
   const text = [
     `${brand}`,
     "",
     `Dear ${record.full_name},`,
     "",
-    `Thank you for registering for ${event.name}.`,
+    `Thank you — we have received your interest for ${event.name}.`,
+    "",
+    "This is not yet a purchased or confirmed ticket.",
+    "Ticketing, sponsorship packages and the full programme will be announced later.",
+    "You will receive priority updates when details are released.",
     "",
     `Event date: ${dateLabel}`,
     `Location: ${location}`,
@@ -65,7 +70,7 @@ export function buildRsvpConfirmationEmail({
     `Registration reference: ${ref}`,
     `Status: ${status}`,
     `Guests: ${record.number_of_attendees}`,
-    `Ticket type: ${record.ticket_type}`,
+    `Ticket preference: ${record.ticket_type}`,
     "",
     `Save the date: ${saveTheDateUrl}`,
     mapsUrl ? `Map: ${mapsUrl}` : "",
@@ -75,7 +80,7 @@ export function buildRsvpConfirmationEmail({
     "",
     `Warm regards,`,
     event.organisation,
-    `Powered by ${brand}`,
+    platformAttribution ? `Powered by ${platformAttribution}` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -96,16 +101,21 @@ export function buildRsvpConfirmationEmail({
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #e8dfd0;border-radius:16px;overflow:hidden;">
           <tr>
             <td style="background:#1a0f0a;padding:28px 32px;text-align:center;">
-              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#c9a227;">${escapeHtml(brand)}</p>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#c9a227;">${escapeHtml(event.organisation)}</p>
               <h1 style="margin:10px 0 0;font-size:26px;line-height:1.25;color:#faf6ef;font-weight:600;">${escapeHtml(event.name)}</h1>
             </td>
           </tr>
           <tr>
             <td style="padding:32px;">
-              <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#8a6f38;">Registration confirmed</p>
+              <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#8a6f38;">Interest received</p>
               <p style="margin:0 0 16px;font-size:22px;line-height:1.3;">Dear ${escapeHtml(record.full_name)},</p>
               <p style="margin:0 0 20px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.7;color:#3a2419;">
-                Thank you for registering. We have saved your interest for <strong>${escapeHtml(event.name)}</strong>.
+                Thank you — we have received your interest for <strong>${escapeHtml(event.name)}</strong>.
+              </p>
+              <p style="margin:0 0 20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#3a2419;background:#faf6ef;border:1px solid #e8dfd0;border-radius:12px;padding:14px 16px;">
+                <strong>This is not yet a purchased or confirmed ticket.</strong>
+                Ticketing, sponsorship packages and the full programme will be announced later.
+                You will receive <strong>priority updates</strong> when details are released.
               </p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#faf6ef;border:1px solid #e8dfd0;border-radius:12px;">
                 <tr>
@@ -130,7 +140,7 @@ export function buildRsvpConfirmationEmail({
                   <td style="padding:10px 0;border-bottom:1px solid #efe6d8;font-family:Arial,Helvetica,sans-serif;font-size:13px;text-align:right;">${record.number_of_attendees}</td>
                 </tr>
                 <tr>
-                  <td style="padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a6f38;">Ticket type</td>
+                  <td style="padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#8a6f38;">Ticket preference</td>
                   <td style="padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;text-align:right;">${escapeHtml(record.ticket_type)}</td>
                 </tr>
               </table>
@@ -155,7 +165,7 @@ export function buildRsvpConfirmationEmail({
           <tr>
             <td style="background:#faf6ef;padding:18px 32px;text-align:center;border-top:1px solid #e8dfd0;">
               <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8a6f38;">
-                Powered by ${escapeHtml(brand)}
+                Powered by ${escapeHtml(platformAttribution)}
               </p>
             </td>
           </tr>

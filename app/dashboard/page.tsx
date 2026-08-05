@@ -10,10 +10,12 @@ import {
   TrendChart,
 } from "@/components/dashboard/dashboard-ui";
 import { fetchExecutiveDashboard } from "@/platform/engines/dashboard/overview";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  await requireDashboardPage();
   const data = await fetchExecutiveDashboard();
 
   return (

@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
+  fetchRsvpActivityAction,
+  resendRsvpConfirmationAction,
   toggleRsvpTagAction,
   updateRsvpCommitteeNoteAction,
   updateRsvpStatusAction,
@@ -30,6 +32,12 @@ import {
 } from "@/platform/engines/dashboard/rsvp/types";
 import { downloadCsvFile } from "@/lib/export/csv";
 import { ModalShell } from "@/components/dashboard/ModalShell";
+import { RegisterGuestDialog } from "@/components/dashboard/RegisterGuestDialog";
+import { EditRsvpDialog } from "@/components/dashboard/EditRsvpDialog";
+import { PaginationBar } from "@/components/dashboard/PaginationBar";
+import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
+import type { ActivityTimelineItem } from "@/lib/activity/queries";
+import { paginateItems } from "@/lib/pagination";
 
 type StatusFilter = "all" | RsvpStatus;
 type TagFilter = "all" | RsvpTag;
@@ -70,15 +78,19 @@ function ActionMenu({
   disabled,
   onView,
   onEditNote,
+  onEditDetails,
   onStatusChange,
   onTagToggle,
+  onResendEmail,
 }: {
   record: DashboardRsvpRecord;
   disabled: boolean;
   onView: (r: DashboardRsvpRecord) => void;
   onEditNote: (r: DashboardRsvpRecord) => void;
+  onEditDetails: (r: DashboardRsvpRecord) => void;
   onStatusChange: (id: string, status: RsvpStatus) => void;
   onTagToggle: (id: string, tag: RsvpTag) => void;
+  onResendEmail: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -101,10 +113,10 @@ function ActionMenu({
           <button type="button" className="fixed inset-0 z-10" aria-label="Close menu" onClick={close} />
           <div
             role="menu"
-            className="absolute right-0 z-20 mt-1 max-h-[24rem] w-52 overflow-y-auto rounded-xl border border-mahogany/[0.08] bg-white py-1 shadow-lg"
+            className="absolute right-0 z-20 mt-1 max-h-[24rem] w-56 overflow-y-auto rounded-xl border border-mahogany/[0.08] bg-white py-1 shadow-lg"
           >
             <MenuItem label="View Details" onClick={() => { onView(record); close(); }} />
-            <MenuItem label="Edit RSVP" disabled muted />
+            <MenuItem label="Edit details" disabled={disabled} onClick={() => { onEditDetails(record); close(); }} />
             <MenuItem
               label={record.committeeNotes ? "Edit Committee Note" : "Add Committee Note"}
               disabled={disabled}
@@ -129,7 +141,11 @@ function ActionMenu({
               />
             ))}
             <div className="my-1 border-t border-mahogany/[0.06]" />
-            <MenuItem label="Send email — coming soon" disabled muted />
+            <MenuItem
+              label="Resend confirmation email"
+              disabled={disabled}
+              onClick={() => { onResendEmail(record.id); close(); }}
+            />
             <MenuItem label="Send SMS — coming soon" disabled muted />
           </div>
         </>
@@ -177,23 +193,6 @@ function CommitteeNoteDialog({
   );
 }
 
-function RegisterGuestDialog({ onClose }: { onClose: () => void }) {
-  return (
-    <ModalShell title="Register Guest" showTitle onClose={onClose} className="max-w-md">
-      <p className="mt-3 font-sans text-sm leading-relaxed text-mahogany/65">
-        Manual phone and walk-in registrations will be added here. Committee members will be able
-        to create attendee records directly from the dashboard.
-      </p>
-      <p className="mt-2 font-sans text-xs font-semibold uppercase tracking-wide text-gold-muted">
-        Coming soon
-      </p>
-      <div className="mt-5 flex justify-end">
-        <ToolbarButton primary onClick={onClose}>Close</ToolbarButton>
-      </div>
-    </ModalShell>
-  );
-}
-
 function RsvpDetailModal({
   record,
   onClose,
@@ -204,6 +203,20 @@ function RsvpDetailModal({
   onEditNote: (r: DashboardRsvpRecord) => void;
 }) {
   const headingId = `rsvp-detail-${record.id}`;
+  const [timeline, setTimeline] = useState<ActivityTimelineItem[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRsvpActivityAction(record.id).then((res) => {
+      if (cancelled) return;
+      setTimeline(res.items ?? []);
+      setLoadingTimeline(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [record.id]);
 
   return (
     <ModalShell
@@ -242,8 +255,11 @@ function RsvpDetailModal({
             ["Phone", record.phone ?? "—"],
             ["Guests", String(record.numberOfAttendees)],
             ["Ticket preference", record.ticketType ?? "—"],
+            ["Source", record.source ?? "—"],
             ["Submitted", formatRsvpDate(record.createdAt)],
             ["Contacted", record.contactedAt ? formatRsvpDate(record.contactedAt) : "—"],
+            ["Accessibility", record.accessibilityRequirements ?? "—"],
+            ["Dietary", record.dietaryRequirements ?? "—"],
           ].map(([label, value]) => (
             <div key={label} className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-3">
               <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">{label}</dt>
@@ -267,26 +283,12 @@ function RsvpDetailModal({
           </div>
         </dl>
 
-        <div className="mt-6 rounded-xl border border-mahogany/[0.06] bg-cream/30 p-4">
-          <p className="font-sans text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">
-            Activity timeline
-          </p>
-          <ul className="mt-3 space-y-3 font-sans text-sm text-mahogany/65">
-            <li className="flex gap-2">
-              <span className="text-gold-deep">·</span>
-              Registered interest — {formatRsvpDateShort(record.createdAt)}
-            </li>
-            {record.contactedAt ? (
-              <li className="flex gap-2">
-                <span className="text-gold-deep">·</span>
-                Marked contacted — {formatRsvpDateShort(record.contactedAt)}
-              </li>
-            ) : null}
-            <li className="flex gap-2 text-mahogany/45">
-              <span>·</span>
-              Ticket invitation, payment, and check-in events will appear here in a future release.
-            </li>
-          </ul>
+        <div className="mt-6">
+          <ActivityTimeline
+            items={timeline}
+            loading={loadingTimeline}
+            emptyFallback={`Registered interest — ${formatRsvpDateShort(record.createdAt)}`}
+          />
         </div>
       </div>
     </ModalShell>
@@ -301,7 +303,10 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
   const [actionError, setActionError] = useState<string | null>(error ?? null);
   const [noteTarget, setNoteTarget] = useState<DashboardRsvpRecord | null>(null);
   const [detailTarget, setDetailTarget] = useState<DashboardRsvpRecord | null>(null);
+  const [editTarget, setEditTarget] = useState<DashboardRsvpRecord | null>(null);
   const [registerGuestOpen, setRegisterGuestOpen] = useState(false);
+  const [actionInfo, setActionInfo] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [isPending, startTransition] = useTransition();
 
   const kpis = useMemo(() => computeRsvpKpis(records), [records]);
@@ -323,6 +328,8 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
     });
   }, [records, search, statusFilter, ticketFilter, tagFilter]);
 
+  const pageSlice = useMemo(() => paginateItems(filtered, page), [filtered, page]);
+
   function handleExport() {
     const header = [
       "Reference",
@@ -333,6 +340,9 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
       "Ticket",
       "Status",
       "Tags",
+      "Source",
+      "Accessibility",
+      "Dietary",
       "Contacted at",
       "Committee Notes",
       "Registrant message",
@@ -347,6 +357,9 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
       r.ticketType ?? "",
       formatRsvpStatusLabel(r.status),
       r.tags.join("; "),
+      r.source ?? "",
+      r.accessibilityRequirements ?? "",
+      r.dietaryRequirements ?? "",
       r.contactedAt ? formatRsvpDate(r.contactedAt) : "",
       r.committeeNotes ?? "",
       r.notes ?? "",
@@ -386,6 +399,11 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
       {actionError ? (
         <div role="alert" className="rounded-xl border border-red-200/70 bg-red-50 px-4 py-3 font-sans text-sm text-red-900">
           {actionError}
+        </div>
+      ) : null}
+      {actionInfo ? (
+        <div role="status" className="rounded-xl border border-emerald-200/70 bg-emerald-50 px-4 py-3 font-sans text-sm text-emerald-900">
+          {actionInfo}
         </div>
       ) : null}
 
@@ -473,7 +491,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-mahogany/[0.04]">
-                  {filtered.map((r) => (
+                  {pageSlice.items.map((r) => (
                     <tr key={r.id} className="transition-colors hover:bg-cream/30">
                       <td className="max-w-[8rem] px-5 py-4 font-mono text-xs text-mahogany/65 sm:px-6">
                         <span className="block truncate" title={r.registrationReference ?? undefined}>
@@ -508,8 +526,22 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                           disabled={isPending}
                           onView={setDetailTarget}
                           onEditNote={setNoteTarget}
+                          onEditDetails={setEditTarget}
                           onStatusChange={(id, status) => runAction(() => updateRsvpStatusAction(id, status))}
                           onTagToggle={(id, tag) => runAction(() => toggleRsvpTagAction(id, tag))}
+                          onResendEmail={(id) =>
+                            runAction(async () => {
+                              const res = await resendRsvpConfirmationAction(id);
+                              if (res.ok) {
+                                setActionInfo(
+                                  res.emailSent
+                                    ? "Confirmation email resent."
+                                    : "Email not sent — check email configuration.",
+                                );
+                              }
+                              return res;
+                            })
+                          }
                         />
                       </td>
                     </tr>
@@ -519,7 +551,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
             </div>
 
             <div className="space-y-3 p-4 xl:hidden">
-              {filtered.map((r) => (
+              {pageSlice.items.map((r) => (
                 <article key={r.id} className="rounded-xl border border-mahogany/[0.06] bg-cream/20 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <button type="button" onClick={() => setDetailTarget(r)} className="min-w-0 text-left">
@@ -548,13 +580,28 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                       disabled={isPending}
                       onView={setDetailTarget}
                       onEditNote={setNoteTarget}
+                      onEditDetails={setEditTarget}
                       onStatusChange={(id, status) => runAction(() => updateRsvpStatusAction(id, status))}
                       onTagToggle={(id, tag) => runAction(() => toggleRsvpTagAction(id, tag))}
+                      onResendEmail={(id) =>
+                        runAction(async () => {
+                          const res = await resendRsvpConfirmationAction(id);
+                          if (res.ok) {
+                            setActionInfo(
+                              res.emailSent
+                                ? "Confirmation email resent."
+                                : "Email not sent — check email configuration.",
+                            );
+                          }
+                          return res;
+                        })
+                      }
                     />
                   </div>
                 </article>
               ))}
             </div>
+            <PaginationBar slice={pageSlice} onPageChange={setPage} label="registrations" />
           </>
         )}
       </section>
@@ -577,13 +624,27 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
 
       {detailTarget ? (
         <RsvpDetailModal
+          key={detailTarget.id}
           record={detailTarget}
           onClose={() => setDetailTarget(null)}
           onEditNote={setNoteTarget}
         />
       ) : null}
 
-      {registerGuestOpen ? <RegisterGuestDialog onClose={() => setRegisterGuestOpen(false)} /> : null}
+      {editTarget ? (
+        <EditRsvpDialog
+          record={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => setActionInfo("Guest details updated.")}
+        />
+      ) : null}
+
+      {registerGuestOpen ? (
+        <RegisterGuestDialog
+          onClose={() => setRegisterGuestOpen(false)}
+          onSuccess={(msg) => setActionInfo(msg)}
+        />
+      ) : null}
     </div>
   );
 }

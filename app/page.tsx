@@ -6,8 +6,11 @@ import { Experience } from "@/components/sections/Experience";
 import { Sponsors } from "@/components/sections/Sponsors";
 import { Volunteer } from "@/components/sections/Volunteer";
 import { RSVP } from "@/components/sections/RSVP";
+import { getFeatureFlags } from "@/lib/feature-flags";
 
 export default function Home() {
+  const flags = getFeatureFlags();
+
   return (
     <>
       <Navbar />
@@ -15,9 +18,9 @@ export default function Home() {
         <Hero />
         <About />
         <Experience />
-        <Sponsors />
-        <Volunteer />
-        <RSVP />
+        <Sponsors enquiryOpen={flags.SPONSOR_ENQUIRY_OPEN} />
+        <Volunteer interestOpen={flags.VOLUNTEER_INTEREST_OPEN} />
+        <RSVP registrationOpen={flags.PUBLIC_REGISTRATION_OPEN} />
       </main>
       <Footer />
     </>

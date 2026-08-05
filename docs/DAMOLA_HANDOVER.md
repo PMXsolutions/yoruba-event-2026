@@ -1,181 +1,66 @@
-# Damola Handover — Friday Demo Deployment
+# Damola Handover — Phase A + Seating MVP
 
-**Project:** Promax Event Platform v1  
+**Project:** Promax Event Platform  
 **Event:** Yoruba Day Canberra 2026  
 **Repo:** https://github.com/PMXsolutions/yoruba-event-2026  
-**Branch:** `main`
 
 ---
 
-## Current status (as of handover)
+## What is live in code
 
 | Area | Status |
 |------|--------|
-| Public landing page | ✅ Presentation-ready |
-| Register Interest form | ✅ Wired to Supabase (needs migration) |
-| Committee Portal (`/dashboard/*`) | ✅ Enterprise UI — RSVP CRM live; other modules demo |
-| Email (Resend) | ⚠️ Optional — activates with env vars |
-| Authentication | ❌ Not implemented — Phase 2 |
-| GitHub push | ⚠️ May need manual push via GitHub Desktop |
+| Public Register Interest | Live — keep open; not a ticket |
+| Confirmation email | Live when SMTP/Resend configured |
+| Committee Register Guest | Live in RSVP CRM |
+| RSVP CRM + activity timeline | Live |
+| Sponsor / volunteer interest | Live (interest only) |
+| Seating / QR / check-in / `/seat` | Live in app — **needs migration** |
+| Dashboard auth | Live — `/dashboard` protected |
+| SMS | Foundation only — do not enable |
 
 ---
 
-## What is complete
+## Damola — exact next steps
 
-- Premium public site (Hero, About, Experience, Sponsors, RSVP)
-- Server action RSVP insert via Supabase service role
-- Health endpoint at `/api/health`
-- Live RSVP CRM at `/dashboard/rsvps` (KPIs, filters, export, committee workflow)
-- Demo script: [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
-- Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- Platform architecture docs in `docs/`
+1. **Pull / deploy** the Phase A branch / PR after merge to `main`.
+2. **Supabase SQL Editor** — run seating migration (or full `run-all-migrations.sql`):
+   - `supabase/migrations/20260805120000_seating_and_rsvp_extensions.sql`
+3. Confirm new tables: `venue_floor_plans`, `seating_tables`, `seating_assignments`.
+4. Confirm `rsvps` has `accessibility_requirements`, `dietary_requirements`, `source`.
+5. Verify Vercel env (never commit secrets):
+   - Supabase URL / anon / service role
+   - SMTP or Resend
+   - Leave `PUBLIC_REGISTRATION_OPEN` unset or `true`
+   - Keep `SMS_ENABLED=false`
+6. Smoke test:
+   - Public Register Interest → appears in RSVPs
+   - Register Guest → appears in RSVPs
+   - Seating assign → `/seat?t=…` works
+   - Check-in Mark Arrived
+   - Unauthenticated `/dashboard` → `/login`
+7. `/api/health` should remain healthy.
 
----
+## Joshua — exact next steps
 
-## What is pending (do not block Friday demo)
-
-| Item | Owner | Priority |
-|------|-------|----------|
-| Supabase migrations (3 SQL files) | Damola | **P0** |
-| Vercel env vars | Damola | **P0** |
-| Push latest commits to GitHub | Joshua | P0 |
-| Resend API key (confirmation emails) | Damola | P1 — optional |
-| Supabase Auth + dashboard protection | Phase 2 | P2 — after demo |
-| Live dashboard data (replace placeholders) | Phase 2 | P2 — Sponsors next |
-
----
-
-## Exact next actions (recommended order)
-
-### 1. Pull latest code
-
-```bash
-git pull origin main
-```
-
-If commits are only local, Joshua pushes first via GitHub Desktop.
-
-### 2. Supabase — run migration
-
-1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project.
-2. Go to **SQL Editor** → **New query**.
-3. Paste and run **all three** migration files in order:
-   - `supabase/migrations/20260112000000_create_rsvps.sql`
-   - `supabase/migrations/20260702100000_rsvp_management_columns.sql`
-   - `supabase/migrations/20260703100000_rsvp_crm_enhancements.sql`
-4. Confirm table exists: **Table Editor → rsvps** (with `status`, `committee_notes`, `tags` columns).
-
-### 3. Vercel — deploy
-
-Follow [DEPLOYMENT.md § Vercel checklist](./DEPLOYMENT.md#vercel-checklist-for-damola).
-
-Minimum env vars:
-
-| Variable | Required |
-|----------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes |
-| `RESEND_API_KEY` | Optional |
-| `RESEND_FROM_EMAIL` | Optional |
-
-### 4. Verify production
-
-```bash
-curl https://<your-vercel-domain>/api/health
-```
-
-Expected: `{"status":"ok","supabase":true,"env":true}`
-
-If `RSVPS_TABLE_MISSING` → migration not applied.  
-If `MISSING_ENV_VARS` → check Vercel env settings and redeploy.
-
-### 5. Test RSVP on production
-
-1. Open production URL.
-2. Scroll to **Register Interest**.
-3. Submit a test entry.
-4. Confirm row in Supabase **Table Editor → rsvps**.
-
-### 6. Test dashboard
-
-Visit `/dashboard` and spot-check **RSVPs** (live when migrations applied), **Sponsors**, and **Settings**.  
-Non-RSVP modules use **placeholder data** — this is expected until Phase 2.
-
-### 7. Mobile check
-
-Test on phone: landing page form + dashboard sidebar drawer.
+1. Review and merge the Phase A PR.
+2. Confirm committee messaging stays “Register Interest / priority updates / not a ticket”.
+3. Decide when (if ever) to set `PUBLIC_REGISTRATION_OPEN=false`.
+4. Approve floor plan asset URL for seating.
+5. Do **not** publish ticket prices or sponsor amounts until committee approval.
+6. Coordinate Twilio + SMS consent only when ready (see `docs/SMS.md`).
 
 ---
 
-## Known risks
+## Docs index
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| `/dashboard` is public (no auth) | Anyone with URL can view demo portal | Only share via **Committee demo** links; add auth in Phase 2 |
-| Placeholder dashboard data (non-RSVP modules) | Sponsors/tasks not live | Explain during demo — see [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) |
-| `npm run dev` may hang (Turbopack) | Local dev friction | Use `npm run preview` |
-| Service role key in Vercel | Security if leaked | Never prefix with `NEXT_PUBLIC_`; never commit to git |
-| Migration skipped | RSVP form fails | Always verify `/api/health` first |
-
----
-
-## What NOT to change before Friday
-
-- Do **not** redesign the public landing page.
-- Do **not** remove **Committee demo** badges (they signal demo mode).
-- Do **not** expose secrets in git or client code.
-- Do **not** implement payments, SMS, or AI API calls.
-- Do **not** remove demo banners from dashboard until auth exists.
-- Do **not** change `.env.local` in git (local only).
-
----
-
-## Useful commands
-
-```bash
-npm install
-npm run lint          # must pass
-npm run build         # must pass
-npm run preview       # local production preview on :3000
-```
-
----
-
-## Contacts & docs
-
-| Doc | Purpose |
-|-----|---------|
-| [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) | Joshua’s presentation flow |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Full Supabase + Vercel steps |
-| [PLATFORM.md](./PLATFORM.md) | SaaS architecture overview |
-| [PHASE_2_SPEC.md](./PHASE_2_SPEC.md) | Auth + live dashboard roadmap |
-| [QUALITY_AUDIT.md](./QUALITY_AUDIT.md) | Overnight quality audit & scores |
-
----
-
-## After Friday
-
-1. Add Supabase Auth + middleware on `/dashboard/*`.
-2. Remove or hide public Committee Portal links.
-3. Connect dashboard to protected server-side queries.
-4. Optional: Resend for confirmation emails, custom domain.
-
----
-
-## Morning Checklist for Joshua and Damola
-
-Full shared checklist: [QUALITY_AUDIT.md § Morning Checklist](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola)
-
-### Joshua
-- [ ] Push latest commits via GitHub Desktop (if agent push failed)
-- [ ] Verify production after Damola deploys
-- [ ] Test Register Interest + RSVP dashboard
-- [ ] Rehearse [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
-
-### Damola
-- [ ] Pull latest · run all 3 Supabase migrations
-- [ ] Set Vercel env vars · deploy
-- [ ] Verify `/api/health` → `ok`
-- [ ] Test Register Interest · confirm row in Supabase Table Editor
-- [ ] Test RSVP CRM (`/dashboard/rsvps`) · mobile smoke test
+- [BUSINESS_WORKFLOWS.md](./BUSINESS_WORKFLOWS.md)
+- [SEATING_MVP.md](./SEATING_MVP.md)
+- [QR_CHECKIN.md](./QR_CHECKIN.md)
+- [EMAIL.md](./EMAIL.md)
+- [SMS.md](./SMS.md)
+- [AUTH_AND_ROLES.md](./AUTH_AND_ROLES.md)
+- [DEPLOYMENT.md](./DEPLOYMENT.md)
+- [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md)
+- [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
+- [ROADMAP.md](./ROADMAP.md)
