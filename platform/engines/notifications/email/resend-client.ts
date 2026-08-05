@@ -4,6 +4,7 @@ import {
   getEmailEnvPresence,
   resolveMailFrom,
 } from "@/platform/engines/notifications/email/env-status";
+import { sendViaSmtp } from "@/platform/engines/notifications/email/smtp-client";
 import {
   buildRsvpConfirmationEmail,
   type RsvpConfirmationEmailParams,
@@ -14,7 +15,7 @@ export type SendEmailResult =
   | { ok: false; reason: "NOT_CONFIGURED" | "SEND_FAILED"; message: string };
 
 /**
- * Resend email client — activates when RESEND_API_KEY + MAIL_FROM (or RESEND_FROM_EMAIL) are set.
+ * Send RSVP confirmation — prefers SMTP when configured, otherwise Resend.
  * Never throws; RSVP submission must not depend on email delivery.
  */
 export async function sendRsvpConfirmationEmail(
@@ -22,13 +23,27 @@ export async function sendRsvpConfirmationEmail(
 ): Promise<SendEmailResult> {
   const env = getEmailEnvPresence();
   if (!env.ready) {
-    console.info("[notification-engine] Email skipped — Resend not configured.");
+    console.info("[notification-engine] Email skipped — no transport configured.");
     return { ok: false, reason: "NOT_CONFIGURED", message: "Email not configured" };
   }
 
   const { subject, html, text } = buildRsvpConfirmationEmail(params);
-  const apiKey = process.env.RESEND_API_KEY!.trim();
-  const from = resolveMailFrom()!;
+
+  if (env.transport === "smtp") {
+    return sendViaSmtp({
+      to: params.record.email,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  // Resend fallback
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = resolveMailFrom();
+  if (!apiKey || !from) {
+    return { ok: false, reason: "NOT_CONFIGURED", message: "Email not configured" };
+  }
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
