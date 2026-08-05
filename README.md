@@ -1,11 +1,24 @@
 # Promax Event Platform
 
 **Version 1.0.0** — reusable event management SaaS  
-**First deployment:** Yoruba Day Canberra 2026
+**First deployment:** Yoruba Day Canberra 2026 — **live** at [yoruba-event-2026.vercel.app](https://yoruba-event-2026.vercel.app)
 
-Built with Next.js 16, TypeScript, Tailwind CSS v4, Supabase Auth, PostgreSQL, Framer Motion, Zod, Resend, and Server Actions.
+Built with Next.js 16, TypeScript, Tailwind CSS v4, Supabase Auth, PostgreSQL, Framer Motion, Zod, and Server Actions.
 
 > This repository is the **Promax Event Platform**, not a one-off website. Yoruba Day Canberra 2026 is the first customer configuration under `config/events/`.
+
+---
+
+## Live readiness
+
+| Check | Status |
+|-------|--------|
+| Production health | `ok` (Supabase + auth + email) |
+| Register Interest | Open for the public |
+| Committee Portal | `/login` → `/dashboard` |
+| Verify script | `npm run verify:deployment` |
+
+See [docs/PRODUCTION_CHECKLIST.md](./docs/PRODUCTION_CHECKLIST.md).
 
 ---
 
@@ -13,7 +26,7 @@ Built with Next.js 16, TypeScript, Tailwind CSS v4, Supabase Auth, PostgreSQL, F
 
 ```bash
 npm install
-cp .env.example .env.local   # Supabase + Resend + admin bootstrap vars
+cp .env.example .env.local   # Supabase + SMTP/Resend + admin bootstrap vars
 # Apply SQL migrations in supabase/migrations/ (Supabase SQL editor or CLI)
 node --env-file=.env.local scripts/provision-admin.mjs
 npm run preview
@@ -30,11 +43,11 @@ Initial administrator email: `admin@promaxevent.com` (password via `ADMIN_PASSWO
 
 | Doc | Description |
 |-----|-------------|
+| [docs/PRODUCTION_CHECKLIST.md](./docs/PRODUCTION_CHECKLIST.md) | **Go-live status + smoke tests** |
 | [docs/PLATFORM.md](./docs/PLATFORM.md) | Platform overview & engines |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel + Supabase deploy |
-| [docs/PRODUCTION_CHECKLIST.md](./docs/PRODUCTION_CHECKLIST.md) | Go-live env + smoke test checklist |
-| [docs/EMAIL.md](./docs/EMAIL.md) | Resend / confirmation emails |
+| [docs/EMAIL.md](./docs/EMAIL.md) | SMTP / Resend confirmation emails |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases & status |
 | [docs/SMS.md](./docs/SMS.md) | Twilio architecture (future) |
 | [docs/AI.md](./docs/AI.md) | AI engine architecture (future) |
@@ -66,8 +79,7 @@ See `.env.example`. Required for production:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
-- `RESEND_API_KEY`
-- `MAIL_FROM` (or legacy `RESEND_FROM_EMAIL`)
+- `MAIL_FROM` + `SMTP_*` (or Resend)
 - `EVENT_SLUG` (optional; defaults to `yoruba-day-canberra-2026`)
 
 Never put secrets in `NEXT_PUBLIC_*` or source control.
@@ -82,6 +94,7 @@ Never put secrets in `NEXT_PUBLIC_*` or source control.
 | `npm run build` | Production build |
 | `npm run preview` | Build + start |
 | `npm run lint` | ESLint |
+| `npm run verify:deployment` | Check production health + pages |
 | `node --env-file=.env.local scripts/provision-admin.mjs` | Create/update SUPER_ADMIN |
 
 ---
@@ -90,3 +103,7 @@ Never put secrets in `NEXT_PUBLIC_*` or source control.
 
 `GET /api/health` — verifies env presence, event config, Supabase connectivity, and email configuration status (presence only).  
 `POST /api/health/rsvp-insert-test` — development-only unless `ENABLE_RSVP_INSERT_TEST=true`.
+
+---
+
+**Promax IT Solutions** · Powered by Promax Event Platform

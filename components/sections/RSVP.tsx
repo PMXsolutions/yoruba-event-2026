@@ -15,7 +15,7 @@ import {
 } from "@/lib/validation/rsvp";
 
 const RSVP_SUBTITLE =
-  "Register your interest and our planning committee will share ticketing and event updates as details are confirmed.";
+  "Register Interest is open. Share your details and our planning committee will follow up with ticketing and event updates. There is no payment at this stage.";
 
 type FormState = {
   fullName: string;
@@ -131,7 +131,7 @@ export function RSVP() {
             <SectionHeading
               align="left"
               eyebrow="Register your interest"
-              title="Join us for an evening draped in gold and grace"
+              title="Join us for a celebration draped in gold and grace"
               subtitle={RSVP_SUBTITLE}
             />
             <ul className="mt-8 space-y-5 font-sans text-sm leading-relaxed text-cream/75 sm:mt-10 sm:text-[0.95rem]">
@@ -300,7 +300,7 @@ export function RSVP() {
                     </div>
                     <div className={fieldWrap}>
                       <label htmlFor="ticketType" className={labelClass}>
-                        Preferred ticket type
+                        Preferred ticket type (indicative)
                       </label>
                       <select
                         id="ticketType"

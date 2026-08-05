@@ -83,9 +83,14 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-16 flex flex-col gap-5 border-t border-white/[0.07] pt-10 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-sans text-xs text-cream/45">
-            © {new Date().getFullYear()} Yoruba Day Canberra · {SITE.presenter}
-          </p>
+          <div className="space-y-1.5">
+            <p className="font-sans text-xs text-cream/45">
+              © {new Date().getFullYear()} Yoruba Day Canberra · {SITE.presenter}
+            </p>
+            <p className="font-sans text-[0.65rem] tracking-wide text-cream/35">
+              Powered by Promax Event Platform
+            </p>
+          </div>
           <a
             href="#home"
             className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold-muted transition-colors hover:text-gold-bright"

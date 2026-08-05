@@ -35,8 +35,8 @@ export function Sponsors() {
         <SectionHeading
           surface="onLight"
           eyebrow="Partners in excellence"
-          title="Sponsor the most anticipated cultural evening of the year"
-          subtitle="Stand alongside a community-led celebration of Yoruba excellence in Canberra—visible, meaningful, and crafted with warmth for guests and partners alike."
+          title="Sponsor a landmark cultural celebration for Canberra"
+          subtitle="Stand alongside a community-led celebration of Yoruba excellence—visible, meaningful, and crafted with warmth for guests and partners alike."
         />
         <p className="mx-auto mb-10 max-w-2xl rounded-2xl border border-gold/25 bg-cream/80 px-6 py-4 text-center font-sans text-sm leading-relaxed text-mahogany/75 shadow-[var(--shadow-card-light)] sm:mb-12 sm:text-[0.95rem]">
           {LAUNCH_COPY.sponsorshipAnnouncedSoon} Enquire below to express early interest—our team
