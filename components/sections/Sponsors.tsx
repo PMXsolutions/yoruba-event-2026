@@ -21,7 +21,7 @@ const tierBadge = {
   community: "Community",
 } as const;
 
-export function Sponsors() {
+export function Sponsors({ enquiryOpen = true }: { enquiryOpen?: boolean }) {
   return (
     <AnimatedSection
       id="sponsors"
@@ -92,7 +92,7 @@ export function Sponsors() {
             </motion.article>
           ))}
         </div>
-        <SponsorEnquiryForm />
+        <SponsorEnquiryForm enquiryOpen={enquiryOpen} />
       </div>
     </AnimatedSection>
   );

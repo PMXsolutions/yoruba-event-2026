@@ -46,9 +46,17 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (isDashboard && !user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    // DASHBOARD_AUTH_REQUIRED defaults true — never leave production dashboard open
+    const authRequired = process.env.DASHBOARD_AUTH_REQUIRED;
+    const required =
+      authRequired == null ||
+      authRequired.trim() === "" ||
+      !["0", "false", "no", "off"].includes(authRequired.trim().toLowerCase());
+    if (required) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   if (isLogin && user) {

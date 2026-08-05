@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/auth/rbac";
 import { checkRateLimit, clientKeyFromHeaders } from "@/lib/security/rate-limit";
 import { logActivity } from "@/lib/activity/log";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
+import { getFeatureFlags } from "@/lib/feature-flags";
 import {
   submitSponsorEnquiry,
   updateSponsorNotes,
@@ -34,6 +35,12 @@ import {
 const idSchema = z.string().uuid();
 
 export async function submitSponsorAction(raw: unknown) {
+  if (!getFeatureFlags().SPONSOR_ENQUIRY_OPEN) {
+    return {
+      ok: false as const,
+      error: "Sponsor enquiries are temporarily closed. Please contact the committee directly.",
+    };
+  }
   const hdrs = await headers();
   const rate = checkRateLimit(clientKeyFromHeaders(hdrs, "sponsor"), 5, 60_000);
   if (!rate.allowed) {
@@ -72,6 +79,12 @@ export async function updateSponsorNotesAction(id: string, notes: string) {
 }
 
 export async function submitVolunteerAction(raw: unknown) {
+  if (!getFeatureFlags().VOLUNTEER_INTEREST_OPEN) {
+    return {
+      ok: false as const,
+      error: "Volunteer interest is temporarily closed. Please contact the committee directly.",
+    };
+  }
   const hdrs = await headers();
   const rate = checkRateLimit(clientKeyFromHeaders(hdrs, "volunteer"), 5, 60_000);
   if (!rate.allowed) {

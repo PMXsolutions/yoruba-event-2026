@@ -32,10 +32,11 @@ export const yorubaDayCanberra2026: EventConfig = {
   website: null,
   launchCopy: {
     comingSoonNote:
-      "Ticketing, sponsorship packages, and the full programme will be announced soon.",
+      "Register your interest to receive priority updates when ticketing, sponsorship packages and the full programme are announced. This is not a ticket purchase.",
     registerInterest: "Register Interest",
     becomeSponsor: "Become a Sponsor",
-    sponsorshipAnnouncedSoon: "Sponsorship packages will be announced soon.",
+    sponsorshipAnnouncedSoon:
+      "Sponsorship packages and amounts will be announced soon. Early interest is welcome.",
     saveTheDate: "Save the Date",
   },
   navItems: [
@@ -44,7 +45,7 @@ export const yorubaDayCanberra2026: EventConfig = {
     { label: "Experience", href: "#experience" },
     { label: "Sponsors", href: "#sponsors" },
     { label: "Volunteer", href: "#volunteer" },
-    { label: "Register", href: "#rsvp" },
+    { label: "Register Interest", href: "#rsvp" },
     { label: "Contact", href: "#contact" },
   ],
   experienceItems: [

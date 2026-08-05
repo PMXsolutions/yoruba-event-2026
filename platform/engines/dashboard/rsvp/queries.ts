@@ -28,10 +28,13 @@ type RsvpRow = {
   contacted_at: string | null;
   tags?: string[] | null;
   registration_reference?: string | null;
+  accessibility_requirements?: string | null;
+  dietary_requirements?: string | null;
+  source?: string | null;
 };
 
 const RSVP_SELECT =
-  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference";
+  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference, accessibility_requirements, dietary_requirements, source";
 
 function mapRow(row: RsvpRow): DashboardRsvpRecord {
   const status = row.status && isRsvpStatus(row.status) ? row.status : "new";
@@ -49,6 +52,9 @@ function mapRow(row: RsvpRow): DashboardRsvpRecord {
     contactedAt: row.contacted_at,
     tags: normalizeTags(row.tags),
     registrationReference: row.registration_reference ?? null,
+    accessibilityRequirements: row.accessibility_requirements ?? null,
+    dietaryRequirements: row.dietary_requirements ?? null,
+    source: row.source ?? null,
   };
 }
 
@@ -264,5 +270,158 @@ export async function toggleDashboardRsvpTag(
   } catch (e) {
     console.error("[dashboard-rsvp] Tag update failed:", e);
     return { ok: false, error: "Could not update tags." };
+  }
+}
+
+export type CommitteeRsvpInput = {
+  fullName: string;
+  email: string;
+  phone?: string;
+  numberOfAttendees: number;
+  ticketType: string;
+  status: RsvpStatus;
+  tags: RsvpTag[];
+  committeeNotes?: string;
+  accessibilityRequirements?: string;
+  dietaryRequirements?: string;
+  notes?: string;
+  source?: string;
+  createdBy?: string | null;
+};
+
+export async function createCommitteeRsvp(
+  input: CommitteeRsvpInput,
+): Promise<
+  | { ok: true; id: string; registrationReference: string; record: DashboardRsvpRecord }
+  | { ok: false; error: string }
+> {
+  const env = getSupabaseEnvPresence();
+  if (!env.serviceRoleReady) return { ok: false, error: "Database not connected." };
+
+  const event = getActiveEventConfig();
+  const { generateRegistrationReference } = await import("@/platform/engines/rsvp/schema");
+  const registrationReference = generateRegistrationReference(event.slug);
+
+  const payload = {
+    full_name: input.fullName.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone?.trim() || null,
+    number_of_attendees: input.numberOfAttendees,
+    ticket_type: input.ticketType,
+    notes: input.notes?.trim() || null,
+    status: input.status,
+    tags: input.tags,
+    committee_notes: input.committeeNotes?.trim() || null,
+    accessibility_requirements: input.accessibilityRequirements?.trim() || null,
+    dietary_requirements: input.dietaryRequirements?.trim() || null,
+    event_slug: event.slug,
+    registration_reference: registrationReference,
+    source: input.source ?? "committee",
+    created_by: input.createdBy ?? null,
+    contacted_at: input.status === "contacted" || input.status === "confirmed"
+      ? new Date().toISOString()
+      : null,
+  };
+
+  try {
+    const supabase = createServiceRoleClient();
+    let { data, error } = await supabase.from("rsvps").insert(payload).select(RSVP_SELECT).single();
+
+    if (error && /accessibility_requirements|dietary_requirements|source|created_by/i.test(error.message)) {
+      const legacy = {
+        full_name: payload.full_name,
+        email: payload.email,
+        phone: payload.phone,
+        number_of_attendees: payload.number_of_attendees,
+        ticket_type: payload.ticket_type,
+        notes: payload.notes,
+        status: payload.status,
+        tags: payload.tags,
+        committee_notes: payload.committee_notes,
+        event_slug: payload.event_slug,
+        registration_reference: payload.registration_reference,
+        contacted_at: payload.contacted_at,
+      };
+      ({ data, error } = await supabase.from("rsvps").insert(legacy).select(RSVP_SELECT).single());
+    }
+
+    if (error || !data) {
+      console.error("[dashboard-rsvp] Committee create failed:", error?.message);
+      return { ok: false, error: "Could not register guest." };
+    }
+
+    const record = mapRow(data as RsvpRow);
+    return { ok: true, id: record.id, registrationReference, record };
+  } catch (e) {
+    console.error("[dashboard-rsvp] Committee create error:", e);
+    return { ok: false, error: "Could not register guest." };
+  }
+}
+
+export async function updateDashboardRsvpDetails(
+  id: string,
+  input: {
+    fullName: string;
+    email: string;
+    phone?: string;
+    numberOfAttendees: number;
+    ticketType: string;
+    notes?: string;
+    accessibilityRequirements?: string;
+    dietaryRequirements?: string;
+  },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!id) return { ok: false, error: "Record not found." };
+  const env = getSupabaseEnvPresence();
+  if (!env.serviceRoleReady) return { ok: false, error: "Database not connected." };
+
+  const payload = {
+    full_name: input.fullName.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone?.trim() || null,
+    number_of_attendees: input.numberOfAttendees,
+    ticket_type: input.ticketType,
+    notes: input.notes?.trim() || null,
+    accessibility_requirements: input.accessibilityRequirements?.trim() || null,
+    dietary_requirements: input.dietaryRequirements?.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const supabase = createServiceRoleClient();
+    let { error } = await supabase.from("rsvps").update(payload).eq("id", id);
+    if (error && /accessibility_requirements|dietary_requirements|updated_at/i.test(error.message)) {
+      const legacy = {
+        full_name: payload.full_name,
+        email: payload.email,
+        phone: payload.phone,
+        number_of_attendees: payload.number_of_attendees,
+        ticket_type: payload.ticket_type,
+        notes: payload.notes,
+      };
+      ({ error } = await supabase.from("rsvps").update(legacy).eq("id", id));
+    }
+    if (error) {
+      console.error("[dashboard-rsvp] Edit failed:", error.message);
+      return { ok: false, error: "Could not update guest details." };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not update guest details." };
+  }
+}
+
+export async function fetchDashboardRsvpById(
+  id: string,
+): Promise<{ ok: true; record: DashboardRsvpRecord } | { ok: false; error: string }> {
+  const env = getSupabaseEnvPresence();
+  if (!env.serviceRoleReady) return { ok: false, error: "Database not connected." };
+  try {
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase.from("rsvps").select(RSVP_SELECT).eq("id", id).maybeSingle();
+    if (error || !data) return { ok: false, error: "Record not found." };
+    return { ok: true, record: mapRow(data as RsvpRow) };
+  } catch {
+    return { ok: false, error: "Record not found." };
   }
 }
