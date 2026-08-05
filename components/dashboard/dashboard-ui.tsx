@@ -6,7 +6,14 @@ const STATUS_STYLES: Record<string, string> = {
   New: "bg-sky-50 text-sky-800 ring-sky-200/60",
   Contacted: "bg-violet-50 text-violet-800 ring-violet-200/60",
   Cancelled: "bg-cream text-mahogany/55 ring-mahogany/15",
+  Approved: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
+  Declined: "bg-cream text-mahogany/55 ring-mahogany/15",
+  Active: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
+  Completed: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
+  Assigned: "bg-sky-50 text-sky-800 ring-sky-200/60",
+  Inactive: "bg-cream text-mahogany/55 ring-mahogany/15",
   Published: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
+  Unpublished: "bg-amber-50 text-amber-900 ring-amber-200/60",
   Done: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
   done: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
   Prospect: "bg-sky-50 text-sky-800 ring-sky-200/60",
@@ -16,13 +23,17 @@ const STATUS_STYLES: Record<string, string> = {
   Available: "bg-cream text-mahogany/70 ring-mahogany/10",
   Pending: "bg-amber-50 text-amber-900 ring-amber-200/60",
   "In progress": "bg-sky-50 text-sky-800 ring-sky-200/60",
+  "In Progress": "bg-sky-50 text-sky-800 ring-sky-200/60",
   "In discussion": "bg-sky-50 text-sky-800 ring-sky-200/60",
   Review: "bg-violet-50 text-violet-800 ring-violet-200/60",
+  Todo: "bg-cream text-mahogany/60 ring-mahogany/10",
   "To do": "bg-cream text-mahogany/60 ring-mahogany/10",
   Blocked: "bg-red-50 text-red-800 ring-red-200/60",
   Critical: "bg-red-50 text-red-800 ring-red-200/60",
+  Urgent: "bg-red-50 text-red-800 ring-red-200/60",
   High: "bg-orange-50 text-orange-900 ring-orange-200/60",
   Medium: "bg-amber-50 text-amber-900 ring-amber-200/60",
+  Low: "bg-cream text-mahogany/60 ring-mahogany/10",
   upcoming: "bg-sky-50 text-sky-800 ring-sky-200/60",
   "at-risk": "bg-red-50 text-red-800 ring-red-200/60",
   Configured: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
@@ -571,17 +582,18 @@ export function TrendChart({
 }: {
   title: string;
   subtitle?: string;
-  points: readonly number[];
+  points: readonly number[] | readonly { label: string; value: number }[];
 }) {
+  const values = points.map((p) => (typeof p === "number" ? p : p.value));
   const width = 400;
   const height = 140;
   const padding = 12;
-  const max = Math.max(...points, 1);
-  const min = Math.min(...points, 0);
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
   const range = max - min || 1;
 
-  const coords = points.map((p, i) => {
-    const x = padding + (i / Math.max(points.length - 1, 1)) * (width - padding * 2);
+  const coords = values.map((p, i) => {
+    const x = padding + (i / Math.max(values.length - 1, 1)) * (width - padding * 2);
     const y = height - padding - ((p - min) / range) * (height - padding * 2);
     return { x, y };
   });

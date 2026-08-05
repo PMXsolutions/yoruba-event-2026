@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
+import { EventJsonLd } from "@/components/seo/EventJsonLd";
+import { SITE } from "@/lib/site";
 import "./globals.css";
 
 const heading = Cormorant_Garamond({
@@ -17,13 +19,24 @@ const body = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Yoruba Day Canberra 2026 | Premium Cultural Celebration",
-  description:
-    "November 2026 in Canberra, ACT—Yoruba Day celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity. Presented by Yoruba Association Canberra.",
+  metadataBase: new URL(SITE.seo.canonicalUrl),
+  title: SITE.seo.title,
+  description: SITE.seo.description,
+  alternates: {
+    canonical: SITE.seo.canonicalUrl,
+  },
   openGraph: {
-    title: "Yoruba Day Canberra 2026",
-    description:
-      "An elevated, welcoming celebration of Yoruba culture in the ACT—elders, youth, families, and friends together.",
+    title: SITE.name,
+    description: SITE.seo.description,
+    url: SITE.seo.canonicalUrl,
+    siteName: SITE.platformBrand,
+    locale: "en_AU",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE.name,
+    description: SITE.seo.description,
   },
 };
 
@@ -38,6 +51,7 @@ export default function RootLayout({
       className={`${heading.variable} ${body.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col bg-espresso text-cream">
+        <EventJsonLd />
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

@@ -11,6 +11,7 @@ import {
   isRsvpTag,
   normalizeTags,
 } from "@/platform/engines/dashboard/rsvp/types";
+import { getActiveEventConfig } from "@/platform/core/config/active-event";
 
 type RsvpRow = {
   id: string;
@@ -26,10 +27,11 @@ type RsvpRow = {
   internal_notes?: string | null;
   contacted_at: string | null;
   tags?: string[] | null;
+  registration_reference?: string | null;
 };
 
 const RSVP_SELECT =
-  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags";
+  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference";
 
 function mapRow(row: RsvpRow): DashboardRsvpRecord {
   const status = row.status && isRsvpStatus(row.status) ? row.status : "new";
@@ -46,6 +48,7 @@ function mapRow(row: RsvpRow): DashboardRsvpRecord {
     committeeNotes: row.committee_notes ?? row.internal_notes ?? null,
     contactedAt: row.contacted_at,
     tags: normalizeTags(row.tags),
+    registrationReference: row.registration_reference ?? null,
   };
 }
 
@@ -55,9 +58,8 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
   if (tableMissing) {
     return {
       ok: false,
-      source: "demo",
       reason: "table_missing",
-      message: "Table missing",
+      message: "RSVP table is not available. Run Supabase migrations.",
     };
   }
 
@@ -68,50 +70,58 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
   if (columnsMissing) {
     return {
       ok: false,
-      source: "demo",
       reason: "columns_missing",
-      message: "CRM columns missing",
+      message: "RSVP CRM columns are missing. Apply the latest migrations.",
     };
   }
 
   console.error("[dashboard-rsvp] Query failed:", message, code);
   return {
     ok: false,
-    source: "demo",
     reason: "query_failed",
-    message: "Query failed",
+    message: "Unable to load RSVPs right now.",
   };
 }
 
-/**
- * Fetch all RSVPs for the committee dashboard via service role (server-only).
- * TODO(platform-auth): Gate behind authenticated committee roles before public launch.
- */
+/** Fetch all RSVPs for the active event via service role (server-only). */
 export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> {
   const env = getSupabaseEnvPresence();
   if (!env.allPresent) {
     return {
       ok: false,
-      source: "demo",
       reason: "missing_env",
-      message: "Env missing",
+      message: "Database is not configured.",
     };
   }
+
+  const event = getActiveEventConfig();
 
   try {
     const supabase = createServiceRoleClient();
     const { data, error } = await supabase
       .from("rsvps")
       .select(RSVP_SELECT)
+      .eq("event_slug", event.slug)
       .order("created_at", { ascending: false });
 
     if (error) {
+      // Fallback without event_slug filter if column not yet migrated
+      if (/event_slug/i.test(error.message)) {
+        const fallback = await supabase
+          .from("rsvps")
+          .select(RSVP_SELECT.replace(", registration_reference", ""))
+          .order("created_at", { ascending: false });
+        if (fallback.error) return classifyQueryError(fallback.error.message, fallback.error.code);
+        return {
+          ok: true,
+          records: (fallback.data ?? []).map((row) => mapRow(row as unknown as RsvpRow)),
+        };
+      }
       return classifyQueryError(error.message, error.code ?? undefined);
     }
 
     return {
       ok: true,
-      source: "live",
       records: (data ?? []).map((row) => mapRow(row as RsvpRow)),
     };
   } catch (e) {
@@ -126,7 +136,6 @@ function contactedAtForStatus(status: RsvpStatus, existing: string | null): stri
   return existing;
 }
 
-/** Update RSVP follow-up status — server-only. */
 export async function updateDashboardRsvpStatus(
   id: string,
   status: RsvpStatus,
@@ -173,7 +182,6 @@ export async function updateDashboardRsvpStatus(
   }
 }
 
-/** Update committee notes — server-only. */
 export async function updateDashboardRsvpCommitteeNote(
   id: string,
   committeeNotes: string,
@@ -215,7 +223,6 @@ export async function updateDashboardRsvpCommitteeNote(
   }
 }
 
-/** Toggle a classification tag — server-only. */
 export async function toggleDashboardRsvpTag(
   id: string,
   tag: RsvpTag,

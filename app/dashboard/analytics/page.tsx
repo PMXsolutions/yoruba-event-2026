@@ -1,60 +1,95 @@
 import {
   BarChart,
   DashboardCard,
+  EmptyState,
   IntegrationBanner,
   StatGrid,
   TrendChart,
 } from "@/components/dashboard/dashboard-ui";
-import {
-  ATTENDANCE_BREAKDOWN,
-  FUNNEL_CHART,
-  PLACEHOLDER_ANALYTICS,
-  SPONSOR_PIPELINE_CHART,
-  TREND_POINTS,
-} from "@/platform/engines/dashboard/placeholder-data";
+import { fetchAnalytics } from "@/platform/engines/dashboard/overview";
 
-export default function DashboardAnalyticsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DashboardAnalyticsPage() {
+  const data = await fetchAnalytics();
+
+  if (data.error) {
+    return (
+      <>
+        <IntegrationBanner title="Unable to load analytics" variant="warning">
+          {data.error}
+        </IntegrationBanner>
+        <EmptyState
+          title="Analytics unavailable"
+          message="Connect Supabase to view live engagement metrics."
+        />
+      </>
+    );
+  }
+
+  if (data.empty) {
+    return (
+      <EmptyState
+        title="No analytics data yet"
+        message="Charts will appear once RSVPs, sponsors, or volunteers are recorded for this event."
+      />
+    );
+  }
+
   return (
     <>
-      <IntegrationBanner title="Analytics engine — preview metrics" variant="info">
-        {/* TODO(analytics-engine): Connect Plausible, Vercel Analytics, or GA4. */}
-        Placeholder metrics for demo. Live funnel data requires analytics integration.
-      </IntegrationBanner>
-
-      <StatGrid stats={PLACEHOLDER_ANALYTICS} />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <TrendChart title="Registration trend" subtitle="Weekly interest (placeholder)" points={[...TREND_POINTS]} />
-        <BarChart title="Conversion funnel" subtitle="Visit → click → complete" data={[...FUNNEL_CHART]} />
-      </div>
+      <StatGrid
+        stats={[
+          { label: "RSVPs", value: String(data.rsvpCount), icon: "✉" },
+          { label: "Expected attendees", value: String(data.attendeeTotal), icon: "◎" },
+          { label: "Sponsors", value: String(data.sponsorCount), icon: "★" },
+          { label: "Volunteers", value: String(data.volunteerCount), icon: "◎" },
+        ]}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <BarChart
-          title="Attendance breakdown"
-          subtitle="By ticket preference (placeholder %)"
-          data={ATTENDANCE_BREAKDOWN.map((d) => ({ ...d, value: d.value * 10 }))}
+        <TrendChart
+          title="RSVP trend"
+          subtitle="Registrations over the last 30 days"
+          points={data.rsvpsOverTime}
         />
         <BarChart
-          title="Sponsor pipeline"
-          subtitle="Prospects by tier"
-          data={SPONSOR_PIPELINE_CHART.map((d) => ({ label: d.label, value: d.value * 25 }))}
+          title="Status breakdown"
+          subtitle="Live RSVP statuses"
+          data={data.statusBreakdown}
         />
       </div>
 
-      <DashboardCard title="Conversion metrics" description="Key performance indicators">
-        <dl className="grid gap-4 sm:grid-cols-3">
-          {[
-            { label: "Visit → RSVP click", value: "14.9%" },
-            { label: "Click → form start", value: "50.5%" },
-            { label: "Form start → complete", value: "0% (awaiting DB)" },
-          ].map((m) => (
-            <div key={m.label} className="rounded-xl border border-mahogany/[0.05] bg-cream/30 p-4">
-              <dt className="font-sans text-xs text-mahogany/45">{m.label}</dt>
-              <dd className="mt-1 font-display text-2xl font-semibold text-mahogany">{m.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </DashboardCard>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {data.ticketTypes.length > 0 ? (
+          <BarChart
+            title="Ticket preferences"
+            subtitle="From Register Interest submissions"
+            data={data.ticketTypes}
+          />
+        ) : (
+          <DashboardCard title="Ticket preferences">
+            <EmptyState
+              title="No ticket data"
+              message="Ticket preferences will appear once guests register interest."
+            />
+          </DashboardCard>
+        )}
+        {data.sponsorPackages.length > 0 ? (
+          <BarChart
+            title="Sponsor packages"
+            subtitle="Enquiries by package"
+            data={data.sponsorPackages}
+          />
+        ) : (
+          <DashboardCard title="Sponsor packages">
+            <EmptyState
+              title="No sponsor data"
+              message="Package breakdown will appear once sponsors register."
+            />
+          </DashboardCard>
+        )}
+      </div>
     </>
   );
 }

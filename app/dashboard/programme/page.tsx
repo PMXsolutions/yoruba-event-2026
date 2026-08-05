@@ -1,28 +1,25 @@
-import { DashboardCard, DataTable, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
-import { PLACEHOLDER_PROGRAMME } from "@/platform/engines/dashboard/placeholder-data";
+import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
+import { ProgrammeManagementPanel } from "@/components/dashboard/ProgrammeManagementPanel";
+import { fetchProgrammeItems } from "@/platform/engines/programme/queries";
 
-export default function DashboardProgrammePage() {
-  return (
-    <>
-      <IntegrationBanner title="Programme engine — draft run of show" variant="info">
-        {/* TODO(programme-engine): Publish approved programme to public site when ready. */}
-        Timings are placeholders until venue and acts are confirmed by the committee.
-      </IntegrationBanner>
+export const dynamic = "force-dynamic";
 
-      <DataTable
-        title="Run of show"
-        description="Draft event programme — times, segments, and zone assignments"
-        columns={["time", "segment", "owner", "zone", "status"]}
-        rows={PLACEHOLDER_PROGRAMME}
-      />
+export default async function DashboardProgrammePage() {
+  const result = await fetchProgrammeItems();
 
-      <DashboardCard title="Programme notes" description="Committee guidance">
-        <ul className="space-y-2 font-sans text-sm leading-relaxed text-mahogany/65">
-          <li>· Opening ceremony must allow 20 minutes for elder blessings</li>
-          <li>· Talking drum segment requires sound check 30 minutes prior</li>
-          <li>· Cuisine service aligned with cultural showcase — not concurrent with Eyo preview</li>
-        </ul>
-      </DashboardCard>
-    </>
-  );
+  if (!result.ok) {
+    return (
+      <>
+        <IntegrationBanner title="Unable to load programme" variant="warning">
+          {result.message}
+        </IntegrationBanner>
+        <EmptyState
+          title="Programme data unavailable"
+          message="Connect Supabase to manage the run of show."
+        />
+      </>
+    );
+  }
+
+  return <ProgrammeManagementPanel records={result.records} />;
 }

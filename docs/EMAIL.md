@@ -8,23 +8,38 @@ Promax Notification Engine · Email channel
 
 Confirmation emails send after successful RSVP registration via **Resend**. Email is **non-blocking** — RSVP saves even if email fails.
 
-Implementation: `platform/engines/notifications/email/`
+```
+platform/engines/notifications/
+  dispatch.ts                          # business entry
+  email/resend-client.ts               # transport
+  email/templates/rsvp-confirmation.ts # HTML + text template
+  email/env-status.ts                  # presence checks only
+```
 
 ---
 
-## Activation (2 minutes)
+## Activation
 
 1. Create account at [resend.com](https://resend.com)
-2. Verify sending domain (or use Resend sandbox for testing)
-3. Add to `.env.local` and Vercel:
+2. Verify sending domain
+3. Add to `.env.local` / Vercel:
 
 ```bash
 RESEND_API_KEY=re_xxxxxxxx
-RESEND_FROM_EMAIL="Yoruba Day Canberra <noreply@yourdomain.com>"
+MAIL_FROM="Promax Event <support@yourdomain.com>"
+MAIL_FROM_NAME=Promax Event
 ```
 
-4. Restart server / redeploy
-5. Submit Register Interest form — check inbox
+Legacy alias still works if `MAIL_FROM` is unset:
+
+```bash
+RESEND_FROM_EMAIL="Promax Event <support@yourdomain.com>"
+```
+
+4. Restart / redeploy
+5. Submit Register Interest — check inbox
+
+**Never** commit API keys, SMTP passwords, or put them in `NEXT_PUBLIC_*`.
 
 ---
 
@@ -32,50 +47,45 @@ RESEND_FROM_EMAIL="Yoruba Day Canberra <noreply@yourdomain.com>"
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `RESEND_API_KEY` | Yes | API key from Resend dashboard |
-| `RESEND_FROM_EMAIL` | Yes | Verified sender (name + email) |
+| `RESEND_API_KEY` | Yes | Resend API key |
+| `MAIL_FROM` | Yes* | From header |
+| `RESEND_FROM_EMAIL` | Alt | Used if `MAIL_FROM` unset |
+| `MAIL_FROM_NAME` | No | Display name documentation |
 
-Check status in **Dashboard → Settings** (reads env presence only, never values).
+Dashboard → Settings reports **Configured** / **Not configured** only.
 
 ---
 
-## Template
+## Template content
 
-RSVP confirmation template: `platform/engines/notifications/email/templates/rsvp-confirmation.ts`
+RSVP confirmation includes:
 
-Uses active `EventConfig` for:
-- Event name
-- Organisation
-- Coming-soon note
-- Contact email
+- Promax Event branding
+- Event name, date, location, description
+- Guest name, attendee count, ticket type
+- Registration reference + status
+- Save the Date CTA + maps link when configured
+- Organisation contact + association branding
+
+Responsive HTML table layout for Gmail, Outlook, Apple Mail, and mobile.
+
+---
+
+## Failure behaviour
+
+| Outcome | RSVP saved? | User experience |
+|---------|-------------|-----------------|
+| Email sent | Yes | Success + optional “email on the way” |
+| Not configured | Yes | Success (email skipped) |
+| Send failed | Yes | Success; failure logged server-side |
+
+Technical errors are never shown raw to end users.
 
 ---
 
 ## Future templates
 
-| Template | Trigger | Status |
-|----------|---------|--------|
-| RSVP confirmation | Form submit | ✅ Implemented |
-| Committee alert (new RSVP) | Form submit | TODO |
-| Sponsor enquiry ack | Sponsor form | TODO |
-| Announcement broadcast | Manual publish | TODO |
-
----
-
-## Error handling
-
-- Missing env → email skipped, RSVP succeeds, log: `Email skipped — Resend not configured`
-- API failure → logged, RSVP succeeds
-- Never expose API keys in logs or client
-
----
-
-## Testing locally
-
-```bash
-# With keys in .env.local
-npm run preview
-# Submit form at http://localhost:3000/#rsvp
-```
-
-Without keys, RSVP still works — no email sent.
+- Sponsor enquiry acknowledgement
+- Volunteer confirmation
+- Committee alert on new RSVP
+- Announcement broadcast

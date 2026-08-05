@@ -41,7 +41,9 @@ export function Footer() {
                 {SITE.contactEmail}
               </a>
               <span className="mt-3 text-cream/50">Phone</span>
-              <span className="text-cream/75">To be confirmed</span>
+              <span className="text-cream/75">
+                {SITE.contactPhone ?? "To be confirmed"}
+              </span>
             </div>
           </div>
           <div className="flex flex-col gap-10 sm:flex-row sm:justify-end md:flex-col md:items-end">
@@ -50,11 +52,10 @@ export function Footer() {
                 Committee
               </p>
               <div className="mt-5 flex flex-col items-start gap-3 sm:items-end">
-                {/* TODO(platform-auth): Remove public link before launch; gate /dashboard with Supabase Auth. */}
                 <CommitteePortalLink variant="footer" />
                 <p className="max-w-xs font-sans text-xs leading-relaxed text-cream/40">
-                  Demo access for planning committee preview. Authentication required before
-                  public launch.
+                  Sign in with your committee credentials to manage RSVPs, sponsors, and
+                  programme.
                 </p>
               </div>
             </div>

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { SponsorEnquiryForm } from "@/components/features/SponsorEnquiryForm";
 import { SPONSOR_TIERS, LAUNCH_COPY } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 
@@ -91,6 +92,7 @@ export function Sponsors() {
             </motion.article>
           ))}
         </div>
+        <SponsorEnquiryForm />
       </div>
     </AnimatedSection>
   );

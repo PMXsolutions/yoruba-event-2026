@@ -60,7 +60,6 @@ export function Navbar() {
               <span className="absolute inset-x-3 bottom-1.5 h-px origin-center scale-x-0 bg-gradient-to-r from-transparent via-gold-bright to-transparent transition-transform duration-500 group-hover/nav:scale-x-100" />
             </Link>
           ))}
-          {/* TODO(platform-auth): Hide until /dashboard is protected with Supabase Auth. */}
           <CommitteePortalLink variant="navbar-desktop" />
         </nav>
 
@@ -124,7 +123,6 @@ export function Navbar() {
                 transition={{ delay: 0.04 * NAV_ITEMS.length, ease: EASE_LUX }}
                 className="mt-2 px-4"
               >
-                {/* TODO(platform-auth): Hide until /dashboard is protected with Supabase Auth. */}
                 <CommitteePortalLink
                   variant="navbar-mobile"
                   onNavigate={() => setOpen(false)}

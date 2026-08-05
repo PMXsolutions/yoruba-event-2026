@@ -80,9 +80,23 @@ export type RsvpRecord = {
   number_of_attendees: number;
   ticket_type: string;
   notes: string | null;
+  event_slug: string;
+  registration_reference: string;
+  status: "new";
 };
 
-export function toRsvpRecord(data: RsvpFormValues): RsvpRecord {
+export function generateRegistrationReference(eventSlug: string): string {
+  const prefix = eventSlug
+    .split("-")
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 4) || "EVT";
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const time = Date.now().toString(36).slice(-4).toUpperCase();
+  return `${prefix}-${time}${rand}`;
+}
+
+export function toRsvpRecord(data: RsvpFormValues, eventSlug: string): RsvpRecord {
   return {
     full_name: data.fullName,
     email: data.email.toLowerCase(),
@@ -90,5 +104,8 @@ export function toRsvpRecord(data: RsvpFormValues): RsvpRecord {
     number_of_attendees: data.attendees,
     ticket_type: data.ticketType,
     notes: data.notes ?? null,
+    event_slug: eventSlug,
+    registration_reference: generateRegistrationReference(eventSlug),
+    status: "new",
   };
 }

@@ -1,101 +1,62 @@
-# Promax Event Platform
+# Platform overview
 
-**Version 1** — multi-event SaaS foundation  
-**First deployment:** Yoruba Day Canberra 2026
-
----
-
-## What this is
-
-This repository is **not** a one-off website. It is Version 1 of the **Promax Event Platform** — reusable event management software for churches, cultural associations, conferences, schools, charities, festivals, and corporate events.
-
-Yoruba Day Canberra 2026 is the **first customer configuration**, isolated under `config/events/`.
+Promax Event Platform v1 — reusable engines powering Yoruba Day Canberra 2026.
 
 ---
 
-## Architecture layers
+## Engines
 
-```
-config/events/          Event-specific branding & content (per customer)
-platform/
-  core/                 Types, active event resolver
-  engines/
-    rsvp/               RSVP validation, persistence, errors
-    notifications/      Email (Resend), SMS stub (Twilio)
-    dashboard/          Portal navigation & placeholder data
-    ai/                 AI capability registry (no API calls v1)
-app/                    Next.js routes (public + committee portal)
-components/             UI (public sections + dashboard)
-lib/                    Legacy re-exports + Supabase clients
-```
-
----
-
-## Engines (v1 status)
-
-| Engine | Status | Location |
-|--------|--------|----------|
-| Event Engine | ✅ Config-driven | `platform/core/` |
-| RSVP Engine | ✅ Live | `platform/engines/rsvp/` |
-| Notification Engine (email) | ✅ Resend-ready | `platform/engines/notifications/` |
-| Notification Engine (SMS) | 📋 Architecture only | `docs/SMS.md` |
-| Dashboard Engine | ✅ UI + placeholders | `platform/engines/dashboard/` |
-| Sponsor CRM | 📋 Scaffold | `/dashboard/sponsors` |
-| Volunteer CRM | 📋 Scaffold | `/dashboard/volunteers` |
-| Committee CRM | 📋 Scaffold | `/dashboard/tasks` |
-| Programme Engine | 📋 Scaffold | `/dashboard/programme` |
-| Analytics Engine | 📋 Scaffold | `/dashboard/analytics` |
-| AI Engine | 📋 Registry only | `platform/engines/ai/` |
-| Ticketing | ❌ Phase 4 | `docs/ROADMAP.md` |
-| Check-in | ❌ Phase 4 | `docs/ROADMAP.md` |
-| CMS | ❌ Future | Content in event config for now |
+| Engine | Path | Status |
+|--------|------|--------|
+| Active event | `platform/core/config/active-event.ts` | Live |
+| RSVP | `platform/engines/rsvp/` | Live (Supabase + CRM) |
+| Sponsors | `platform/engines/sponsors/` | Live |
+| Volunteers | `platform/engines/volunteers/` | Live |
+| Tasks | `platform/engines/tasks/` | Live |
+| Programme | `platform/engines/programme/` | Live (operational DB) |
+| Announcements | `platform/engines/announcements/` | Live |
+| Notifications | `platform/engines/notifications/` | Live (Resend) |
+| Dashboard / analytics | `platform/engines/dashboard/` | Live |
+| AI | `platform/engines/ai/` | Planned registry only |
+| SMS | `platform/engines/notifications/sms/` | Stub |
 
 ---
 
-## Multi-event / multi-tenancy path
+## Event configuration
 
-1. **Today:** Single deployment, `EVENT_SLUG` defaults to `yoruba-day-canberra-2026`
-2. **Next:** Add events to `EVENT_REGISTRY` in `platform/core/config/active-event.ts`
-3. **Future:** Subdomain routing (`yoruba.promax.events`), tenant DB column, org billing
+Active event resolved by `EVENT_SLUG` (default `yoruba-day-canberra-2026`).
 
----
+Config includes: name, slug, tagline, date/time/timezone, venue, calendar, contact, social, hero copy, experience, sponsor tiers, ticket types, SEO, platform brand.
 
-## Adding a new event
-
-1. Create `config/events/<slug>/index.ts` implementing `EventConfig`
-2. Register in `EVENT_REGISTRY`
-3. Deploy with `EVENT_SLUG=<slug>`
-4. Run Supabase migration (shared or per-tenant schema TBD)
+Stable marketing content (hero, experience) stays in config. Committee-editable operational content (programme items, announcements) lives in Supabase.
 
 ---
 
-## Committee portal
+## Committee portal modules
 
-Routes under `/dashboard/*` — **Event Command Centre** with enterprise UI.
+| Route | Data source |
+|-------|-------------|
+| `/dashboard` | Live aggregates |
+| `/dashboard/rsvps` | `rsvps` |
+| `/dashboard/sponsors` | `sponsors` |
+| `/dashboard/volunteers` | `volunteers` |
+| `/dashboard/tasks` | `tasks` |
+| `/dashboard/programme` | `programme_items` |
+| `/dashboard/announcements` | `announcements` |
+| `/dashboard/analytics` | Aggregated Supabase queries |
+| `/dashboard/settings` | Event config + env presence |
 
-**Current status:** RSVP management at `/dashboard/rsvps` reads live Supabase data (server-side). Other modules use placeholder data. **Not authenticated** — protect before public launch.
-
-**Next staged modules:** Sponsors CRM, Volunteers, Tasks, Programme — see `docs/PHASE_2_SPEC.md`.
-- Add Supabase Auth + RBAC middleware on all `/dashboard/*` routes
-- Replace placeholder data with protected server-side queries
-- Remove or hide public demo links
-
-See `docs/PHASE_2_SPEC.md` for auth roadmap.
-
----
-
-## Related docs
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [EMAIL.md](./EMAIL.md)
-- [SMS.md](./SMS.md)
-- [AI.md](./AI.md)
-- [DEPLOYMENT.md](./DEPLOYMENT.md)
-- [ROADMAP.md](./ROADMAP.md)
-- [QUALITY_AUDIT.md](./QUALITY_AUDIT.md)
+Empty states are shown when tables have no rows. Demo/fallback datasets are not used in production.
 
 ---
 
-## Morning Checklist for Joshua and Damola
+## Roles
 
-See [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).
+| Role | Intent |
+|------|--------|
+| `SUPER_ADMIN` | Full access |
+| `ADMIN` | Manage CRM + content |
+| `COMMITTEE` | Day-to-day CRM + tasks |
+| `VOLUNTEER` | Read-focused access |
+
+Permission checks are enforced in server actions (`lib/auth/rbac.ts`) and mirrored in RLS helper functions.

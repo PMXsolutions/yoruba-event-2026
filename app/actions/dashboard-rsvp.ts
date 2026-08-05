@@ -8,21 +8,22 @@ import {
   updateDashboardRsvpStatus,
 } from "@/platform/engines/dashboard/rsvp/queries";
 import { RSVP_STATUSES, RSVP_TAGS } from "@/platform/engines/dashboard/rsvp/types";
+import { requireAuth } from "@/lib/auth/rbac";
+import { logActivity } from "@/lib/activity/log";
+import { getActiveEventConfig } from "@/platform/core/config/active-event";
 
 const statusSchema = z.enum(RSVP_STATUSES);
 const tagSchema = z.enum(RSVP_TAGS);
 const noteSchema = z.string().max(4000);
 const idSchema = z.string().uuid();
 
-/**
- * Committee dashboard RSVP actions — server-only via service role.
- * TODO(platform-auth): Protect with Supabase Auth + RBAC before public launch.
- */
-
 export async function updateRsvpStatusAction(
   id: string,
   status: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireAuth("rsvp.write");
+  if (!auth.ok) return { ok: false, error: auth.message };
+
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) return { ok: false, error: "Invalid record." };
 
@@ -31,6 +32,15 @@ export async function updateRsvpStatusAction(
 
   const result = await updateDashboardRsvpStatus(parsedId.data, parsedStatus.data);
   if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "rsvp.status_updated",
+      entityType: "rsvp",
+      entityId: parsedId.data,
+      actorId: auth.user.id,
+      metadata: { status: parsedStatus.data },
+    });
     revalidatePath("/dashboard/rsvps");
     revalidatePath("/dashboard");
   }
@@ -41,6 +51,9 @@ export async function updateRsvpCommitteeNoteAction(
   id: string,
   committeeNotes: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireAuth("rsvp.write");
+  if (!auth.ok) return { ok: false, error: auth.message };
+
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) return { ok: false, error: "Invalid record." };
 
@@ -58,6 +71,9 @@ export async function toggleRsvpTagAction(
   id: string,
   tag: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireAuth("rsvp.write");
+  if (!auth.ok) return { ok: false, error: auth.message };
+
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) return { ok: false, error: "Invalid record." };
 

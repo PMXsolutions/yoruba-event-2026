@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
-import { DASHBOARD_NAV } from "@/platform/engines/dashboard/placeholder-data";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useTransition, type ReactNode } from "react";
+import { signOutAction } from "@/app/actions/dashboard";
+import { DASHBOARD_NAV } from "@/platform/engines/dashboard/nav";
 import { SITE } from "@/lib/site";
 import { getDashboardPageMeta } from "@/components/dashboard/page-config";
 
@@ -68,16 +69,45 @@ function PanelIcon() {
   );
 }
 
-export function DashboardLayout({ children }: { children: ReactNode }) {
+export type DashboardAdminInfo = {
+  fullName: string | null;
+  email: string;
+  role: string;
+};
+
+export function DashboardLayout({
+  children,
+  admin,
+}: {
+  children: ReactNode;
+  admin?: DashboardAdminInfo | null;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
   const meta = getDashboardPageMeta(pathname);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [isSigningOut, startSignOut] = useTransition();
   const closeMobileNav = () => setMobileNavOpen(false);
+
+  const displayName = admin?.fullName?.trim() || admin?.email || "Committee Member";
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "CM";
+
+  function handleSignOut() {
+    startSignOut(async () => {
+      await signOutAction();
+      router.push("/login");
+      router.refresh();
+    });
+  }
 
   return (
     <div className="dashboard-root min-h-screen bg-cream-warm font-sans text-mahogany">
-      {/* Mobile overlay */}
       {mobileNavOpen ? (
         <button
           type="button"
@@ -88,13 +118,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       ) : null}
 
       <div className="flex min-h-screen">
-        {/* Sidebar */}
         <aside
           className={`dashboard-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gold/10 bg-espresso text-cream transition-[width,transform] duration-300 ease-out lg:relative lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:shrink-0 lg:translate-x-0 ${
             mobileNavOpen ? "translate-x-0" : "-translate-x-full"
           } ${sidebarCollapsed ? "w-[4.5rem]" : "w-64"}`}
         >
-          {/* Brand */}
           <div
             className={`flex h-16 shrink-0 items-center border-b border-gold/10 ${
               sidebarCollapsed ? "justify-center px-2" : "justify-between px-4"
@@ -122,7 +150,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             </button>
           </div>
 
-          {/* Nav */}
           <nav
             aria-label="Committee portal"
             className="flex-1 space-y-1 overflow-y-auto px-2 py-4"
@@ -174,12 +201,21 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          {/* Sidebar footer */}
           <div
-            className={`shrink-0 border-t border-gold/10 p-3 ${
-              sidebarCollapsed ? "flex justify-center" : ""
+            className={`shrink-0 space-y-2 border-t border-gold/10 p-3 ${
+              sidebarCollapsed ? "flex flex-col items-center" : ""
             }`}
           >
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className={`inline-flex items-center gap-2 rounded-xl border border-gold/20 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-gold-light transition-colors hover:border-gold-bright/40 hover:bg-gold/10 hover:text-cream disabled:opacity-50 ${
+                sidebarCollapsed ? "p-2.5" : "w-full justify-center px-3 py-2.5"
+              }`}
+            >
+              {sidebarCollapsed ? "⎋" : isSigningOut ? "Signing out…" : "Sign out"}
+            </button>
             <Link
               href="/"
               onClick={closeMobileNav}
@@ -192,9 +228,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        {/* Main column */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Top header */}
           <header className="sticky top-0 z-20 border-b border-mahogany/8 bg-white/90 backdrop-blur-xl">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
               <button
@@ -206,7 +240,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <MenuIcon />
               </button>
 
-              {/* Global search — module-specific search lives on each page (e.g. RSVPs) */}
               <div className="relative hidden min-w-0 flex-1 sm:block sm:max-w-xs lg:max-w-md">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mahogany/35">
                   <SearchIcon />
@@ -220,10 +253,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   aria-label="Search dashboard (coming soon)"
                 />
               </div>
-
-              <span className="hidden shrink-0 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-1 font-sans text-[0.58rem] font-bold uppercase tracking-[0.1em] text-amber-900 md:inline-flex">
-                Demo
-              </span>
 
               <span className="hidden shrink-0 rounded-full border border-gold/25 bg-gold/[0.08] px-3 py-1.5 font-sans text-[0.62rem] font-bold uppercase tracking-[0.12em] text-gold-deep lg:inline-flex">
                 {SITE.name}
@@ -245,22 +274,30 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
                 <div className="flex items-center gap-2.5 rounded-xl border border-mahogany/8 bg-cream/30 py-1.5 pl-1.5 pr-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-espresso font-sans text-xs font-bold text-gold-bright">
-                    CM
+                    {initials}
                   </span>
                   <div className="hidden min-w-0 sm:block">
                     <p className="truncate font-sans text-xs font-semibold text-mahogany">
-                      Committee Member
+                      {displayName}
                     </p>
                     <p className="truncate font-sans text-[0.65rem] text-mahogany/50">
-                      {SITE.presenter}
+                      {admin?.role?.replaceAll("_", " ") || SITE.presenter}
                     </p>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="hidden rounded-lg border border-mahogany/10 px-3 py-2 font-sans text-xs font-semibold text-mahogany/70 transition-colors hover:bg-cream hover:text-mahogany disabled:opacity-50 sm:inline-flex"
+                >
+                  {isSigningOut ? "…" : "Sign out"}
+                </button>
               </div>
             </div>
           </header>
 
-          {/* Breadcrumbs + page header */}
           <div className="border-b border-mahogany/6 bg-cream/60 px-4 py-5 sm:px-6 lg:px-8">
             <nav aria-label="Breadcrumb" className="mb-3 flex flex-wrap items-center gap-1.5">
               <Link
@@ -303,7 +340,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          {/* Page content */}
           <main id="main-content" className="dashboard-content-grid flex-1 bg-cream-warm px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <div className="mx-auto max-w-7xl space-y-6">{children}</div>
           </main>
