@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
-/** Temporary demo route — replace with auth-gated entry before public launch. */
-export const COMMITTEE_PORTAL_HREF = "/dashboard" as const;
+/** Auth-gated committee entry — redirects to login when not signed in. */
+export const COMMITTEE_PORTAL_HREF = "/login" as const;
 
 const base =
   "group inline-flex items-center gap-2 font-sans transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-gold-bright";
@@ -18,28 +18,12 @@ const variants: Record<Variant, string> = {
     "rounded-full border border-gold/25 bg-white/[0.03] px-5 py-2.5 text-sm text-cream/85 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)] hover:border-gold-bright/45 hover:bg-gold/[0.08] hover:text-cream",
 };
 
-function DemoBadge({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`rounded-full border border-gold/25 bg-espresso/40 px-2 py-0.5 font-sans text-[0.58rem] font-bold uppercase tracking-[0.12em] text-gold-muted ${className}`}
-    >
-      Committee demo
-    </span>
-  );
-}
-
 type CommitteePortalLinkProps = {
   variant: Variant;
   className?: string;
   onNavigate?: () => void;
 } & Omit<ComponentProps<typeof Link>, "href" | "className" | "children">;
 
-/**
- * Temporary Committee Portal entry for stakeholder demos.
- *
- * TODO(platform-auth): Remove public nav/footer exposure before launch.
- * Protect /dashboard with Supabase Auth + RBAC middleware — see docs/PHASE_2_SPEC.md.
- */
 export function CommitteePortalLink({
   variant,
   className = "",
@@ -54,7 +38,6 @@ export function CommitteePortalLink({
       {...props}
     >
       <span>Committee Portal</span>
-      <DemoBadge />
     </Link>
   );
 }

@@ -54,15 +54,13 @@ export type DashboardRsvpRecord = {
   committeeNotes: string | null;
   contactedAt: string | null;
   tags: readonly RsvpTag[];
+  registrationReference: string | null;
 };
 
-export type RsvpDataSource = "live" | "demo";
-
 export type FetchDashboardRsvpsResult =
-  | { ok: true; source: "live"; records: DashboardRsvpRecord[] }
+  | { ok: true; records: DashboardRsvpRecord[] }
   | {
       ok: false;
-      source: "demo";
       reason: "missing_env" | "table_missing" | "columns_missing" | "query_failed";
       message: string;
     };

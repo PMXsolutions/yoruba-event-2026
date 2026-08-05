@@ -1,6 +1,9 @@
 import "server-only";
 
-import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
+import {
+  getEmailEnvPresence,
+  resolveMailFrom,
+} from "@/platform/engines/notifications/email/env-status";
 import {
   buildRsvpConfirmationEmail,
   type RsvpConfirmationEmailParams,
@@ -11,7 +14,7 @@ export type SendEmailResult =
   | { ok: false; reason: "NOT_CONFIGURED" | "SEND_FAILED"; message: string };
 
 /**
- * Resend email client — activates when RESEND_API_KEY + RESEND_FROM_EMAIL are set.
+ * Resend email client — activates when RESEND_API_KEY + MAIL_FROM (or RESEND_FROM_EMAIL) are set.
  * Never throws; RSVP submission must not depend on email delivery.
  */
 export async function sendRsvpConfirmationEmail(
@@ -20,12 +23,12 @@ export async function sendRsvpConfirmationEmail(
   const env = getEmailEnvPresence();
   if (!env.ready) {
     console.info("[notification-engine] Email skipped — Resend not configured.");
-    return { ok: false, reason: "NOT_CONFIGURED", message: "Resend not configured" };
+    return { ok: false, reason: "NOT_CONFIGURED", message: "Email not configured" };
   }
 
   const { subject, html, text } = buildRsvpConfirmationEmail(params);
   const apiKey = process.env.RESEND_API_KEY!.trim();
-  const from = process.env.RESEND_FROM_EMAIL!.trim();
+  const from = resolveMailFrom()!;
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -55,6 +58,6 @@ export async function sendRsvpConfirmationEmail(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[notification-engine] Email send failed:", msg);
-    return { ok: false, reason: "SEND_FAILED", message: msg };
+    return { ok: false, reason: "SEND_FAILED", message: "Email delivery failed" };
   }
 }

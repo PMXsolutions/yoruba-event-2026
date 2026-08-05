@@ -18,7 +18,6 @@ import {
 import { TICKET_TYPES } from "@/lib/site";
 import {
   type DashboardRsvpRecord,
-  type RsvpDataSource,
   type RsvpStatus,
   type RsvpTag,
   RSVP_QUICK_TAGS,
@@ -37,32 +36,8 @@ type TagFilter = "all" | RsvpTag;
 
 type RsvpManagementPanelProps = {
   records: DashboardRsvpRecord[];
-  source: RsvpDataSource;
+  error?: string;
 };
-
-function RsvpStatusBanner({ source }: { source: RsvpDataSource }) {
-  if (source === "live") {
-    return (
-      <section className="rounded-2xl border border-emerald-200/70 bg-gradient-to-r from-emerald-50 to-white px-5 py-4 shadow-sm">
-        <p className="font-sans text-sm font-semibold text-emerald-950">Live RSVP Data</p>
-        <p className="mt-1 font-sans text-sm leading-relaxed text-emerald-900/85">
-          This dashboard is connected to the live Register Interest database.
-        </p>
-        {/* TODO(platform-auth): Protect /dashboard/rsvps with Supabase Auth before public launch. */}
-      </section>
-    );
-  }
-
-  return (
-    <section className="rounded-2xl border border-sky-200/70 bg-gradient-to-r from-sky-50 to-white px-5 py-4 shadow-sm">
-      <p className="font-sans text-sm font-semibold text-sky-950">Demo Mode</p>
-      <p className="mt-1 font-sans text-sm leading-relaxed text-sky-900/85">
-        This dashboard is currently showing sample data. Live registrations will appear here once
-        the Supabase migration is applied.
-      </p>
-    </section>
-  );
-}
 
 function MenuItem({
   label,
@@ -178,26 +153,26 @@ function CommitteeNoteDialog({
 
   return (
     <ModalShell title="Committee Notes" showTitle onClose={onClose}>
-        <p className="mt-1 truncate font-sans text-sm text-mahogany/55">
-          {record.fullName} · {record.email}
-        </p>
-        <textarea
-          id={`committee-note-${record.id}`}
-          aria-label="Committee notes"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={5}
-          maxLength={4000}
-          placeholder="Follow-up outcomes, seating preferences, sponsor conversations…"
-          className="mt-4 w-full resize-y rounded-xl border border-mahogany/10 bg-cream/30 px-4 py-3 font-sans text-sm text-mahogany outline-none placeholder:text-mahogany/35 focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10"
-        />
-        <p className="mt-2 font-sans text-xs text-mahogany/45">{note.length} / 4,000</p>
-        <div className="mt-5 flex flex-wrap justify-end gap-2">
-          <ToolbarButton onClick={onClose}>Cancel</ToolbarButton>
-          <ToolbarButton primary disabled={saving} onClick={() => onSave(record.id, note)}>
-            {saving ? "Saving…" : "Save"}
-          </ToolbarButton>
-        </div>
+      <p className="mt-1 truncate font-sans text-sm text-mahogany/55">
+        {record.fullName} · {record.email}
+      </p>
+      <textarea
+        id={`committee-note-${record.id}`}
+        aria-label="Committee notes"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={5}
+        maxLength={4000}
+        placeholder="Follow-up outcomes, seating preferences, sponsor conversations…"
+        className="mt-4 w-full resize-y rounded-xl border border-mahogany/10 bg-cream/30 px-4 py-3 font-sans text-sm text-mahogany outline-none placeholder:text-mahogany/35 focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10"
+      />
+      <p className="mt-2 font-sans text-xs text-mahogany/45">{note.length} / 4,000</p>
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <ToolbarButton onClick={onClose}>Cancel</ToolbarButton>
+        <ToolbarButton primary disabled={saving} onClick={() => onSave(record.id, note)}>
+          {saving ? "Saving…" : "Save"}
+        </ToolbarButton>
+      </div>
     </ModalShell>
   );
 }
@@ -205,16 +180,16 @@ function CommitteeNoteDialog({
 function RegisterGuestDialog({ onClose }: { onClose: () => void }) {
   return (
     <ModalShell title="Register Guest" showTitle onClose={onClose} className="max-w-md">
-        <p className="mt-3 font-sans text-sm leading-relaxed text-mahogany/65">
-          Manual phone and walk-in registrations will be added here. Committee members will be able
-          to create attendee records directly from the dashboard.
-        </p>
-        <p className="mt-2 font-sans text-xs font-semibold uppercase tracking-wide text-gold-muted">
-          Coming soon
-        </p>
-        <div className="mt-5 flex justify-end">
-          <ToolbarButton primary onClick={onClose}>Close</ToolbarButton>
-        </div>
+      <p className="mt-3 font-sans text-sm leading-relaxed text-mahogany/65">
+        Manual phone and walk-in registrations will be added here. Committee members will be able
+        to create attendee records directly from the dashboard.
+      </p>
+      <p className="mt-2 font-sans text-xs font-semibold uppercase tracking-wide text-gold-muted">
+        Coming soon
+      </p>
+      <div className="mt-5 flex justify-end">
+        <ToolbarButton primary onClick={onClose}>Close</ToolbarButton>
+      </div>
     </ModalShell>
   );
 }
@@ -237,97 +212,97 @@ function RsvpDetailModal({
       labelledBy={headingId}
       onClose={onClose}
     >
-        <div className="border-b border-mahogany/[0.06] px-6 py-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 id={headingId} className="truncate font-display text-xl font-semibold text-mahogany">{record.fullName}</h3>
-              <p className="mt-1 truncate font-sans text-sm text-mahogany/55">{record.email}</p>
+      <div className="border-b border-mahogany/[0.06] px-6 py-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 id={headingId} className="truncate font-display text-xl font-semibold text-mahogany">{record.fullName}</h3>
+            <p className="mt-1 truncate font-sans text-sm text-mahogany/55">{record.email}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close registration details"
+            className="rounded-lg border border-mahogany/10 px-2.5 py-1.5 font-sans text-xs font-semibold text-mahogany/60 hover:bg-cream/60"
+          >
+            Close
+          </button>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <StatusBadge status={formatRsvpStatusLabel(record.status)} />
+          {record.tags.map((tag) => (
+            <TagBadge key={tag} tag={tag} />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        <dl className="space-y-4 font-sans text-sm">
+          {[
+            ["Reference", record.registrationReference ?? "—"],
+            ["Phone", record.phone ?? "—"],
+            ["Guests", String(record.numberOfAttendees)],
+            ["Ticket preference", record.ticketType ?? "—"],
+            ["Submitted", formatRsvpDate(record.createdAt)],
+            ["Contacted", record.contactedAt ? formatRsvpDate(record.contactedAt) : "—"],
+          ].map(([label, value]) => (
+            <div key={label} className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-3">
+              <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">{label}</dt>
+              <dd className="break-words text-mahogany/80">{value}</dd>
             </div>
+          ))}
+          <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-3">
+            <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">Registrant message</dt>
+            <dd className="break-words text-mahogany/70">{record.notes ?? "—"}</dd>
+          </div>
+          <div className="flex flex-col gap-1 pb-3">
+            <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">Committee Notes</dt>
+            <dd className="break-words text-mahogany/70">{record.committeeNotes ?? "—"}</dd>
             <button
               type="button"
-              onClick={onClose}
-              aria-label="Close registration details"
-              className="rounded-lg border border-mahogany/10 px-2.5 py-1.5 font-sans text-xs font-semibold text-mahogany/60 hover:bg-cream/60"
+              onClick={() => { onClose(); onEditNote(record); }}
+              className="mt-1 w-fit font-sans text-xs font-semibold text-gold-deep hover:text-mahogany"
             >
-              Close
+              {record.committeeNotes ? "Edit note" : "Add note"}
             </button>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <StatusBadge status={formatRsvpStatusLabel(record.status)} />
-            {record.tags.map((tag) => (
-              <TagBadge key={tag} tag={tag} />
-            ))}
-          </div>
-        </div>
+        </dl>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          <dl className="space-y-4 font-sans text-sm">
-            {[
-              ["Phone", record.phone ?? "—"],
-              ["Guests", String(record.numberOfAttendees)],
-              ["Ticket preference", record.ticketType ?? "—"],
-              ["Submitted", formatRsvpDate(record.createdAt)],
-              ["Contacted", record.contactedAt ? formatRsvpDate(record.contactedAt) : "—"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-3">
-                <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">{label}</dt>
-                <dd className="break-words text-mahogany/80">{value}</dd>
-              </div>
-            ))}
-            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-3">
-              <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">Registrant message</dt>
-              <dd className="break-words text-mahogany/70">{record.notes ?? "—"}</dd>
-            </div>
-            <div className="flex flex-col gap-1 pb-3">
-              <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">Committee Notes</dt>
-              <dd className="break-words text-mahogany/70">{record.committeeNotes ?? "—"}</dd>
-              <button
-                type="button"
-                onClick={() => { onClose(); onEditNote(record); }}
-                className="mt-1 w-fit font-sans text-xs font-semibold text-gold-deep hover:text-mahogany"
-              >
-                {record.committeeNotes ? "Edit note" : "Add note"}
-              </button>
-            </div>
-          </dl>
-
-          <div className="mt-6 rounded-xl border border-mahogany/[0.06] bg-cream/30 p-4">
-            <p className="font-sans text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">
-              Activity timeline
-            </p>
-            <ul className="mt-3 space-y-3 font-sans text-sm text-mahogany/65">
+        <div className="mt-6 rounded-xl border border-mahogany/[0.06] bg-cream/30 p-4">
+          <p className="font-sans text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">
+            Activity timeline
+          </p>
+          <ul className="mt-3 space-y-3 font-sans text-sm text-mahogany/65">
+            <li className="flex gap-2">
+              <span className="text-gold-deep">·</span>
+              Registered interest — {formatRsvpDateShort(record.createdAt)}
+            </li>
+            {record.contactedAt ? (
               <li className="flex gap-2">
                 <span className="text-gold-deep">·</span>
-                Registered interest — {formatRsvpDateShort(record.createdAt)}
+                Marked contacted — {formatRsvpDateShort(record.contactedAt)}
               </li>
-              {record.contactedAt ? (
-                <li className="flex gap-2">
-                  <span className="text-gold-deep">·</span>
-                  Marked contacted — {formatRsvpDateShort(record.contactedAt)}
-                </li>
-              ) : null}
-              <li className="flex gap-2 text-mahogany/45">
-                <span>·</span>
-                Ticket invitation, payment, and check-in events will appear here in a future release.
-              </li>
-            </ul>
-          </div>
+            ) : null}
+            <li className="flex gap-2 text-mahogany/45">
+              <span>·</span>
+              Ticket invitation, payment, and check-in events will appear here in a future release.
+            </li>
+          </ul>
         </div>
+      </div>
     </ModalShell>
   );
 }
 
-export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProps) {
+export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [ticketFilter, setTicketFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<TagFilter>("all");
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(error ?? null);
   const [noteTarget, setNoteTarget] = useState<DashboardRsvpRecord | null>(null);
   const [detailTarget, setDetailTarget] = useState<DashboardRsvpRecord | null>(null);
   const [registerGuestOpen, setRegisterGuestOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const isDemo = source === "demo";
 
   const kpis = useMemo(() => computeRsvpKpis(records), [records]);
 
@@ -342,6 +317,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
         r.fullName.toLowerCase().includes(q) ||
         r.email.toLowerCase().includes(q) ||
         (r.phone?.toLowerCase().includes(q) ?? false) ||
+        (r.registrationReference?.toLowerCase().includes(q) ?? false) ||
         r.tags.some((t) => t.toLowerCase().includes(q))
       );
     });
@@ -349,20 +325,37 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
 
   function handleExport() {
     const header = [
-      "Name", "Email", "Phone", "Guests", "Ticket", "Status", "Tags",
-      "Contacted at", "Committee Notes", "Registrant message", "Submitted",
+      "Reference",
+      "Name",
+      "Email",
+      "Phone",
+      "Guests",
+      "Ticket",
+      "Status",
+      "Tags",
+      "Contacted at",
+      "Committee Notes",
+      "Registrant message",
+      "Submitted",
     ];
     const rows = filtered.map((r) => [
-      r.fullName, r.email, r.phone ?? "", String(r.numberOfAttendees), r.ticketType ?? "",
-      formatRsvpStatusLabel(r.status), r.tags.join("; "),
+      r.registrationReference ?? "",
+      r.fullName,
+      r.email,
+      r.phone ?? "",
+      String(r.numberOfAttendees),
+      r.ticketType ?? "",
+      formatRsvpStatusLabel(r.status),
+      r.tags.join("; "),
       r.contactedAt ? formatRsvpDate(r.contactedAt) : "",
-      r.committeeNotes ?? "", r.notes ?? "", formatRsvpDate(r.createdAt),
+      r.committeeNotes ?? "",
+      r.notes ?? "",
+      formatRsvpDate(r.createdAt),
     ]);
     downloadCsvFile(`yoruba-day-rsvps-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows]);
   }
 
   function runAction(fn: () => Promise<{ ok: boolean; error?: string }>) {
-    if (isDemo) return;
     setActionError(null);
     startTransition(async () => {
       const result = await fn();
@@ -372,8 +365,6 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
 
   return (
     <div className="space-y-6">
-      <RsvpStatusBanner source={source} />
-
       <div className="flex justify-end">
         <ToolbarButton primary onClick={() => setRegisterGuestOpen(true)}>
           + Register Guest
@@ -413,7 +404,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, email, phone, or tag…"
+                placeholder="Search by name, email, phone, reference, or tag…"
                 aria-label="Search RSVPs"
                 className="w-full min-w-0 basis-full rounded-lg border border-mahogany/10 bg-cream/30 px-3 py-2 font-sans text-sm text-mahogany outline-none placeholder:text-mahogany/35 focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10 sm:basis-auto sm:min-w-[12rem] sm:flex-1"
               />
@@ -450,14 +441,6 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
-              <select
-                disabled
-                aria-label="Date range filter"
-                title="Date range filtering — coming soon"
-                className="cursor-not-allowed rounded-lg border border-mahogany/10 bg-cream/40 px-3 py-2 font-sans text-xs font-semibold text-mahogany/40 outline-none"
-              >
-                <option>Date range — soon</option>
-              </select>
               <ToolbarButton onClick={handleExport} disabled={filtered.length === 0}>
                 Export CSV
               </ToolbarButton>
@@ -484,7 +467,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
               <table className="w-full min-w-[64rem] text-left font-sans text-sm">
                 <thead>
                   <tr className="border-b border-mahogany/[0.05] bg-cream/40">
-                    {["Name", "Email", "Guests", "Ticket", "Tags", "Submitted", "Status", "Committee Notes", "Actions"].map((h) => (
+                    {["Reference", "Name", "Email", "Guests", "Ticket", "Tags", "Submitted", "Status", "Committee Notes", "Actions"].map((h) => (
                       <th key={h} scope="col" className="px-5 py-3.5 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-mahogany/45 sm:px-6">{h}</th>
                     ))}
                   </tr>
@@ -492,6 +475,11 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
                 <tbody className="divide-y divide-mahogany/[0.04]">
                   {filtered.map((r) => (
                     <tr key={r.id} className="transition-colors hover:bg-cream/30">
+                      <td className="max-w-[8rem] px-5 py-4 font-mono text-xs text-mahogany/65 sm:px-6">
+                        <span className="block truncate" title={r.registrationReference ?? undefined}>
+                          {r.registrationReference ?? "—"}
+                        </span>
+                      </td>
                       <td className="max-w-[10rem] px-5 py-4 font-medium text-mahogany sm:px-6">
                         <button type="button" onClick={() => setDetailTarget(r)} className="block max-w-full truncate text-left hover:text-gold-deep">
                           {r.fullName}
@@ -517,7 +505,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
                       <td className="px-5 py-4 sm:px-6">
                         <ActionMenu
                           record={r}
-                          disabled={isDemo || isPending}
+                          disabled={isPending}
                           onView={setDetailTarget}
                           onEditNote={setNoteTarget}
                           onStatusChange={(id, status) => runAction(() => updateRsvpStatusAction(id, status))}
@@ -537,6 +525,9 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
                     <button type="button" onClick={() => setDetailTarget(r)} className="min-w-0 text-left">
                       <p className="truncate font-sans text-sm font-semibold text-mahogany">{r.fullName}</p>
                       <p className="truncate font-sans text-xs text-mahogany/55">{r.email}</p>
+                      {r.registrationReference ? (
+                        <p className="mt-0.5 font-mono text-[0.65rem] text-mahogany/45">{r.registrationReference}</p>
+                      ) : null}
                     </button>
                     <StatusBadge status={formatRsvpStatusLabel(r.status)} />
                   </div>
@@ -554,7 +545,7 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
                   <div className="mt-4">
                     <ActionMenu
                       record={r}
-                      disabled={isDemo || isPending}
+                      disabled={isPending}
                       onView={setDetailTarget}
                       onEditNote={setNoteTarget}
                       onStatusChange={(id, status) => runAction(() => updateRsvpStatusAction(id, status))}
@@ -574,7 +565,6 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
           saving={isPending}
           onClose={() => setNoteTarget(null)}
           onSave={(id, note) => {
-            if (isDemo) return;
             setActionError(null);
             startTransition(async () => {
               const result = await updateRsvpCommitteeNoteAction(id, note);

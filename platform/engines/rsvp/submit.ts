@@ -50,10 +50,31 @@ export async function submitRsvpToDatabase(
     };
   }
 
-  const record = toRsvpRecord(parsed.data);
+  const record = toRsvpRecord(parsed.data, event.slug);
 
   try {
     const supabase = createServiceRoleClient();
+
+    // Soft duplicate prevention: same email + event within last 24h
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: existing } = await supabase
+      .from("rsvps")
+      .select("id, registration_reference")
+      .eq("event_slug", event.slug)
+      .eq("email", record.email)
+      .gte("created_at", since)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      return {
+        ok: false,
+        error:
+          "You have already registered recently with this email. Please check your inbox or contact us if you need to update your details.",
+        errorCode: "DUPLICATE_REGISTRATION",
+      };
+    }
+
     const { error } = await supabase.from("rsvps").insert(record);
 
     if (error) {

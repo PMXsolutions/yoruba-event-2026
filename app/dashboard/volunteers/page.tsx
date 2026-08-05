@@ -1,29 +1,25 @@
-import { DataTable, IntegrationBanner, StatGrid } from "@/components/dashboard/dashboard-ui";
-import { PLACEHOLDER_VOLUNTEERS } from "@/platform/engines/dashboard/placeholder-data";
+import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
+import { VolunteerManagementPanel } from "@/components/dashboard/VolunteerManagementPanel";
+import { fetchVolunteers } from "@/platform/engines/volunteers/queries";
 
-export default function DashboardVolunteersPage() {
-  return (
-    <>
-      <IntegrationBanner title="Volunteer management — demo roster" variant="info">
-        {/* TODO(volunteer-crm): Connect volunteer_signups when recruitment opens. */}
-        Sample roster for committee preview. Shift scheduling activates with programme confirmation.
-      </IntegrationBanner>
+export const dynamic = "force-dynamic";
 
-      <StatGrid
-        stats={[
-          { label: "Confirmed", value: "2", change: "Ready to assign", icon: "◎" },
-          { label: "Open roles", value: "2", change: "Needs volunteers", icon: "☐" },
-          { label: "Areas covered", value: "4", change: "Foyer, hall, stage, dining", icon: "◈" },
-          { label: "Total shifts", value: "TBC", change: "After venue confirm", icon: "◷" },
-        ]}
-      />
+export default async function DashboardVolunteersPage() {
+  const result = await fetchVolunteers();
 
-      <DataTable
-        title="Volunteer roster"
-        description="Roles, availability, and assigned areas"
-        columns={["name", "role", "availability", "status", "area"]}
-        rows={PLACEHOLDER_VOLUNTEERS}
-      />
-    </>
-  );
+  if (!result.ok) {
+    return (
+      <>
+        <IntegrationBanner title="Unable to load volunteers" variant="warning">
+          {result.message}
+        </IntegrationBanner>
+        <EmptyState
+          title="Volunteer data unavailable"
+          message="Connect Supabase to load volunteer registrations."
+        />
+      </>
+    );
+  }
+
+  return <VolunteerManagementPanel records={result.records} />;
 }

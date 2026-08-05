@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { CountdownTimer } from "@/components/features/CountdownTimer";
 import { ButtonLink } from "@/components/ui/Button";
+import { SaveTheDateMenu } from "@/components/features/SaveTheDateMenu";
 import { SITE, LAUNCH_COPY } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 
@@ -87,7 +88,7 @@ export function Hero() {
             variants={item}
             className="mb-6 flex flex-col gap-2 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.38em] text-gold-bright sm:mb-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1 sm:text-xs sm:tracking-[0.42em]"
           >
-            <span className="text-cream/90">{SITE.heroDateLine}</span>
+            <span className="text-cream/90">{SITE.heroDateDisplay}</span>
             <span
               aria-hidden
               className="hidden h-1 w-1 rounded-full bg-gold-bright/70 sm:inline-block"
@@ -153,7 +154,8 @@ export function Hero() {
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
             <ButtonLink href="#rsvp">{LAUNCH_COPY.registerInterest}</ButtonLink>
-            <ButtonLink href="#sponsors" variant="outline">
+            <SaveTheDateMenu variant="outline" />
+            <ButtonLink href="#sponsors" variant="ghost">
               {LAUNCH_COPY.becomeSponsor}
             </ButtonLink>
           </div>
