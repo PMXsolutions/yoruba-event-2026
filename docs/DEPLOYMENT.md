@@ -21,14 +21,25 @@ Do **not** run `supabase/seed/` in production. Seed content is for explicit loca
 
 ## 2. Admin account
 
+Default committee administrator email: `admin@promaxevent.com`
+
+Set a strong password in **`.env.local`** (gitignored) or Vercel — never commit it:
+
 ```bash
-# In a secure shell with production env vars loaded — never commit passwords
-export ADMIN_EMAIL=admin@promaxevent.com
-export ADMIN_PASSWORD='…strong password…'
-node scripts/provision-admin.mjs
+ADMIN_EMAIL=admin@promaxevent.com
+ADMIN_FULL_NAME=Platform Administrator
+ADMIN_PASSWORD="your-strong-password-here"
 ```
 
-This creates/updates the Auth user and upserts a `SUPER_ADMIN` profile.
+Provision / reset in Supabase Auth:
+
+```bash
+# Requires NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+npm run provision-admin
+```
+
+This creates or updates the Auth user and upserts a `SUPER_ADMIN` profile.
+Sign in at `/login`. Rotate the password after first production use.
 
 ---
 
