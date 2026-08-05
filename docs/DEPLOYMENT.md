@@ -52,6 +52,9 @@ npm run provision-admin
 
 Sign in at `/login`. Rotate the password after first production use.
 
+If you only set `ADMIN_PASSWORD` in `.env.local` but never run `provision-admin`,
+the password cannot work — Supabase Auth has no matching user yet.
+
 ---
 
 ## 3. Vercel environment
