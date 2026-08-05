@@ -84,12 +84,14 @@ export default async function DashboardSettingsPage() {
                   : "Required database environment variables are missing",
               },
               {
-                name: "Resend (email)",
+                name: "Email (SMTP / Resend)",
                 status: email.ready ? "Configured" : "Not configured",
                 ok: email.ready,
                 detail: email.ready
-                  ? "Outbound email is ready"
-                  : "Email provider environment variables are incomplete",
+                  ? email.transport === "smtp"
+                    ? "SMTP transport ready"
+                    : "Resend transport ready"
+                  : "Email transport environment variables are incomplete",
               },
             ]}
           />
