@@ -110,11 +110,13 @@ export function ToolbarButton({
   disabled,
   primary,
   onClick,
+  type = "button",
 }: {
   children: ReactNode;
   disabled?: boolean;
   primary?: boolean;
   onClick?: () => void;
+  type?: "button" | "submit" | "reset";
 }) {
   const base =
     "inline-flex items-center gap-2 rounded-lg px-4 py-2 font-sans text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/30 focus-visible:ring-offset-2";
@@ -131,7 +133,7 @@ export function ToolbarButton({
   if (primary) {
     return (
       <button
-        type="button"
+        type={type}
         onClick={onClick}
         disabled={disabled}
         className={`${base} border border-gold/30 bg-espresso text-gold-light hover:bg-mahogany disabled:cursor-not-allowed disabled:opacity-45`}
@@ -142,7 +144,7 @@ export function ToolbarButton({
   }
   return (
     <button
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`${base} border border-mahogany/10 bg-white text-mahogany/75 hover:border-gold/25 hover:bg-cream/60 disabled:cursor-not-allowed disabled:opacity-45`}

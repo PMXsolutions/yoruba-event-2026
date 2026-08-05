@@ -15,7 +15,7 @@ import {
 } from "@/lib/validation/rsvp";
 
 const RSVP_SUBTITLE =
-  "Register your interest and our planning committee will share ticketing and event updates as details are confirmed.";
+  "Register your interest to receive priority updates when ticketing, sponsorship packages and the full programme are announced. This is not a ticket purchase — there is no payment at this stage.";
 
 type FormState = {
   fullName: string;
@@ -54,7 +54,7 @@ function inputClass(err?: string) {
   return err ? inputError : inputNormal;
 }
 
-export function RSVP() {
+export function RSVP({ registrationOpen = true }: { registrationOpen?: boolean }) {
   const [form, setForm] = useState<FormState>(initial);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -64,6 +64,7 @@ export function RSVP() {
   const [isPending, setIsPending] = useState(false);
   const [confirmationEmailQueued, setConfirmationEmailQueued] = useState(false);
   const [registrationReference, setRegistrationReference] = useState<string | null>(null);
+  const [smsConsent, setSmsConsent] = useState(false);
 
   function clearMessages() {
     setSubmitError(null);
@@ -72,7 +73,12 @@ export function RSVP() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!registrationOpen) return;
     clearMessages();
+
+    const notesWithConsent = smsConsent
+      ? [form.notes.trim(), "[SMS consent: yes]"].filter(Boolean).join("\n")
+      : form.notes;
 
     const payload = {
       fullName: form.fullName,
@@ -80,7 +86,7 @@ export function RSVP() {
       phone: form.phone,
       attendees: form.attendees,
       ticketType: form.ticketType,
-      notes: form.notes,
+      notes: notesWithConsent,
     };
 
     const local = rsvpFormSchema.safeParse(payload);
@@ -103,6 +109,7 @@ export function RSVP() {
         setConfirmationEmailQueued(result.emailSent ?? false);
         setRegistrationReference(result.registrationReference ?? null);
         setForm(initial);
+        setSmsConsent(false);
         setFieldErrors({});
         setSubmitError(null);
         return;
@@ -167,12 +174,12 @@ export function RSVP() {
                 <div className="relative py-10 text-center sm:py-14" role="status" aria-live="polite">
                   <div className={successBox}>
                     <p className="font-display text-2xl font-medium text-cream sm:text-3xl">
-                      Thank you — you are on the list
+                      Interest received
                     </p>
                     <p className="mx-auto mt-4 max-w-md font-sans text-sm leading-relaxed text-cream/78 sm:text-base">
-                      Your interest has been received and stored securely. Our planning committee
-                      will reach out to the email you provided with ticketing and programme news as
-                      soon as dates and venues are finalised.
+                      Thank you — your interest has been received. This is not yet a purchased or
+                      confirmed ticket. You will receive priority updates when ticketing, sponsorship
+                      packages and the full programme are announced.
                     </p>
                     {registrationReference ? (
                       <p className="mx-auto mt-3 font-sans text-sm text-gold-light">
@@ -195,11 +202,23 @@ export function RSVP() {
                       setConfirmationEmailQueued(false);
                       setRegistrationReference(null);
                       setForm(initial);
+                      setSmsConsent(false);
                       clearMessages();
                     }}
                   >
                     Register another guest
                   </Button>
+                </div>
+              ) : !registrationOpen ? (
+                <div className="relative py-10 text-center sm:py-14" role="status">
+                  <div className={successBox}>
+                    <p className="font-display text-2xl font-medium text-cream">
+                      Register Interest temporarily closed
+                    </p>
+                    <p className="mx-auto mt-4 max-w-md font-sans text-sm leading-relaxed text-cream/78">
+                      Please check back soon, or contact the committee if you need assistance.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="relative space-y-6 sm:space-y-7">
@@ -353,11 +372,24 @@ export function RSVP() {
                   <div className="rounded-2xl border border-gold/15 bg-espresso/40 px-4 py-3 font-sans text-xs leading-relaxed text-cream/60 sm:text-[0.8rem]">
                     {LAUNCH_COPY.comingSoonNote}
                   </div>
+                  <label className="flex items-start gap-3 font-sans text-xs leading-relaxed text-cream/65 sm:text-[0.8rem]">
+                    <input
+                      type="checkbox"
+                      checked={smsConsent}
+                      onChange={(e) => setSmsConsent(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      Optional: I consent to receive SMS updates about this event when SMS messaging
+                      is enabled. No SMS will be sent until committee and Twilio configuration are
+                      approved.
+                    </span>
+                  </label>
                   <div className="border-t border-white/10 pt-6 pb-2 sm:pt-7">
                     <Button
                       type="submit"
                       className="w-full min-h-[3.25rem] sm:w-auto sm:min-w-[14rem]"
-                      disabled={isPending}
+                      disabled={isPending || !registrationOpen}
                     >
                       {isPending ? "Sending…" : LAUNCH_COPY.registerInterest}
                     </Button>

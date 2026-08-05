@@ -75,3 +75,24 @@ MAIL_FROM="Promax Event <support@yourdomain.com>"
 | Email sent | Yes |
 | Not configured | Yes (email skipped) |
 | Send failed | Yes (failure logged safely) |
+| `EMAIL_CONFIRMATIONS_ENABLED=false` | Yes (email skipped) |
+
+---
+
+## Templates
+
+| Template | Status |
+|----------|--------|
+| Register Interest / guest confirmation (`rsvp-confirmation.ts`) | **Live** when transport configured |
+| Ticket invitation | Draft only (`future-templates.ts`) |
+| Seating / QR confirmation | Draft only |
+| Event reminder | Draft only |
+| Thank-you | Draft only |
+
+Live confirmation copy states interest received, **not a purchased ticket**, and priority updates when ticketing / sponsorship / programme are announced.
+
+---
+
+## Feature flag
+
+`EMAIL_CONFIRMATIONS_ENABLED` (default true). When false, dispatch skips send without failing the RSVP.

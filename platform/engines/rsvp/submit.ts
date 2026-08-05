@@ -12,7 +12,7 @@ import { mapConfigError, mapSupabaseRsvpError } from "@/platform/engines/rsvp/er
 import type { EventConfig } from "@/platform/core/types/event";
 
 export type SubmitRsvpResult =
-  | { ok: true; record: ReturnType<typeof toRsvpRecord> }
+  | { ok: true; record: ReturnType<typeof toRsvpRecord>; id: string }
   | {
       ok: false;
       error: string;
@@ -90,7 +90,9 @@ export async function submitRsvpToDatabase(
       };
     }
 
-    let { error } = await supabase.from("rsvps").insert(record);
+    let insertResult = await supabase.from("rsvps").insert(record).select("id").single();
+    let error = insertResult.error;
+    let insertedId = insertResult.data?.id as string | undefined;
 
     // Compatibility: older schemas without production columns
     if (error && /event_slug|registration_reference/i.test(error.message)) {
@@ -103,7 +105,9 @@ export async function submitRsvpToDatabase(
         notes: record.notes,
         status: record.status,
       };
-      ({ error } = await supabase.from("rsvps").insert(legacy));
+      insertResult = await supabase.from("rsvps").insert(legacy).select("id").single();
+      error = insertResult.error;
+      insertedId = insertResult.data?.id as string | undefined;
     }
 
     if (error) {
@@ -112,7 +116,7 @@ export async function submitRsvpToDatabase(
       return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
     }
 
-    return { ok: true, record };
+    return { ok: true, record, id: insertedId ?? "" };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[rsvp-engine] Unexpected error:", msg);

@@ -15,16 +15,14 @@ export const RSVP_TAGS = [
   "Media",
   "Committee",
   "General Attendee",
+  "Elder",
+  "Youth",
 ] as const;
 
 export type RsvpTag = (typeof RSVP_TAGS)[number];
 
-/** Quick-tag actions shown in row menus. */
-export const RSVP_QUICK_TAGS: readonly RsvpTag[] = [
-  "VIP",
-  "Sponsor Lead",
-  "Volunteer",
-];
+/** Quick-tag actions shown in row menus (full approved tag set). */
+export const RSVP_QUICK_TAGS: readonly RsvpTag[] = RSVP_TAGS;
 
 /**
  * Future ticketing journey (not implemented in v1).
@@ -37,8 +35,11 @@ export const FUTURE_RSVP_JOURNEY = [
   "Ticket Invited",
   "Paid",
   "Confirmed",
+  "Seat Assigned",
+  "QR Generated",
   "Checked In",
-  "Completed",
+  "Attended",
+  "Thank You Sent",
 ] as const;
 
 export type DashboardRsvpRecord = {
@@ -55,6 +56,9 @@ export type DashboardRsvpRecord = {
   contactedAt: string | null;
   tags: readonly RsvpTag[];
   registrationReference: string | null;
+  accessibilityRequirements: string | null;
+  dietaryRequirements: string | null;
+  source: string | null;
 };
 
 export type FetchDashboardRsvpsResult =

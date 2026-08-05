@@ -11,7 +11,7 @@ const field =
 const label =
   "mb-2.5 block font-sans text-[0.62rem] font-bold uppercase tracking-[0.24em] text-gold-muted";
 
-export function Volunteer() {
+export function Volunteer({ interestOpen = true }: { interestOpen?: boolean }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -27,6 +27,7 @@ export function Volunteer() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!interestOpen) return;
     setPending(true);
     setError(null);
     try {
@@ -62,16 +63,26 @@ export function Volunteer() {
         <SectionHeading
           eyebrow="Serve with us"
           title="Volunteer at Yoruba Day"
-          subtitle="Help welcome guests, support the programme, and bring the celebration to life. Share your skills and availability and our committee will be in touch."
+          subtitle="Help welcome guests, support the programme, and bring the celebration to life. Share your skills and availability — roles are confirmed after committee screening."
         />
 
         <div className="mx-auto mt-12 max-w-3xl rounded-[1.75rem] border border-gold/20 bg-mahogany/50 p-6 backdrop-blur-sm sm:p-8">
+          {!interestOpen ? (
+            <p
+              role="status"
+              className="mb-6 rounded-xl border border-gold/25 bg-gold/[0.08] px-4 py-3 text-sm text-cream/90"
+            >
+              Volunteer interest is temporarily closed. Please check back soon or contact the
+              committee.
+            </p>
+          ) : null}
           {done ? (
             <p
               role="status"
               className="mb-6 rounded-xl border border-gold/25 bg-gold/[0.08] px-4 py-3 text-sm text-cream/90"
             >
-              Thank you — your volunteer registration has been received.
+              Thank you — your volunteer interest has been received. This is not a confirmed role
+              until the committee follows up.
             </p>
           ) : null}
           {error ? (
@@ -169,8 +180,8 @@ export function Volunteer() {
               />
             </div>
             <div className="sm:col-span-2">
-              <Button type="submit" disabled={pending}>
-                {pending ? "Submitting…" : "Register as volunteer"}
+              <Button type="submit" disabled={!interestOpen || pending}>
+                {pending ? "Submitting…" : "Register volunteer interest"}
               </Button>
             </div>
           </form>
