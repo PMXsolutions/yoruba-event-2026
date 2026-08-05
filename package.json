@@ -4,10 +4,10 @@
   "description": "Promax Event Platform v1 — first deployment: Yoruba Day Canberra 2026",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "preview": "next build && next start",
+    "dev": "next dev -H 0.0.0.0 -p 3001",
+    "preview": "next build && next start -H 0.0.0.0 -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 0.0.0.0 -p 3001",
     "lint": "eslint"
   },
   "dependencies": {
