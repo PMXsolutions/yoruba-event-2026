@@ -71,13 +71,21 @@ lib/                    Legacy re-exports + Supabase clients
 
 ## Committee portal
 
-Routes under `/dashboard/*` — **Event Command Centre** with enterprise UI.
+Routes under `/dashboard/*` — committee tools for Yoruba Day Canberra 2026.
 
-**Current status:** RSVP management at `/dashboard/rsvps` reads live Supabase data (server-side). Other modules use placeholder data. **Not authenticated** — protect before public launch.
+**Current status**
+
+- Presentation-ready UI for committee walkthroughs  
+- RSVP management at `/dashboard/rsvps` reads live Supabase data when migrations + env vars are set (otherwise labelled sample data)  
+- Other modules use professional placeholder data  
+- **Not authenticated** — limit sharing until Phase 2 auth  
+
+**Committee business docs:** [COMMITTEE_PRESENTATION.md](./COMMITTEE_PRESENTATION.md), [BUSINESS_WORKFLOWS.md](./BUSINESS_WORKFLOWS.md), [CONTENT_CHECKLIST.md](./CONTENT_CHECKLIST.md).
 
 **Next staged modules:** Sponsors CRM, Volunteers, Tasks, Programme — see `docs/PHASE_2_SPEC.md`.
-- Add Supabase Auth + RBAC middleware on all `/dashboard/*` routes
-- Replace placeholder data with protected server-side queries
+
+- Add Supabase Auth + RBAC middleware on all `/dashboard/*` routes  
+- Replace placeholder data with protected server-side queries  
 - Remove or hide public demo links
 
 See `docs/PHASE_2_SPEC.md` for auth roadmap.

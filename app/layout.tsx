@@ -17,13 +17,13 @@ const body = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Yoruba Day Canberra 2026 | Premium Cultural Celebration",
+  title: "Yoruba Day Canberra 2026 | Cultural Celebration",
   description:
-    "November 2026 in Canberra, ACT—Yoruba Day celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity. Presented by Yoruba Association Canberra.",
+    "November 2026 in Canberra, ACT—Yoruba Day celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity. Presented by Yoruba Association Canberra. Exact date and venue to be confirmed. Register your interest today.",
   openGraph: {
     title: "Yoruba Day Canberra 2026",
     description:
-      "An elevated, welcoming celebration of Yoruba culture in the ACT—elders, youth, families, and friends together.",
+      "A warm, welcoming celebration of Yoruba culture in Canberra, ACT—elders, youth, families, and friends together. Presented by Yoruba Association Canberra.",
   },
 };
 

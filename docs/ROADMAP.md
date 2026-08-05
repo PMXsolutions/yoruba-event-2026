@@ -1,24 +1,38 @@
 # Yoruba Day Canberra 2026 — Platform Roadmap
 
-**Last updated:** July 2026  
-**Owner:** Yoruba Association Canberra / PMX Solutions
+**Last updated:** August 2026  
+**Owner:** Yoruba Association Canberra / Promax IT Solutions
+
+---
+
+## Ownership at a glance
+
+| Track | Owner |
+|-------|-------|
+| Public content, committee materials, presentation polish | Joshua |
+| Supabase migrations, Vercel env vars, health check, live RSVP test, Resend | Damola |
+| Exact date, venue, prices, packages, programme confirmation | Committee |
 
 ---
 
 ## Phase 1 — Public launch (current)
 
-**Goal:** Premium public website with interest registration.
+**Goal:** Professional public website with Register Interest and committee-ready presentation.
 
-| Item | Status |
-|------|--------|
-| Marketing site (Hero, About, Experience, Sponsors, RSVP, Footer) | ✅ Done |
-| Register Interest form → Supabase | ✅ Done |
-| Health check API | ✅ Done |
-| GitHub backup | ✅ Done |
-| Vercel deployment | ⏳ Damola |
-| Rate limiting / CAPTCHA | ⏳ Post-launch hardening |
-| Final sponsor logos & social URLs | ⏳ Business decision |
-| Confirmed event date & ticket prices | ⏳ Business decision |
+| Item | Status | Owner |
+|------|--------|-------|
+| Marketing site (Hero, About, Experience, Sponsors, Register Interest, Footer) | ✅ Done | Joshua |
+| Register Interest form → Supabase (code ready) | ✅ Done | Joshua |
+| Health check API | ✅ Done | Joshua |
+| GitHub on `main` | ✅ Done | Joshua |
+| Committee presentation / feedback / workflows / content checklist | ✅ Done | Joshua |
+| Vercel site published | ✅ Live URL exists | Damola |
+| Supabase migrations on production | ⏳ Pending | Damola |
+| Vercel Supabase env vars | ⏳ Pending | Damola |
+| `/api/health` → ok on production | ⏳ Pending | Damola |
+| Rate limiting / CAPTCHA | ⏳ Post-launch hardening | Engineering |
+| Exact date, venue, ticket prices, sponsor amounts | ⏳ Committee decisions | Committee |
+| Final sponsor logos & social URLs | ⏳ Committee / Comms | Committee |
 
 ---
 
@@ -28,14 +42,15 @@
 
 | Item | Status |
 |------|--------|
-| Dashboard route scaffold (`/dashboard/*`) | ✅ Scaffold only |
-| Authentication (Supabase Auth or similar) | ❌ Not started |
-| RSVP list / export | ❌ Blocked on auth |
-| Sponsor pipeline CRM | ❌ Blocked on auth |
-| Volunteer roster | ❌ Not started |
-| Task board | ❌ Not started |
+| Dashboard route scaffold (`/dashboard/*`) | ✅ Done (presentation UI) |
+| RSVP CRM (list, filters, status, notes, tags, CSV export) | ✅ Done (live when DB connected; sample data otherwise) |
+| Authentication (Supabase Auth or similar) | ❌ Not started — required before wide portal sharing |
+| Sponsor pipeline CRM | 📋 UI scaffold + placeholder data |
+| Volunteer roster | 📋 UI scaffold + placeholder data |
+| Task board | 📋 UI scaffold + placeholder data |
+| Programme / announcements / analytics | 📋 UI scaffold + placeholder data |
 
-See [PHASE_2_SPEC.md](./PHASE_2_SPEC.md).
+See [PHASE_2_SPEC.md](./PHASE_2_SPEC.md) and [BUSINESS_WORKFLOWS.md](./BUSINESS_WORKFLOWS.md).
 
 ---
 
@@ -45,7 +60,7 @@ See [PHASE_2_SPEC.md](./PHASE_2_SPEC.md).
 
 | Item | Status |
 |------|--------|
-| Email on new RSVP (Resend) | ⚠️ Scaffold — activates with `RESEND_API_KEY` + `RESEND_FROM_EMAIL` |
+| Guest confirmation email (Resend) | ⚠️ Scaffold — activates with `RESEND_*` (Damola) |
 | Admin notification preferences | ❌ Not started |
 | Analytics (Plausible / GA4) | ❌ Not started |
 | SEO (sitemap, OG images) | ❌ Not started |
@@ -65,7 +80,7 @@ See [PHASE_3_SPEC.md](./PHASE_3_SPEC.md).
 | QR check-in | ❌ Not started |
 | Refund policy | ❌ Business decision required |
 
-**Do not implement until Phase 1 is live and committee approves pricing.**
+**Do not implement until Phase 1 Register Interest is live and the committee approves pricing.**
 
 ---
 
@@ -73,38 +88,54 @@ See [PHASE_3_SPEC.md](./PHASE_3_SPEC.md).
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| RSVP spam | Medium | Rate limiting + CAPTCHA (Phase 1 hardening) |
-| Unprotected `/dashboard` routes | Medium | Do not link publicly; add auth in Phase 2 |
-| Service role key exposure | High | Server-only client; never commit `.env.local` |
-| Turbopack dev hang | Low | Use `npm run preview` for local testing |
-| Missing Supabase migration | High | Run SQL before deploy; verify `/api/health` |
-| Placeholder content at launch | Low | Replace sponsors/social when assets ready |
+| RSVP spam | Medium | Rate limiting + CAPTCHA (post-launch) |
+| Unprotected `/dashboard` routes | Medium | Limit sharing; add auth in Phase 2 |
+| Service role key exposure | High | Server-only; never commit secrets |
+| Missing Supabase migration / env | High | Damola checklist; verify `/api/health` |
+| Invented date / price / venue | High | Use TBC / coming soon until committee confirms |
+| Placeholder portal modules | Low | Clearly labelled presentation mode |
 
 ---
 
-## Remaining business decisions
+## Remaining committee decisions
 
-1. **Exact event date** (currently November 2026, placeholder 22 Nov for countdown)
-2. **Venue confirmation**
-3. **Ticket types and pricing**
-4. **Sponsor tier amounts and benefits**
-5. **Official social media URLs**
-6. **Contact phone number**
-7. **Sponsor logo assets**
-8. **Photography / video for hero and OG images**
+See [CONTENT_CHECKLIST.md](./CONTENT_CHECKLIST.md). Highlights:
+
+1. Exact event date and times  
+2. Venue confirmation  
+3. Ticket types and pricing  
+4. Sponsor tier amounts and benefits  
+5. Official social media URLs and phone  
+6. Confirmed programme, performers, MC, vendors  
+7. Sponsor logos and photography  
 
 ---
 
-## Friday launch checklist
+## Launch readiness checklist
 
-- [ ] Push latest commits to GitHub (`main`)
-- [ ] All three Supabase migrations applied
-- [ ] Vercel env vars set (3 Supabase vars minimum)
-- [ ] `GET /api/health` returns `{ "status": "ok" }`
-- [ ] Register Interest form submits successfully
-- [ ] RSVP dashboard (`/dashboard/rsvps`) shows live data when connected
-- [ ] Rehearse demo — [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
-- [ ] Damola reviews site on mobile and desktop
-- [ ] Custom domain configured (if ready)
+### Joshua (complete / maintain)
+
+- [x] Public site presentation-ready  
+- [x] Committee presentation document  
+- [x] Committee feedback framework  
+- [x] Business workflows documented (proposed)  
+- [x] Content checklist with owners  
+- [ ] Rehearse 5-minute walkthrough before the meeting  
+
+### Damola (production connection)
+
+- [ ] Run all three Supabase migrations  
+- [ ] Set three Supabase env vars on Vercel  
+- [ ] Redeploy  
+- [ ] `GET /api/health` → `{ "status": "ok", "supabase": true, "env": true }`  
+- [ ] Test Register Interest + row in Supabase  
+- [ ] Confirm `/dashboard/rsvps` Live banner  
+- [ ] Optional: Resend keys  
+
+### Committee
+
+- [ ] Review public wording  
+- [ ] Confirm or amend workflows  
+- [ ] Fill content checklist priorities  
 
 Full morning checklist: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).

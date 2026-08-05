@@ -15,7 +15,7 @@ import {
 } from "@/lib/validation/rsvp";
 
 const RSVP_SUBTITLE =
-  "Register your interest and our planning committee will share ticketing and event updates as details are confirmed.";
+  "Register your interest and our planning committee will share ticketing details and event updates as they are confirmed. There is no payment at this stage.";
 
 type FormState = {
   fullName: string;
@@ -129,14 +129,14 @@ export function RSVP() {
             <SectionHeading
               align="left"
               eyebrow="Register your interest"
-              title="Join us for an evening draped in gold and grace"
+              title="Join us for a celebration draped in gold and grace"
               subtitle={RSVP_SUBTITLE}
             />
             <ul className="mt-8 space-y-5 font-sans text-sm leading-relaxed text-cream/75 sm:mt-10 sm:text-[0.95rem]">
               {[
-                "Share your details once—our planning committee will follow up as the programme firms.",
-                "Let us know your party size and preferred ticket type so we can plan seating fairly.",
-                "Corporate tables and sponsorship conversations can begin in parallel—no obligation at this stage.",
+                "Share your details once—our planning committee will follow up as the programme is confirmed.",
+                "Tell us your party size and preferred ticket type (indicative only—pricing coming soon).",
+                "Sponsorship conversations are welcome in parallel—no obligation at this stage.",
               ].map((line) => (
                 <li key={line} className="flex gap-4">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-br from-gold-bright to-gold-deep shadow-[0_0_12px_rgba(201,162,39,0.5)]" />
@@ -291,7 +291,7 @@ export function RSVP() {
                     </div>
                     <div className={fieldWrap}>
                       <label htmlFor="ticketType" className={labelClass}>
-                        Preferred ticket type
+                        Preferred ticket type (indicative)
                       </label>
                       <select
                         id="ticketType"

@@ -177,7 +177,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           {/* Sidebar footer */}
           <div
             className={`shrink-0 border-t border-gold/10 p-3 ${
-              sidebarCollapsed ? "flex justify-center" : ""
+              sidebarCollapsed ? "flex flex-col items-center gap-2" : "space-y-2"
             }`}
           >
             <Link
@@ -189,6 +189,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             >
               {sidebarCollapsed ? "←" : "← Public site"}
             </Link>
+            {!sidebarCollapsed ? (
+              <p className="px-1 text-center font-sans text-[0.58rem] tracking-wide text-cream/35">
+                Powered by Promax Event Platform
+              </p>
+            ) : null}
           </div>
         </aside>
 
@@ -291,7 +296,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
                 <p className="font-sans text-[0.62rem] font-bold uppercase tracking-[0.32em] text-gold-muted">
-                  Promax Event Platform · Event Command Centre
+                  Yoruba Day Canberra 2026 · Committee Portal
                 </p>
                 <h1 className="mt-1 font-display text-2xl font-semibold text-mahogany sm:text-3xl">
                   {meta.title}

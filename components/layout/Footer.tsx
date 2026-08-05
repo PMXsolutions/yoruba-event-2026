@@ -53,8 +53,7 @@ export function Footer() {
                 {/* TODO(platform-auth): Remove public link before launch; gate /dashboard with Supabase Auth. */}
                 <CommitteePortalLink variant="footer" />
                 <p className="max-w-xs font-sans text-xs leading-relaxed text-cream/40">
-                  Demo access for planning committee preview. Authentication required before
-                  public launch.
+                  Committee preview only. Sign-in protection will be added before wider access.
                 </p>
               </div>
             </div>
@@ -82,9 +81,14 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-16 flex flex-col gap-5 border-t border-white/[0.07] pt-10 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-sans text-xs text-cream/45">
-            © {new Date().getFullYear()} Yoruba Day Canberra · {SITE.presenter}
-          </p>
+          <div className="space-y-1.5">
+            <p className="font-sans text-xs text-cream/45">
+              © {new Date().getFullYear()} Yoruba Day Canberra · {SITE.presenter}
+            </p>
+            <p className="font-sans text-[0.65rem] tracking-wide text-cream/35">
+              Powered by Promax Event Platform
+            </p>
+          </div>
           <a
             href="#home"
             className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold-muted transition-colors hover:text-gold-bright"

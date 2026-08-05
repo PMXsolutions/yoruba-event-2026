@@ -125,19 +125,22 @@ An overnight pass reviewed the public site, Committee Portal, RSVP CRM, shared c
 
 ## Production readiness score
 
-**80 / 100**
+**Committee presentation readiness: high** · **Public Register Interest go-live: blocked on Damola DB/env**
 
 | Criterion | Score |
 |-----------|-------|
-| Public site | 92 |
-| RSVP submit path | 85 (needs migration on prod) |
+| Public site content / clarity | 94 |
+| RSVP submit path | 85 (needs migration + env on prod) |
 | Health / observability | 88 |
-| Dashboard demo UX | 92 |
-| RSVP CRM (live) | 85 |
+| Dashboard presentation UX | 93 |
+| RSVP CRM (when connected) | 85 |
 | Auth / security | 35 |
 | Email (optional) | 70 |
+| Committee business docs | 95 |
 
-**Blockers for production launch:** Supabase migrations on production project, Vercel env vars, dashboard authentication before public promotion.
+**Blockers for public Register Interest go-live:** Supabase migrations on production, Vercel env vars, health ok.  
+**Blocker for wide Committee Portal sharing:** authentication (Phase 2).  
+**Not blockers for tonight’s committee review:** exact date, venue, prices (use TBC).
 
 ---
 
@@ -160,34 +163,37 @@ Platform structure, engines, and multi-event config are in place. Missing for Sa
 
 ## Morning Checklist for Joshua and Damola
 
-Shared steps (both):
+### Shared
 
 - [ ] Pull latest commits from `main`
-- [ ] Run all three Supabase migrations in order (SQL Editor)
-- [ ] Verify `GET /api/health` → `{"status":"ok","supabase":true,"env":true}`
-- [ ] Deploy to Vercel (or confirm auto-deploy from `main`)
-- [ ] Confirm env vars on Vercel: Supabase URL, anon key, service role key
-- [ ] Test **Register Interest** on production (`/#rsvp`)
-- [ ] Test **RSVP dashboard** at `/dashboard/rsvps` (live banner when connected)
-- [ ] Rehearse demo using [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
+- [ ] Agree who presents vs who verifies health
 
-### Morning Checklist for Joshua
+### Joshua (product / committee)
 
-- [ ] Push latest commits via **GitHub Desktop** if agent push unavailable
-- [ ] Confirm branch `main` is on GitHub before Damola deploys
-- [ ] Run `npm run lint` and `npm run build` locally if verifying before demo
-- [ ] Open production URL + `/dashboard` in two tabs before presenting
-- [ ] Rehearse Acts 1–3 in [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
+- [x] Public content presentation pass
+- [x] [COMMITTEE_PRESENTATION.md](./COMMITTEE_PRESENTATION.md)
+- [x] [COMMITTEE_FEEDBACK.md](./COMMITTEE_FEEDBACK.md)
+- [x] [BUSINESS_WORKFLOWS.md](./BUSINESS_WORKFLOWS.md)
+- [x] [CONTENT_CHECKLIST.md](./CONTENT_CHECKLIST.md)
+- [ ] Push latest commits (or GitHub Desktop → Push origin)
+- [ ] Rehearse 5-minute walkthrough
+- [ ] Open public site + `/dashboard` in two tabs before presenting
 
-### Morning Checklist for Damola
+### Damola (database / hosting)
 
 - [ ] Apply migrations: `20260112000000`, `20260702100000`, `20260703100000`
 - [ ] Set Vercel env vars (see [DEPLOYMENT.md](./DEPLOYMENT.md))
 - [ ] Redeploy after env or migration changes
 - [ ] `curl https://<domain>/api/health` — resolve any non-`ok` code
 - [ ] Submit test RSVP; confirm row in Supabase **Table Editor → rsvps**
-- [ ] Spot-check mobile: landing form + dashboard drawer
+- [ ] Confirm `/dashboard/rsvps` Live banner
 - [ ] Optional: configure Resend for confirmation emails
+
+### Committee
+
+- [ ] Review wording via [COMMITTEE_FEEDBACK.md](./COMMITTEE_FEEDBACK.md)
+- [ ] Confirm or amend [BUSINESS_WORKFLOWS.md](./BUSINESS_WORKFLOWS.md)
+- [ ] Fill priority rows in [CONTENT_CHECKLIST.md](./CONTENT_CHECKLIST.md)
 
 ---
 

@@ -1,7 +1,9 @@
 # Phase 2 Specification — Organiser Dashboard
 
-**Status:** RSVP CRM live (July 2026) — other modules scaffold only  
-**Blocked on:** Authentication before public launch
+**Status:** RSVP CRM implemented (live when DB connected) — other modules scaffold / presentation data  
+**Blocked on for wide sharing:** Authentication  
+
+Proposed end-to-end workflows (for committee confirmation): [BUSINESS_WORKFLOWS.md](./BUSINESS_WORKFLOWS.md).
 
 ---
 

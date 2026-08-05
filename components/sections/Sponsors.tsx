@@ -34,12 +34,12 @@ export function Sponsors() {
         <SectionHeading
           surface="onLight"
           eyebrow="Partners in excellence"
-          title="Sponsor the most anticipated cultural evening of the year"
-          subtitle="Stand alongside a community-led celebration of Yoruba excellence in Canberra—visible, meaningful, and crafted with warmth for guests and partners alike."
+          title="Sponsor a landmark cultural celebration for Canberra"
+          subtitle="Stand alongside a community-led celebration of Yoruba excellence—visible, meaningful, and crafted with warmth for guests and partners alike."
         />
         <p className="mx-auto mb-10 max-w-2xl rounded-2xl border border-gold/25 bg-cream/80 px-6 py-4 text-center font-sans text-sm leading-relaxed text-mahogany/75 shadow-[var(--shadow-card-light)] sm:mb-12 sm:text-[0.95rem]">
-          {LAUNCH_COPY.sponsorshipAnnouncedSoon} Enquire below to express early interest—our team
-          will share the sponsorship deck when packages are finalised.
+          {LAUNCH_COPY.sponsorshipAnnouncedSoon} Express early interest via Register Interest or
+          email—our committee will share the sponsorship deck when packages are finalised.
         </p>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-7">
           {SPONSOR_TIERS.map((s, index) => (
@@ -85,7 +85,7 @@ export function Sponsors() {
                   and on-site moments that guests and families will remember.
                 </p>
                 <p className="mt-5 font-sans text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-gold-deep">
-                  Packages announced soon
+                  Packages &amp; amounts coming soon
                 </p>
               </div>
             </motion.article>
