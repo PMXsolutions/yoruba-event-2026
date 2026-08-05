@@ -70,7 +70,7 @@ export async function submitSponsorEnquiry(
   }
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return { ok: false, error: "Registration is temporarily unavailable. Please try again later." };
   }
 
@@ -106,7 +106,7 @@ export type FetchSponsorsResult =
 
 export async function fetchSponsors(): Promise<FetchSponsorsResult> {
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) return { ok: false, message: "Database is not configured." };
+  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
 
   const event = getActiveEventConfig();
   try {

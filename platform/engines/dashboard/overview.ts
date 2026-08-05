@@ -49,7 +49,7 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData>
   };
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return { ...empty, error: "Database is not configured." };
   }
 
@@ -85,10 +85,27 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData>
           .limit(8),
       ]);
 
-    const rsvps = rsvpsRes.data ?? [];
-    const sponsors = sponsorsRes.data ?? [];
-    const volunteers = volunteersRes.data ?? [];
-    const tasks = tasksRes.data ?? [];
+    const rsvps = rsvpsRes.error ? [] : (rsvpsRes.data ?? []);
+    const sponsors = sponsorsRes.error ? [] : (sponsorsRes.data ?? []);
+    const volunteers = volunteersRes.error ? [] : (volunteersRes.data ?? []);
+    const tasks = tasksRes.error ? [] : (tasksRes.data ?? []);
+
+    const queryErrors = [
+      rsvpsRes.error,
+      sponsorsRes.error,
+      volunteersRes.error,
+      tasksRes.error,
+      programmeRes.error,
+      announcementsRes.error,
+      activityRes.error,
+    ].filter(Boolean);
+
+    if (queryErrors.length > 0) {
+      console.error(
+        "[dashboard-overview] One or more queries failed:",
+        queryErrors.map((e) => e?.message).join(" | "),
+      );
+    }
 
     const byStatus = (s: string) => rsvps.filter((r) => r.status === s).length;
     const newCount = byStatus("new");
@@ -186,6 +203,10 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData>
         status: String(t.status).replace("_", " "),
         progress: t.status === "in_progress" ? "50" : t.status === "blocked" ? "20" : "0",
       })),
+      error:
+        queryErrors.length > 0
+          ? "Some live metrics could not be loaded. Confirm migrations are applied."
+          : undefined,
     };
   } catch (e) {
     console.error("[dashboard-overview] Failed:", e);
@@ -243,7 +264,7 @@ export async function fetchAnalytics(): Promise<AnalyticsData> {
   };
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) return { ...empty, error: "Database is not configured." };
+  if (!env.serviceRoleReady) return { ...empty, error: "Database is not configured." };
 
   const event = getActiveEventConfig();
   try {

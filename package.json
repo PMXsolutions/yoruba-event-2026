@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "provision-admin": "node --env-file=.env.local scripts/provision-admin.mjs"
+    "provision-admin": "node --env-file=.env.local scripts/provision-admin.mjs",
+    "verify:deployment": "node scripts/verify-deployment.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

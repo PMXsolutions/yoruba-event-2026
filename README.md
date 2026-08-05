@@ -33,6 +33,7 @@ Initial administrator email: `admin@promaxevent.com` (password via `ADMIN_PASSWO
 | [docs/PLATFORM.md](./docs/PLATFORM.md) | Platform overview & engines |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel + Supabase deploy |
+| [docs/PRODUCTION_CHECKLIST.md](./docs/PRODUCTION_CHECKLIST.md) | Go-live env + smoke test checklist |
 | [docs/EMAIL.md](./docs/EMAIL.md) | Resend / confirmation emails |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases & status |
 | [docs/SMS.md](./docs/SMS.md) | Twilio architecture (future) |
