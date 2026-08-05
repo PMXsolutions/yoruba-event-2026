@@ -11,6 +11,8 @@ Vercel + Supabase production checklist for Promax Event Platform.
 
 1. Create a Supabase project
 2. Run migrations **in order** from `supabase/migrations/`:
+
+   Or paste the combined file once: [`supabase/run-all-migrations.sql`](../supabase/run-all-migrations.sql) into the Supabase SQL Editor.
    - `20260112000000_create_rsvps.sql`
    - `20260702100000_rsvp_management_columns.sql`
    - `20260703100000_rsvp_crm_enhancements.sql`
