@@ -19,6 +19,17 @@ export const DASHBOARD_PAGE_META: Record<string, DashboardPageMeta> = {
       "View, search, and export interest registrations from the Promax RSVP Engine.",
     breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "RSVPs" }],
   },
+  "/dashboard/seating": {
+    title: "Seating MVP",
+    description:
+      "Upload floor plan references, define tables and zones, assign seats, and prepare QR check-in.",
+    breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "Seating" }],
+  },
+  "/dashboard/check-in": {
+    title: "Guest check-in",
+    description: "Search guests, mark arrived, undo check-in, and export a printable steward list.",
+    breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "Check-in" }],
+  },
   "/dashboard/sponsors": {
     title: "Sponsor CRM",
     description: "Track sponsor tiers, enquiries, and partnership pipeline.",
