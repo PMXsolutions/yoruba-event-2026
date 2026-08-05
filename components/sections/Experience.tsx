@@ -35,9 +35,9 @@ export function Experience() {
 
       <div className="relative mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
         <SectionHeading
-          eyebrow="The experience"
+          eyebrow="Planned highlights"
           title="A tapestry of sound, taste, and ceremony"
-          subtitle="Each moment is composed like a movement in music—from talking drum and Eyo procession to Aso Oke, Yoruba plates, and voices of every generation."
+          subtitle="These are the experiences we look forward to sharing—from talking drum and Eyo procession to Aso Oke, Yoruba plates, and voices of every generation. The full programme will be announced soon."
         />
         <motion.ul
           variants={list}
