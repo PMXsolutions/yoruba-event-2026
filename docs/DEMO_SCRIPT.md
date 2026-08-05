@@ -1,42 +1,43 @@
 # Demo script — Yoruba Day Canberra 2026
 
-Stakeholder walkthrough for the production committee portal.
+Stakeholder walkthrough for Phase A + Seating MVP.
 
 ---
 
 ## Prep
 
-1. Apply all SQL migrations in `supabase/migrations/`
-2. Configure `.env.local` (Supabase + Resend)
-3. Provision admin: `node --env-file=.env.local scripts/provision-admin.mjs`
-4. `npm run preview`
+1. Apply all SQL migrations (including seating extensions) — or `run-all-migrations.sql`
+2. Configure Supabase + SMTP/Resend env vars
+3. Provision admin: `npm run provision-admin`
+4. `npm run build && npm run start` (or Vercel preview)
 
 ---
 
-## Public site (5 min)
+## Public site (6 min)
 
-1. Open `/` — hero shows **Yoruba Day Canberra 2026**, **22 November 2026**, Canberra
-2. Click **Save the Date** — download .ics / Google / Outlook
-3. Register Interest — submit RSVP; note registration reference
-4. Submit a sponsorship enquiry and a volunteer registration
+1. Open `/` — **Yoruba Day Canberra 2026**, Save the Date, honest “coming soon” copy
+2. Register Interest — emphasise **not a ticket**; note registration reference
+3. Confirmation email (if configured) — interest received + priority updates
+4. Sponsor enquiry + volunteer interest — expressions of interest only
+5. Optional: `/seat` after a committee seat assignment
 
 ---
 
-## Committee portal (8 min)
+## Committee portal (10 min)
 
-1. Open **Committee Portal** → `/login`
-2. Sign in as `admin@promaxevent.com`
-3. Overview — live KPIs (zeros are real empty states)
-4. RSVPs — search, status, tags, notes, CSV export
-5. Sponsors / Volunteers / Tasks / Programme / Announcements — live modules
-6. Analytics — real distributions or honest empty state
-7. Settings — Configured / Not configured only (no secrets)
-8. Sign out
+1. `/login` → Overview KPIs
+2. **RSVPs** — Register Guest (VIP / phone), status, tags, notes, activity timeline, resend email, CSV
+3. **Seating** — floor plan URL, create table/zone, assign seat, steward export
+4. **Check-in** — search, Mark Arrived / Undo, steward export
+5. Sponsors / Volunteers / Tasks / Programme / Announcements
+6. Settings — configured flags only (no secrets)
+7. Sign out — confirm `/dashboard` redirects to login
 
 ---
 
 ## Talking points
 
-- Event-specific content is configuration-driven (`EVENT_SLUG`)
-- Operational data is Supabase-backed with RLS + server-side RBAC
-- Email confirmation is non-blocking (RSVP always persists)
+- Public Register Interest stays open until the committee chooses otherwise
+- Seating MVP is operational foundation — not a visual designer yet
+- QR tokens are opaque; full guest list is not public
+- SMS and payment/ticketing remain future scope

@@ -17,7 +17,8 @@ Vercel + Supabase production checklist for Promax Event Platform.
    - `20260702100000_rsvp_management_columns.sql`
    - `20260703100000_rsvp_crm_enhancements.sql`
    - `20260805100000_platform_production.sql`
-3. Confirm tables exist: `events`, `rsvps`, `profiles`, `sponsors`, `volunteers`, `tasks`, `programme_items`, `announcements`, `activity_logs`
+   - `20260805120000_seating_and_rsvp_extensions.sql`
+3. Confirm tables exist: `events`, `rsvps`, `profiles`, `sponsors`, `volunteers`, `tasks`, `programme_items`, `announcements`, `activity_logs`, `venue_floor_plans`, `seating_tables`, `seating_assignments`
 4. Confirm RLS is enabled (policies included in the production migration)
 
 Do **not** run `supabase/seed/` in production. Seed content is for explicit local QA only.
@@ -70,6 +71,10 @@ the password cannot work — Supabase Auth has no matching user yet.
 | `SMTP_USER` | Yes for SMTP | Sender mailbox |
 | `SMTP_PASSWORD` | Yes for SMTP | Never commit |
 | `EVENT_SLUG` | Optional | Defaults to Yoruba Day |
+| `PUBLIC_REGISTRATION_OPEN` | Optional | Default **true** |
+| `EMAIL_CONFIRMATIONS_ENABLED` | Optional | Default true |
+| `SEATING_ENABLED` / `QR_CHECKIN_ENABLED` | Optional | Default true |
+| `SMS_ENABLED` | Optional | Default **false** |
 
 Optional Resend alternative: `RESEND_API_KEY` (+ From) when SMTP is unset.
 

@@ -1,43 +1,43 @@
 # Roadmap
 
-Promax Event Platform — status after production hardening (Yoruba Day Canberra 2026).
+Promax Event Platform — after Phase A + Seating MVP.
 
 ---
 
-## Completed (v1 production foundation)
+## Completed
 
 - [x] Public marketing site with config-driven branding
-- [x] Save the Date (.ics / Google / Outlook)
-- [x] RSVP → Zod → Server Action → Supabase
-- [x] Registration references + confirmation email (Resend)
-- [x] Live RSVP CRM (search, filters, status, tags, notes, CSV)
-- [x] Sponsor registration + CRM
-- [x] Volunteer registration + management
-- [x] Task board
-- [x] Programme items (Supabase operational)
-- [x] Announcements (publish / archive)
-- [x] Live analytics (no fake charts)
-- [x] Supabase Auth + middleware + RBAC
-- [x] RLS policies for operational tables
-- [x] Rate limiting on public forms
-- [x] SEO (metadata, sitemap, robots, Event JSON-LD)
-- [x] Health checks (env / DB / event / email presence)
+- [x] Save the Date + Register Interest (honest messaging)
+- [x] RSVP → Zod → Server Action → Supabase (email non-blocking)
+- [x] Live RSVP CRM (status, tags, notes, CSV, activity timeline, resend)
+- [x] Committee Register Guest
+- [x] Sponsor / volunteer interest + CRM
+- [x] Tasks / programme / announcements
+- [x] Supabase Auth + dashboard protection + RBAC foundation
+- [x] Central feature flags
+- [x] Seating MVP (tables, zones, assign, floor plan ref, steward export)
+- [x] QR token + public seat lookup + check-in foundation
+- [x] SMS dispatch hook behind flag (no production send)
+- [x] Future email template drafts
 
 ---
 
 ## Next
 
-- [ ] CAPTCHA on public forms (architecture ready)
-- [ ] Committee alert emails on new RSVP / sponsor
+- [ ] Apply seating migration on production Supabase (ops)
+- [ ] Finer product roles (RSVP Manager, Sponsor Manager, …)
+- [ ] CAPTCHA on public forms
+- [ ] Committee alert emails on new interest
 - [ ] Sponsor / volunteer confirmation emails
-- [ ] Soft multi-tenant routing (subdomain / path)
-- [ ] SMS via Twilio (`docs/SMS.md`)
-- [ ] Ticketing / payments / check-in (Phase 4)
+- [ ] Camera QR scan UX
+- [ ] SMS activation after Twilio + consent approval
+- [ ] Ticketing / payments (committee-approved rules only)
+- [ ] Visual seating designer
 
 ---
 
 ## Explicitly deferred
 
-- Full multi-org SaaS billing
-- AI content generation (registry only)
-- Automated E2E suite (add when CI budget allows)
+- Multi-org SaaS billing
+- AI content generation beyond capability registry
+- Invented ticket prices / sponsor amounts / unconfirmed programme
