@@ -2,6 +2,9 @@
 
 Vercel + Supabase production checklist for Promax Event Platform.
 
+> Live site: https://yoruba-event-2026.vercel.app  
+> Full go-live steps: [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md)
+
 ---
 
 ## 1. Supabase
@@ -23,7 +26,15 @@ Do **not** run `supabase/seed/` in production. Seed content is for explicit loca
 
 Default committee administrator email: `admin@promaxevent.com`
 
-Set a strong password in **`.env.local`** (gitignored) or Vercel — never commit it:
+Login and registration fail until Supabase env vars are set on the deployment and the admin user is provisioned.
+
+Confirm Vercel (Production) has:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Then set:
 
 ```bash
 ADMIN_EMAIL=admin@promaxevent.com
@@ -31,48 +42,58 @@ ADMIN_FULL_NAME=Platform Administrator
 ADMIN_PASSWORD="your-strong-password-here"
 ```
 
-Provision / reset in Supabase Auth:
+Provision:
 
 ```bash
-# Requires NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
 npm run provision-admin
 ```
 
-This creates or updates the Auth user and upserts a `SUPER_ADMIN` profile.
 Sign in at `/login`. Rotate the password after first production use.
 
 ---
 
 ## 3. Vercel environment
 
-Set:
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | `https://<ref>.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Browser Auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server inserts + CRM |
+| `MAIL_FROM` | Yes for email | e.g. `Promax Event <support@promaxcare.com.au>` |
+| `SMTP_HOST` | Yes for SMTP | e.g. `mail.promaxcare.com.au` |
+| `SMTP_PORT` | Recommended | `587` |
+| `SMTP_USER` | Yes for SMTP | Sender mailbox |
+| `SMTP_PASSWORD` | Yes for SMTP | Never commit |
+| `EVENT_SLUG` | Optional | Defaults to Yoruba Day |
 
-| Variable | Notes |
-|----------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only |
-| `RESEND_API_KEY` | Email |
-| `MAIL_FROM` | e.g. `Promax Event <support@example.com>` |
-| `EVENT_SLUG` | Optional; default Yoruba Day slug |
+Optional Resend alternative: `RESEND_API_KEY` (+ From) when SMTP is unset.
 
-Optional: `MAIL_FROM_NAME`, `RESEND_FROM_EMAIL` (legacy), SMTP_* (unused by default transport).
+**After changing `NEXT_PUBLIC_*` variables, Redeploy.**
 
 ---
 
-## 4. Deploy
+## 4. Deploy & verify
 
 1. Connect the GitHub repo to Vercel
 2. Framework: Next.js (auto-detected)
 3. Deploy production
-4. Verify `GET /api/health` returns `{ "status": "ok", ... }`
+4. Verify:
+
+```bash
+npm run verify:deployment
+# or
+curl -s https://yoruba-event-2026.vercel.app/api/health
+```
+
+Expect `{ "status": "ok", "supabase": true, ... }`.
+
 5. Sign in at `/login` and confirm dashboard modules load (empty states are OK)
 
 ---
 
 ## 5. Production safety
 
-- `/dashboard/*` requires authentication (middleware)
+- `/dashboard/*` requires authentication (`proxy.ts`)
 - Service role key never exposed to the browser
 - Settings page shows **Configured / Not configured** only — never secret values
 - RSVP insert test route is blocked in production unless `ENABLE_RSVP_INSERT_TEST=true`

@@ -77,11 +77,19 @@ export default async function DashboardSettingsPage() {
             items={[
               {
                 name: "Supabase (database)",
-                status: supabase.allPresent ? "Configured" : "Not configured",
-                ok: supabase.allPresent,
-                detail: supabase.allPresent
-                  ? "Environment variables present"
-                  : "Required database environment variables are missing",
+                status: supabase.serviceRoleReady ? "Configured" : "Not configured",
+                ok: supabase.serviceRoleReady,
+                detail: supabase.serviceRoleReady
+                  ? "Service-role database access ready"
+                  : "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+              },
+              {
+                name: "Supabase Auth",
+                status: supabase.authReady ? "Configured" : "Not configured",
+                ok: supabase.authReady,
+                detail: supabase.authReady
+                  ? "Browser auth (anon key) ready"
+                  : "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
               },
               {
                 name: "Email (SMTP / Resend)",

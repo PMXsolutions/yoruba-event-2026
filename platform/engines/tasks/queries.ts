@@ -53,7 +53,7 @@ export type FetchTasksResult =
 
 export async function fetchTasks(): Promise<FetchTasksResult> {
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) return { ok: false, message: "Database is not configured." };
+  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
   const event = getActiveEventConfig();
   try {
     const supabase = createServiceRoleClient();

@@ -3,7 +3,7 @@
 import { useState, type FormEvent, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { createBrowserSupabaseClient, AuthConfigError } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SITE } from "@/lib/site";
 
@@ -24,11 +24,13 @@ function LoginForm() {
     setInfo(null);
     setIsPending(true);
 
+    const trimmedEmail = email.trim().toLowerCase();
+
     try {
       const supabase = createBrowserSupabaseClient();
 
       if (mode === "forgot") {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
           redirectTo: `${window.location.origin}/login`,
         });
         if (resetError) {
@@ -39,7 +41,10 @@ function LoginForm() {
         return;
       }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      });
 
       if (authError) {
         setError("Invalid email or password. Committee access only.");
@@ -48,8 +53,12 @@ function LoginForm() {
 
       router.push(redirect.startsWith("/") ? redirect : "/dashboard");
       router.refresh();
-    } catch {
-      setError("Unable to sign in. Please try again.");
+    } catch (err) {
+      if (err instanceof AuthConfigError) {
+        setError(err.message);
+      } else {
+        setError("Unable to sign in. Please try again.");
+      }
     } finally {
       setIsPending(false);
     }
