@@ -139,10 +139,13 @@ export function Hero() {
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <span className="h-px flex-1 max-w-[3rem] bg-gradient-to-r from-gold-bright/60 to-transparent sm:max-w-[4rem]" />
             <p className="font-sans text-[0.65rem] font-semibold uppercase tracking-[0.38em] text-gold-muted sm:text-xs">
-              Countdown to celebration
+              Countdown toward November 2026
             </p>
           </div>
           <CountdownTimer />
+          <p className="mt-4 max-w-xl font-sans text-xs leading-relaxed text-cream/55 sm:text-sm">
+            Exact date and venue to be confirmed by the committee.
+          </p>
         </motion.div>
 
         <motion.div

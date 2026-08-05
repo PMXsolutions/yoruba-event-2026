@@ -1,7 +1,9 @@
 # Phase 3 Specification — Communications & Analytics
 
-**Status:** Not started  
-**Depends on:** Phase 1 live, Phase 2 auth (for admin notifications)
+**Status:** Admin alerts / analytics / SEO — not started  
+**Note:** Guest **Register Interest confirmation email** via Resend is already scaffolded in Phase 1 and activates when Damola sets `RESEND_*` env vars. That is separate from the admin notification work below.
+
+**Depends on:** Phase 1 live Register Interest; Phase 2 auth (for admin notification preferences)
 
 ---
 

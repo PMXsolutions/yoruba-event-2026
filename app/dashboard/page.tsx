@@ -22,9 +22,9 @@ export default function DashboardPage() {
     <>
       <IntegrationBanner title="Committee portal — presentation mode" variant="info">
         {/* TODO(platform-auth): Protect /dashboard with Supabase Auth + RBAC before public launch. */}
-        Executive metrics and most modules use sample data for stakeholder demos. Live Register
-        Interest records are managed at <strong>/dashboard/rsvps</strong> when Supabase is
-        connected. Authentication is required before public launch.
+        Overview metrics and most modules use sample data for committee presentations. Live
+        Register Interest records are managed at <strong>/dashboard/rsvps</strong> when the
+        database is connected. Sign-in protection will be added before wider sharing.
       </IntegrationBanner>
 
       <StatGrid stats={EXECUTIVE_STATS} columns={6} />

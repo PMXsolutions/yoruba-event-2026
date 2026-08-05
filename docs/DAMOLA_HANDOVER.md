@@ -1,47 +1,37 @@
-# Damola Handover — Friday Demo Deployment
+# Damola Handover — Production Database & Hosting
 
 **Project:** Promax Event Platform v1  
 **Event:** Yoruba Day Canberra 2026  
 **Repo:** https://github.com/PMXsolutions/yoruba-event-2026  
-**Branch:** `main`
+**Branch:** `main` (also accept latest committee-readiness merges)
 
 ---
 
-## Current status (as of handover)
+## Ownership split (read this first)
+
+| Damola (you) | Joshua (done / ongoing) | Committee |
+|--------------|-------------------------|-----------|
+| Supabase migrations (3 SQL files) | Public content & presentation polish | Exact date, venue, prices |
+| Vercel env vars + redeploy | Committee presentation & feedback docs | Programme & sponsors decisions |
+| `/api/health` verification | Business workflows documentation | Logos, socials, phone |
+| Live Register Interest test | Content checklist | Cultural confirmations |
+| Optional Resend configuration | Portal presentation labelling | |
+
+**Do not wait on content decisions to finish database connection.** Content can update after health is green.
+
+---
+
+## Current status
 
 | Area | Status |
 |------|--------|
-| Public landing page | ✅ Presentation-ready |
-| Register Interest form | ✅ Wired to Supabase (needs migration) |
-| Committee Portal (`/dashboard/*`) | ✅ Enterprise UI — RSVP CRM live; other modules demo |
+| Public landing page | ✅ Committee-ready |
+| Register Interest form | ✅ Wired to Supabase (needs your migration + env) |
+| Committee Portal UI | ✅ Presentation-ready; RSVP CRM live when DB connected |
+| Production site URL | ✅ Published (e.g. yoruba-event-2026.vercel.app) |
+| Production `/api/health` | ❌ Last check: `MISSING_ENV_VARS` |
 | Email (Resend) | ⚠️ Optional — activates with env vars |
-| Authentication | ❌ Not implemented — Phase 2 |
-| GitHub push | ⚠️ May need manual push via GitHub Desktop |
-
----
-
-## What is complete
-
-- Premium public site (Hero, About, Experience, Sponsors, RSVP)
-- Server action RSVP insert via Supabase service role
-- Health endpoint at `/api/health`
-- Live RSVP CRM at `/dashboard/rsvps` (KPIs, filters, export, committee workflow)
-- Demo script: [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
-- Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- Platform architecture docs in `docs/`
-
----
-
-## What is pending (do not block Friday demo)
-
-| Item | Owner | Priority |
-|------|-------|----------|
-| Supabase migrations (3 SQL files) | Damola | **P0** |
-| Vercel env vars | Damola | **P0** |
-| Push latest commits to GitHub | Joshua | P0 |
-| Resend API key (confirmation emails) | Damola | P1 — optional |
-| Supabase Auth + dashboard protection | Phase 2 | P2 — after demo |
-| Live dashboard data (replace placeholders) | Phase 2 | P2 — Sponsors next |
+| Authentication | ❌ Phase 2 — not your blocker for Register Interest |
 
 ---
 
@@ -53,23 +43,21 @@
 git pull origin main
 ```
 
-If commits are only local, Joshua pushes first via GitHub Desktop.
+### 2. Supabase — run migrations
 
-### 2. Supabase — run migration
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → project.  
+2. **SQL Editor** → **New query**.  
+3. Run **all three** in order:
 
-1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project.
-2. Go to **SQL Editor** → **New query**.
-3. Paste and run **all three** migration files in order:
-   - `supabase/migrations/20260112000000_create_rsvps.sql`
-   - `supabase/migrations/20260702100000_rsvp_management_columns.sql`
-   - `supabase/migrations/20260703100000_rsvp_crm_enhancements.sql`
-4. Confirm table exists: **Table Editor → rsvps** (with `status`, `committee_notes`, `tags` columns).
+   - `supabase/migrations/20260112000000_create_rsvps.sql`  
+   - `supabase/migrations/20260702100000_rsvp_management_columns.sql`  
+   - `supabase/migrations/20260703100000_rsvp_crm_enhancements.sql`  
 
-### 3. Vercel — deploy
+4. Confirm **Table Editor → rsvps** includes CRM columns (`status`, `committee_notes`, `tags`, etc.).
 
-Follow [DEPLOYMENT.md § Vercel checklist](./DEPLOYMENT.md#vercel-checklist-for-damola).
+### 3. Vercel — environment variables
 
-Minimum env vars:
+Minimum:
 
 | Variable | Required |
 |----------|----------|
@@ -79,103 +67,66 @@ Minimum env vars:
 | `RESEND_API_KEY` | Optional |
 | `RESEND_FROM_EMAIL` | Optional |
 
-### 4. Verify production
+Then **redeploy** Production so the new env vars load.
+
+Full steps: [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+### 4. Verify production health
 
 ```bash
-curl https://<your-vercel-domain>/api/health
+curl https://yoruba-event-2026.vercel.app/api/health
 ```
 
-Expected: `{"status":"ok","supabase":true,"env":true}`
+Expected:
 
-If `RSVPS_TABLE_MISSING` → migration not applied.  
-If `MISSING_ENV_VARS` → check Vercel env settings and redeploy.
+```json
+{"status":"ok","supabase":true,"env":true}
+```
 
-### 5. Test RSVP on production
+| Response | Action |
+|----------|--------|
+| `MISSING_ENV_VARS` | Fix Vercel env; redeploy |
+| `RSVPS_TABLE_MISSING` | Re-run migrations |
+| `SUPABASE_QUERY_FAILED` | Check URL format (no `/rest/v1`) and keys |
 
-1. Open production URL.
-2. Scroll to **Register Interest**.
-3. Submit a test entry.
-4. Confirm row in Supabase **Table Editor → rsvps**.
+### 5. Test Register Interest
 
-### 6. Test dashboard
+1. Open production site → **Register Interest**.  
+2. Submit a unique test email.  
+3. Confirm row in Supabase **rsvps**.  
+4. Open `/dashboard/rsvps` → expect **Live RSVP Data** banner.
 
-Visit `/dashboard` and spot-check **RSVPs** (live when migrations applied), **Sponsors**, and **Settings**.  
-Non-RSVP modules use **placeholder data** — this is expected until Phase 2.
+### 6. Optional — Resend
 
-### 7. Mobile check
+Add `RESEND_API_KEY` and `RESEND_FROM_EMAIL`, redeploy, submit another test, confirm inbox. See [EMAIL.md](./EMAIL.md).
 
-Test on phone: landing page form + dashboard sidebar drawer.
+---
+
+## What you do **not** need to do tonight
+
+- Rewrite public marketing copy (Joshua)  
+- Invent date / venue / ticket prices (committee)  
+- Implement portal authentication (Phase 2)  
+- Build new backend modules  
 
 ---
 
 ## Known risks
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| `/dashboard` is public (no auth) | Anyone with URL can view demo portal | Only share via **Committee demo** links; add auth in Phase 2 |
-| Placeholder dashboard data (non-RSVP modules) | Sponsors/tasks not live | Explain during demo — see [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) |
-| `npm run dev` may hang (Turbopack) | Local dev friction | Use `npm run preview` |
-| Service role key in Vercel | Security if leaked | Never prefix with `NEXT_PUBLIC_`; never commit to git |
-| Migration skipped | RSVP form fails | Always verify `/api/health` first |
+| Risk | Mitigation |
+|------|------------|
+| `/dashboard` has no auth | Share only with committee; Phase 2 auth |
+| Env vars missing → form fails | Always verify `/api/health` first |
+| Service role key leak | Never `NEXT_PUBLIC_`; never commit |
 
 ---
 
-## What NOT to change before Friday
+## When you are done
 
-- Do **not** redesign the public landing page.
-- Do **not** remove **Committee demo** badges (they signal demo mode).
-- Do **not** expose secrets in git or client code.
-- Do **not** implement payments, SMS, or AI API calls.
-- Do **not** remove demo banners from dashboard until auth exists.
-- Do **not** change `.env.local` in git (local only).
+Reply to Joshua with:
 
----
+1. Health endpoint JSON (ok)  
+2. Screenshot or note of test row in Supabase  
+3. Whether Resend was configured  
 
-## Useful commands
-
-```bash
-npm install
-npm run lint          # must pass
-npm run build         # must pass
-npm run preview       # local production preview on :3000
-```
-
----
-
-## Contacts & docs
-
-| Doc | Purpose |
-|-----|---------|
-| [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) | Joshua’s presentation flow |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Full Supabase + Vercel steps |
-| [PLATFORM.md](./PLATFORM.md) | SaaS architecture overview |
-| [PHASE_2_SPEC.md](./PHASE_2_SPEC.md) | Auth + live dashboard roadmap |
-| [QUALITY_AUDIT.md](./QUALITY_AUDIT.md) | Overnight quality audit & scores |
-
----
-
-## After Friday
-
-1. Add Supabase Auth + middleware on `/dashboard/*`.
-2. Remove or hide public Committee Portal links.
-3. Connect dashboard to protected server-side queries.
-4. Optional: Resend for confirmation emails, custom domain.
-
----
-
-## Morning Checklist for Joshua and Damola
-
-Full shared checklist: [QUALITY_AUDIT.md § Morning Checklist](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola)
-
-### Joshua
-- [ ] Push latest commits via GitHub Desktop (if agent push failed)
-- [ ] Verify production after Damola deploys
-- [ ] Test Register Interest + RSVP dashboard
-- [ ] Rehearse [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
-
-### Damola
-- [ ] Pull latest · run all 3 Supabase migrations
-- [ ] Set Vercel env vars · deploy
-- [ ] Verify `/api/health` → `ok`
-- [ ] Test Register Interest · confirm row in Supabase Table Editor
-- [ ] Test RSVP CRM (`/dashboard/rsvps`) · mobile smoke test
+Committee materials: [COMMITTEE_PRESENTATION.md](./COMMITTEE_PRESENTATION.md).

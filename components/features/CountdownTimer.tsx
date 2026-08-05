@@ -53,7 +53,7 @@ export function CountdownTimer() {
     <div
       className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-start sm:gap-3 md:gap-4"
       role="group"
-      aria-label="Countdown to celebration"
+      aria-label="Countdown toward November 2026 — exact date to be confirmed"
     >
       {units.map((u, index) => (
         <motion.div

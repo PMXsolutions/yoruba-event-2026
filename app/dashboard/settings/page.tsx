@@ -80,9 +80,9 @@ export default function DashboardSettingsPage() {
               },
               {
                 name: "Vercel (hosting)",
-                status: "Deployment ready",
+                status: "Site published",
                 ok: true,
-                detail: "Connect repo in Vercel dashboard",
+                detail: "Env vars & redeploy owned by Damola",
               },
               {
                 name: "Authentication",
@@ -95,21 +95,23 @@ export default function DashboardSettingsPage() {
         </DashboardCard>
       </div>
 
-      <DashboardCard title="Demo & launch notes" description="Important before public access">
+      <DashboardCard title="Presentation & launch notes" description="Important before wider access">
         <ul className="space-y-3 font-sans text-sm leading-relaxed text-mahogany/65">
           <li>
-            · This portal is currently in <strong>demo mode</strong> for committee and client
-            presentations.
+            · This portal is in <strong>presentation mode</strong> for committee review.
           </li>
           <li>
-            · <strong>Authentication must be added</strong> before removing demo labels or sharing
-            publicly.
+            · <strong>Sign-in protection</strong> will be added before the portal is shared more
+            widely.
           </li>
           <li>
-            · Live RSVP data appears on <strong>/dashboard/rsvps</strong> once Supabase migrations
-            are applied and env vars are set. Until auth is added, the portal remains in demo mode.
+            · Live Register Interest data appears on <strong>/dashboard/rsvps</strong> once Damola
+            completes database setup. Other modules remain sample data until Phase 2.
           </li>
-          <li>· See <code className="text-xs">docs/PLATFORM.md</code> for the SaaS roadmap.</li>
+          <li>
+            · See <code className="text-xs">docs/COMMITTEE_PRESENTATION.md</code> for the meeting
+            walkthrough.
+          </li>
         </ul>
       </DashboardCard>
     </>

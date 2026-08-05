@@ -2,6 +2,12 @@
 
 Deploy **Promax Event Platform v1** (Yoruba Day Canberra 2026) to **Vercel** with **Supabase** as the database backend.
 
+**Owner for this guide:** Damola  
+**Content / committee readiness:** Joshua — see [COMMITTEE_PRESENTATION.md](./COMMITTEE_PRESENTATION.md)  
+**Quick checklist:** [DAMOLA_HANDOVER.md](./DAMOLA_HANDOVER.md)
+
+The marketing site may already be published on Vercel. Production Register Interest still requires migrations + environment variables below.
+
 ---
 
 ## Prerequisites

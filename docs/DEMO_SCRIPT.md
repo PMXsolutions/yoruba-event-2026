@@ -1,7 +1,9 @@
 # Demo Script — Yoruba Day Canberra 2026
 
-**Audience:** Committee members, sponsors, Promax IT Solutions prospects  
-**Duration:** ~8 minutes  
+**Audience:** Committee members (primary), sponsors, Promax prospects  
+**Short version:** use [COMMITTEE_PRESENTATION.md](./COMMITTEE_PRESENTATION.md) (~5 minutes)  
+**This document:** fuller demo (~8 minutes) if time allows  
+
 **Presenter:** Joshua  
 **Deployer:** Damola (Vercel + Supabase)
 
@@ -9,12 +11,13 @@
 
 ## Before you start
 
-1. Confirm production URL is live (or run locally: `npm run preview`).
-2. Run migration in Supabase if not done — see [DEPLOYMENT.md](./DEPLOYMENT.md).
-3. Verify health: `curl https://<your-domain>/api/health` → expect `{"status":"ok",...}`.
-4. Open two browser tabs: **public site** and **Committee Portal** (`/dashboard`).
+1. Confirm production URL loads (or local: `npm run preview`).  
+2. Prefer Damola has finished migrations + env vars. If not, say clearly:  
+   > “Register Interest is ready; Damola is connecting the secure database so submissions save tonight / tomorrow.”  
+3. If connected, verify: `curl https://<your-domain>/api/health` → `status: ok`.  
+4. Open two tabs: **public site** and **Committee Portal** (`/dashboard`).
 
-> **Note:** Dashboard links in the nav/footer are labelled **Committee demo**. RSVP Management at `/dashboard/rsvps` uses **live Supabase data** when migrations and env vars are applied; other portal modules use placeholder data until Phase 2. Auth is not yet implemented.
+> Portal links show **Committee demo**. RSVPs are **live** when the database is connected; otherwise the RSVP screen shows **presentation sample data**. Other portal modules are previews. Sign-in is not implemented yet — keep portal links limited.
 
 ---
 
@@ -22,110 +25,78 @@
 
 ### 1. Landing page (`/`)
 
-- Scroll through Hero → About → Experience → Sponsors.
-- Highlight: premium cultural branding, countdown, clear call-to-action.
-- Point out **Register Interest** (not “RSVP” — ticketing opens later).
+- Hero: **Yoruba Day Canberra 2026**, November 2026, Canberra ACT, Presented by Yoruba Association Canberra.  
+- Note countdown is toward November 2026; **exact date and venue to be confirmed**.  
+- About → Experience (planned highlights) → Sponsors (packages coming soon).
 
-### 2. Register Interest form (`/#rsvp`)
+### 2. Register Interest (`/#rsvp`)
 
-- Click **Register Interest** in the hero or nav.
-- Fill in:
-  - Name: `Demo Guest`
-  - Email: your test address
-  - Attendees: `2`
-  - Ticket type: `General admission`
-- Submit and show the **confirmation message**:
-  > “Thank you — you are on the list”
-- If Resend is configured, mention confirmation email (optional).
+- Emphasise **Register Interest** (not checkout).  
+- Ticket types are **indicative preferences**; pricing coming soon.  
+- Submit a test only if health is ok.  
+- If DB not ready, walk the form UI without submitting (or submit and explain Damola’s next step if it errors).
 
-### 3. Sponsors section
+### 3. Sponsors
 
-- Briefly show tier cards (Platinum, Gold, Heritage, Community).
-- Explain packages are TBC — enquiries flow through the committee.
+- Tier names for discussion; amounts **coming soon**.  
+- Early interest welcome via form or email.
+
+### 4. Footer
+
+- Contact email; phone **to be confirmed**; socials coming soon.  
+- Subtle **Powered by Promax Event Platform**.
 
 ---
 
 ## Act 2 — Committee Portal (5 min)
 
-### 4. Open Event Command Centre
+### 5. Overview (`/dashboard`)
 
-- Click **Committee Portal** (with **Committee demo** badge) in nav or footer.
-- Or navigate directly to `/dashboard`.
-
-### 5. Executive overview (`/dashboard`)
-
-Walk through:
-
-| Widget | Talking point |
-|--------|----------------|
-| Stat cards | RSVPs, attendance, sponsors, volunteers, tasks, days to event |
-| Registration funnel | Preview metrics — live after Supabase + analytics |
-| Recent activity | Committee activity feed (demo data) |
-| Upcoming milestones | Key planning dates |
-| Priority tasks | Active workstreams |
-
-Mention the **Demo mode** banner — auth required before public launch.
+- Banner: **Committee portal — presentation mode**.  
+- Sample executive metrics (expected).  
+- Point to **RSVPs** for real guest interest once connected.
 
 ### 6. RSVP management (`/dashboard/rsvps`)
 
-- Show **Demo Mode** or **Live RSVP Data** banner (professional — not an error state).
-- Walk through KPI cards: Total Registrations, New Today, Contacted, Confirmed, Expected Guests, Pending Follow Up.
-- Demonstrate search, status/ticket/tag filters, and **Export CSV**.
-- Open **View Details** on a row — show contact info, tags, committee notes, activity timeline placeholder.
-- Explain workflow: **Register Interest is not approval** — committee follows up, tags for segmentation, status for relationship stage.
-- Mention future journey: Ticket Invited → Paid → Checked In (Phase 4 ticketing).
-- If live: submit a test registration on the public site and refresh to show the new row.
+- **Live RSVP Data** or **Presentation sample data** banner.  
+- KPIs, filters, export, notes/tags (when live).  
+- **Register Guest · Coming soon** is intentionally not a live action yet.  
+- Workflow language: New → Contacted → … (see [BUSINESS_WORKFLOWS.md](./BUSINESS_WORKFLOWS.md)).
 
-### 7. Sponsor CRM (`/dashboard/sponsors`)
+### 7. Other modules (brief)
 
-- Pipeline cards by tier.
-- Sponsor table with follow-up status and next actions.
-
-### 8. Volunteers & Tasks (`/dashboard/volunteers`, `/dashboard/tasks`)
-
-- Roster and committee task board with progress indicators.
-
-### 9. Analytics (`/dashboard/analytics`)
-
-- Trend charts, funnel, conversion metrics (placeholder for demo).
-
-### 10. Settings (`/dashboard/settings`)
-
-- Event configuration and integration status (Supabase, Resend, Vercel).
-- Demo & launch notes — auth and live data roadmap.
+- Sponsors, Volunteers, Tasks, Programme, Announcements, Analytics = **preview / sample**.  
+- Settings: integration status; Damola owns DB/env.
 
 ---
 
 ## Closing lines
 
-> “This is Promax Event Platform v1 — a reusable SaaS foundation. Yoruba Day Canberra 2026 is the first deployment. The public site captures interest today; the Committee Portal shows where organisers will manage everything once auth and live data are connected.”
+> “This is the digital home for Yoruba Day Canberra 2026, presented by Yoruba Association Canberra, powered quietly by Promax Event Platform.  
+> The public site is ready for committee review. Damola is finishing the secure database connection for live Register Interest.  
+> We need your decisions on date, venue, programme, and packages — using the feedback sheet.”
+
+Hand out / open: [COMMITTEE_FEEDBACK.md](./COMMITTEE_FEEDBACK.md) and [CONTENT_CHECKLIST.md](./CONTENT_CHECKLIST.md).
 
 ---
 
-## Troubleshooting during demo
+## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
-| Form submit fails | Check `/api/health` — run Supabase migration |
-| Health returns `RSVPS_TABLE_MISSING` | Run SQL from `supabase/migrations/20260112000000_create_rsvps.sql` |
-| Health returns `MISSING_ENV_VARS` | Add Supabase env vars in Vercel |
-| RSVP dashboard shows demo sample data | Run migrations + env vars; expect green **Live** banner when connected |
-| Non-RSVP dashboard modules show placeholder | Expected until Phase 2 |
-| Dev server hangs | Use `npm run preview` instead of `npm run dev` |
+| Form submit fails | Check `/api/health` — Damola migrations + env |
+| `MISSING_ENV_VARS` | Vercel env + redeploy |
+| `RSVPS_TABLE_MISSING` | Run all three migrations |
+| RSVP shows sample data | Expected until DB connected |
+| Non-RSVP modules are placeholders | Expected until Phase 2 |
+| Dev server hangs | Use `npm run preview` |
 
 ---
 
 ## Do not demo (v1)
 
-- Payments / Stripe
-- SMS / Twilio
-- AI features
-- Real authentication (login)
-
-See [DAMOLA_HANDOVER.md](./DAMOLA_HANDOVER.md) for deployment steps.
-
----
-
-## Morning Checklist for Joshua and Damola
-
-Before presenting: push commits, run migrations, verify `/api/health`, deploy, test Register Interest and `/dashboard/rsvps`, rehearse this script. Details: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).
+- Payments / Stripe  
+- SMS  
+- AI features  
+- Editing unfinished “Coming soon” actions as if live  
+- Inventing a confirmed date, venue, or price

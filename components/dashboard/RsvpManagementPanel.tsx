@@ -55,10 +55,11 @@ function RsvpStatusBanner({ source }: { source: RsvpDataSource }) {
 
   return (
     <section className="rounded-2xl border border-sky-200/70 bg-gradient-to-r from-sky-50 to-white px-5 py-4 shadow-sm">
-      <p className="font-sans text-sm font-semibold text-sky-950">Demo Mode</p>
+      <p className="font-sans text-sm font-semibold text-sky-950">Presentation sample data</p>
       <p className="mt-1 font-sans text-sm leading-relaxed text-sky-900/85">
-        This dashboard is currently showing sample data. Live registrations will appear here once
-        the Supabase migration is applied.
+        Sample registrations are shown for committee walkthroughs. Live Register Interest records
+        will appear here once the database is connected (migrations and environment variables —
+        handled by Damola).
       </p>
     </section>
   );
@@ -375,8 +376,8 @@ export function RsvpManagementPanel({ records, source }: RsvpManagementPanelProp
       <RsvpStatusBanner source={source} />
 
       <div className="flex justify-end">
-        <ToolbarButton primary onClick={() => setRegisterGuestOpen(true)}>
-          + Register Guest
+        <ToolbarButton onClick={() => setRegisterGuestOpen(true)}>
+          Register Guest · Coming soon
         </ToolbarButton>
       </div>
 
