@@ -25,7 +25,6 @@ function LoginForm() {
     setIsPending(true);
 
     const trimmedEmail = email.trim().toLowerCase();
-    const trimmedPassword = password.trim();
 
     try {
       const supabase = createBrowserSupabaseClient();
@@ -44,7 +43,7 @@ function LoginForm() {
 
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
-        password: trimmedPassword,
+        password,
       });
 
       if (authError) {

@@ -45,7 +45,7 @@ export async function fetchAnnouncements(opts?: {
   publishedOnly?: boolean;
 }): Promise<FetchAnnouncementsResult> {
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) return { ok: false, message: "Database is not configured." };
+  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
   const event = getActiveEventConfig();
   try {
     const supabase = createServiceRoleClient();
@@ -79,25 +79,51 @@ export async function upsertAnnouncement(
   const event = getActiveEventConfig();
   const d = parsed.data as AnnouncementFormValues;
   const now = new Date().toISOString();
-  const payload = {
-    event_slug: event.slug,
-    title: d.title,
-    body: d.body,
-    is_published: d.isPublished,
-    published_at: d.isPublished ? now : null,
-    scheduled_for: d.scheduledFor || null,
-    created_by: createdBy,
-  };
+
   try {
     const supabase = createServiceRoleClient();
+
     if (id) {
-      const { error } = await supabase.from("announcements").update(payload).eq("id", id);
+      const { data: existing } = await supabase
+        .from("announcements")
+        .select("is_published, published_at")
+        .eq("id", id)
+        .maybeSingle();
+
+      const wasPublished = Boolean(
+        existing && (existing as { is_published?: boolean }).is_published,
+      );
+      const publishedAt = d.isPublished
+        ? wasPublished
+          ? ((existing as { published_at?: string | null }).published_at ?? now)
+          : now
+        : null;
+
+      const { error } = await supabase
+        .from("announcements")
+        .update({
+          title: d.title,
+          body: d.body,
+          is_published: d.isPublished,
+          published_at: publishedAt,
+          scheduled_for: d.scheduledFor || null,
+        })
+        .eq("id", id);
       if (error) return { ok: false, error: "Could not update announcement." };
       return { ok: true, id };
     }
+
     const { data, error } = await supabase
       .from("announcements")
-      .insert(payload)
+      .insert({
+        event_slug: event.slug,
+        title: d.title,
+        body: d.body,
+        is_published: d.isPublished,
+        published_at: d.isPublished ? now : null,
+        scheduled_for: d.scheduledFor || null,
+        created_by: createdBy,
+      })
       .select("id")
       .single();
     if (error || !data) return { ok: false, error: "Could not create announcement." };

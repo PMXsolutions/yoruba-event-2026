@@ -41,7 +41,7 @@ export async function POST(): Promise<NextResponse<OkBody | ErrorBody>> {
   }
 
   const presence = getSupabaseEnvPresence();
-  if (!presence.allPresent) {
+  if (!presence.serviceRoleReady) {
     const missing = missingSupabaseEnvVarNames(presence);
     console.error(
       "[api/health/rsvp-insert-test] Missing env (names only):",
@@ -70,6 +70,8 @@ export async function POST(): Promise<NextResponse<OkBody | ErrorBody>> {
   }
 
   const email = `health-check+${Date.now()}@invalid.example`;
+  const { getActiveEventConfig } = await import("@/platform/core/config/active-event");
+  const event = getActiveEventConfig();
   const row = {
     full_name: "Connectivity test (auto-deleted)",
     email,
@@ -77,6 +79,9 @@ export async function POST(): Promise<NextResponse<OkBody | ErrorBody>> {
     number_of_attendees: 1,
     ticket_type: TICKET_TYPES[0],
     notes: "Temporary RSVP backend insert test",
+    event_slug: event.slug,
+    registration_reference: `TEST-${Date.now().toString(36).toUpperCase()}`,
+    status: "new",
   };
 
   const { data: inserted, error: insertError } = await supabase

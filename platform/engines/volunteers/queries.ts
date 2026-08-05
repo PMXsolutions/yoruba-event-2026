@@ -68,7 +68,7 @@ export async function submitVolunteerRegistration(
   }
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return { ok: false, error: "Registration is temporarily unavailable. Please try again later." };
   }
 
@@ -108,7 +108,7 @@ export type FetchVolunteersResult =
 
 export async function fetchVolunteers(): Promise<FetchVolunteersResult> {
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) return { ok: false, message: "Database is not configured." };
+  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
   const event = getActiveEventConfig();
   try {
     const supabase = createServiceRoleClient();

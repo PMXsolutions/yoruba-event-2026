@@ -4,7 +4,12 @@ export type SupabaseEnvPresence = {
   hasPublicUrl: boolean;
   hasAnonKey: boolean;
   hasServiceRoleKey: boolean;
+  /** URL + anon + service role (full platform). */
   allPresent: boolean;
+  /** URL + service role — enough for server-side inserts/CRM via service role. */
+  serviceRoleReady: boolean;
+  /** URL + anon — enough for browser Auth (/login). */
+  authReady: boolean;
 };
 
 function isNonEmpty(value: string | undefined): boolean {
@@ -22,6 +27,8 @@ export function getSupabaseEnvPresence(): SupabaseEnvPresence {
     hasPublicUrl,
     hasAnonKey,
     hasServiceRoleKey,
+    serviceRoleReady: hasPublicUrl && hasServiceRoleKey,
+    authReady: hasPublicUrl && hasAnonKey,
     allPresent: hasPublicUrl && hasAnonKey && hasServiceRoleKey,
   };
 }
@@ -30,6 +37,13 @@ export function missingSupabaseEnvVarNames(presence: SupabaseEnvPresence): strin
   const missing: string[] = [];
   if (!presence.hasPublicUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
   if (!presence.hasAnonKey) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  if (!presence.hasServiceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  return missing;
+}
+
+export function missingServiceRoleEnvVarNames(presence: SupabaseEnvPresence): string[] {
+  const missing: string[] = [];
+  if (!presence.hasPublicUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
   if (!presence.hasServiceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   return missing;
 }

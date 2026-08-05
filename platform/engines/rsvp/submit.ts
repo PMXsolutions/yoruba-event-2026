@@ -41,7 +41,7 @@ export async function submitRsvpToDatabase(
   }
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return {
       ok: false,
       error: mapConfigError("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
@@ -57,7 +57,9 @@ export async function submitRsvpToDatabase(
 
     // Soft duplicate prevention: same email + event within last 24h
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: existing } = await supabase
+    let existing: { id: string; registration_reference?: string | null } | null = null;
+
+    const withSlug = await supabase
       .from("rsvps")
       .select("id, registration_reference")
       .eq("event_slug", event.slug)
@@ -65,6 +67,19 @@ export async function submitRsvpToDatabase(
       .gte("created_at", since)
       .limit(1)
       .maybeSingle();
+
+    if (withSlug.error && /event_slug/i.test(withSlug.error.message)) {
+      const fallback = await supabase
+        .from("rsvps")
+        .select("id, registration_reference")
+        .eq("email", record.email)
+        .gte("created_at", since)
+        .limit(1)
+        .maybeSingle();
+      existing = fallback.data;
+    } else if (!withSlug.error) {
+      existing = withSlug.data;
+    }
 
     if (existing) {
       return {
@@ -75,7 +90,21 @@ export async function submitRsvpToDatabase(
       };
     }
 
-    const { error } = await supabase.from("rsvps").insert(record);
+    let { error } = await supabase.from("rsvps").insert(record);
+
+    // Compatibility: older schemas without production columns
+    if (error && /event_slug|registration_reference/i.test(error.message)) {
+      const legacy = {
+        full_name: record.full_name,
+        email: record.email,
+        phone: record.phone,
+        number_of_attendees: record.number_of_attendees,
+        ticket_type: record.ticket_type,
+        notes: record.notes,
+        status: record.status,
+      };
+      ({ error } = await supabase.from("rsvps").insert(legacy));
+    }
 
     if (error) {
       console.error("[rsvp-engine] Supabase insert error:", error.message, error.code);

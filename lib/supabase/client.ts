@@ -4,7 +4,9 @@ import { createBrowserClient } from "@supabase/ssr";
 import { normalizeSupabaseProjectUrl } from "@/lib/supabase/normalize-url";
 
 export class AuthConfigError extends Error {
-  constructor(message = "Authentication is not configured for this deployment.") {
+  constructor(
+    message = "Authentication is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then redeploy.",
+  ) {
     super(message);
     this.name = "AuthConfigError";
   }
@@ -18,9 +20,7 @@ export function createBrowserSupabaseClient() {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!rawUrl?.trim() || !anonKey?.trim()) {
-    throw new AuthConfigError(
-      "Authentication is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then redeploy.",
-    );
+    throw new AuthConfigError();
   }
   return createBrowserClient(normalizeSupabaseProjectUrl(rawUrl), anonKey);
 }
