@@ -61,7 +61,9 @@ MAIL_FROM="Promax Event <support@yourdomain.com>"
 ## Security
 
 - Do not put SMTP passwords in git, README, or `NEXT_PUBLIC_*`
+- Do not store SMTP passwords (or other credentials) in Supabase tables / database records
 - Do not log passwords or API keys
+- Configure production secrets in Vercel Environment Variables (and locally in `.env.local` only)
 - Rotate any password that was shared in chat, tickets, or screenshots
 
 ---
