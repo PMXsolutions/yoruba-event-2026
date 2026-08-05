@@ -63,6 +63,7 @@ export function RSVP() {
   >({});
   const [isPending, setIsPending] = useState(false);
   const [confirmationEmailQueued, setConfirmationEmailQueued] = useState(false);
+  const [registrationReference, setRegistrationReference] = useState<string | null>(null);
 
   function clearMessages() {
     setSubmitError(null);
@@ -100,6 +101,7 @@ export function RSVP() {
       if (result.ok) {
         setSubmitted(true);
         setConfirmationEmailQueued(result.emailSent ?? false);
+        setRegistrationReference(result.registrationReference ?? null);
         setForm(initial);
         setFieldErrors({});
         setSubmitError(null);
@@ -172,6 +174,12 @@ export function RSVP() {
                       will reach out to the email you provided with ticketing and programme news as
                       soon as dates and venues are finalised.
                     </p>
+                    {registrationReference ? (
+                      <p className="mx-auto mt-3 font-sans text-sm text-gold-light">
+                        Registration reference:{" "}
+                        <strong className="tracking-wide">{registrationReference}</strong>
+                      </p>
+                    ) : null}
                     {confirmationEmailQueued ? (
                       <p className="mx-auto mt-3 max-w-md font-sans text-xs text-cream/60">
                         A confirmation email is on its way to your inbox.
@@ -185,6 +193,7 @@ export function RSVP() {
                     onClick={() => {
                       setSubmitted(false);
                       setConfirmationEmailQueued(false);
+                      setRegistrationReference(null);
                       setForm(initial);
                       clearMessages();
                     }}

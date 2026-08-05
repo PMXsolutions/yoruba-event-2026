@@ -11,20 +11,22 @@ Promax Event Platform — technical architecture (v1)
 │                     Vercel / Next.js 16                          │
 │  ┌──────────────┐  ┌─────────────────┐  ┌──────────────────┐  │
 │  │ Public site  │  │ Committee portal │  │ API / Actions    │  │
-│  │ (event config)│  │ /dashboard/*     │  │ RSVP, health     │  │
+│  │ (event config)│  │ /dashboard/*     │  │ RSVP, CRM, health│  │
 │  └──────┬───────┘  └────────┬─────────┘  └────────┬─────────┘  │
 │         │                   │                      │             │
 │  ┌──────┴───────────────────┴──────────────────────┴─────────┐  │
 │  │              Promax Platform Engines                       │  │
-│  │  RSVP · Notifications · Dashboard · AI (registry)         │  │
+│  │  RSVP · Sponsors · Volunteers · Tasks · Programme          │  │
+│  │  Announcements · Notifications · Dashboard / Analytics     │  │
 │  └──────┬───────────────────────────────┬────────────────────┘  │
 └─────────┼───────────────────────────────┼───────────────────────┘
           │                               │
           ▼                               ▼
    ┌─────────────┐                 ┌─────────────┐
    │  Supabase   │                 │   Resend    │
-   │  (Postgres) │                 │   (email)   │
-   └─────────────┘                 └─────────────┘
+   │  Auth + DB  │                 │   (email)   │
+   │  + RLS      │                 └─────────────┘
+   └─────────────┘
 ```
 
 ---
@@ -33,24 +35,76 @@ Promax Event Platform — technical architecture (v1)
 
 | Layer | Path | Purpose |
 |-------|------|---------|
-| Event config | `config/events/<slug>/` | Customer branding, copy, ticket types |
-| Platform core | `platform/core/` | Types, active event resolver |
+| Event config | `config/events/<slug>/` | Customer branding, date, venue, tickets, SEO |
+| Platform core | `platform/core/` | Types, active event resolver (`EVENT_SLUG`) |
 | Platform engines | `platform/engines/` | Reusable business logic |
-| App routes | `app/` | Next.js pages, actions, API |
+| Auth | `lib/auth/`, `middleware.ts` | Session + RBAC |
+| App routes | `app/` | Pages, actions, API |
 | Components | `components/` | UI |
-| Infrastructure | `lib/supabase/` | Database clients |
+| Infrastructure | `lib/supabase/` | Browser, SSR, and service-role clients |
 
 **Rule:** If another organisation could use it → platform engine. If Yoruba-specific → event config.
 
 ---
 
+## Authentication & authorization
+
+1. Supabase Auth email/password at `/login`
+2. Middleware protects `/dashboard/*` and redirects unauthenticated users to `/login`
+3. `profiles` table stores role: `SUPER_ADMIN` | `ADMIN` | `COMMITTEE` | `VOLUNTEER`
+4. Server actions call `requireAuth(permission)` before mutating data
+5. RLS policies restrict direct table access; public writes go through validated service-role server actions
+
+Initial admin: `admin@promaxevent.com` via `scripts/provision-admin.mjs` (password from env only).
+
+---
+
+## Data model (conceptual)
+
+```
+Event (slug)
+ ├── RSVPs
+ ├── Sponsors
+ ├── Volunteers
+ ├── Tasks
+ ├── Programme items
+ ├── Announcements
+ └── Activity logs
+```
+
+Every operational row carries `event_slug` for multi-event readiness. Full multi-tenancy is not enabled yet.
+
+---
+
 ## RSVP flow
 
-1. Client form validates via `createRsvpFormSchema(ticketTypes)`
-2. `submitRsvp` Server Action resolves `EventConfig` via `getActiveEventConfig()`
-3. **RSVP Engine** validates + inserts via service role
-4. **Notification Engine** sends Resend confirmation (non-blocking)
-5. Success returned to client
+1. Public form → Zod validation → rate limit
+2. `submitRsvp` Server Action → RSVP Engine insert (service role)
+3. Unique `registration_reference` generated
+4. Notification Engine sends Resend confirmation (non-blocking)
+5. Success UI shows reference; CRM lists live rows
+
+Statuses: `new` → `contacted` → `confirmed` | `cancelled`
+
+---
+
+## Email architecture
+
+```
+dispatchRsvpNotifications()
+  └── sendRsvpConfirmationEmail()   # transport (Resend HTTP)
+        └── buildRsvpConfirmationEmail()  # template
+```
+
+Failures are logged server-side without exposing credentials. RSVP persistence never depends on email success.
+
+---
+
+## Public forms abuse protection
+
+- In-memory rate limiting (`lib/security/rate-limit.ts`)
+- Soft duplicate prevention (same email + event within 24h for RSVP)
+- Architecture ready for CAPTCHA without changing form contracts
 
 ---
 
@@ -58,38 +112,5 @@ Promax Event Platform — technical architecture (v1)
 
 | Phase | Mechanism |
 |-------|-----------|
-| v1 | `EVENT_SLUG` env var → `EVENT_REGISTRY` |
-| v2 | Subdomain → slug mapping |
-| v3 | Tenant ID column on all tables + RLS |
-
----
-
-## Committee portal
-
-`/dashboard/*` — Dashboard Engine UI. **RSVP CRM** (`/dashboard/rsvps`) reads live Supabase data when migrations and env vars are configured; other modules use placeholder demo data until Phase 2. Auth required before production (Phase 2).
-
-Modules: Executive, RSVPs, Sponsors, Volunteers, Tasks, Programme, Announcements, Analytics, Settings.
-
----
-
-## Security
-
-- Service role: `server-only`, never client-bundled
-- RLS on `rsvps`, no anon policies
-- Email/SMS: server-side only, non-blocking
-- Dashboard: unauthenticated scaffold — do not expose publicly
-
----
-
-## Related
-
-- [PLATFORM.md](./PLATFORM.md) — engine catalogue
-- [EMAIL.md](./EMAIL.md) — Resend
-- [PHASE_2_SPEC.md](./PHASE_2_SPEC.md) — auth + live dashboard
-- [QUALITY_AUDIT.md](./QUALITY_AUDIT.md) — quality audit & morning checklist
-
----
-
-## Morning Checklist for Joshua and Damola
-
-See [QUALITY_AUDIT.md § Morning Checklist](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola) for the full shared, Joshua, and Damola checklists (push, migrations, `/api/health`, Vercel deploy, Register Interest, RSVP dashboard, demo rehearsal).
+| Now | `EVENT_SLUG` + TypeScript registry + `event_slug` columns |
+| Next | Subdomain / path routing, shared auth org model |

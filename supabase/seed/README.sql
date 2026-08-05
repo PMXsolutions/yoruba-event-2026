@@ -1,0 +1,13 @@
+-- Explicit development seed only.
+-- Do NOT run automatically in production.
+-- Usage: apply manually via Supabase SQL editor when you need sample rows for local QA.
+
+-- Example (commented out intentionally):
+-- INSERT INTO public.tasks (event_slug, title, description, status, priority)
+-- VALUES (
+--   'yoruba-day-canberra-2026',
+--   'Confirm venue logistics',
+--   'Coordinate AV, seating, and accessibility.',
+--   'todo',
+--   'high'
+-- );

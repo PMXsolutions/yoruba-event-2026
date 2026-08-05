@@ -1,9 +1,9 @@
 # Promax Event Platform
 
-**Version 1** — reusable event management SaaS  
-**First deployment:** [Yoruba Day Canberra 2026](https://github.com/PMXsolutions/yoruba-event-2026)
+**Version 1.0.0** — reusable event management SaaS  
+**First deployment:** Yoruba Day Canberra 2026
 
-Built with Next.js 16, TypeScript, Tailwind CSS v4, Supabase, and Framer Motion.
+Built with Next.js 16, TypeScript, Tailwind CSS v4, Supabase Auth, PostgreSQL, Framer Motion, Zod, Resend, and Server Actions.
 
 > This repository is the **Promax Event Platform**, not a one-off website. Yoruba Day Canberra 2026 is the first customer configuration under `config/events/`.
 
@@ -13,11 +13,16 @@ Built with Next.js 16, TypeScript, Tailwind CSS v4, Supabase, and Framer Motion.
 
 ```bash
 npm install
-cp .env.example .env.local   # Supabase + optional Resend
-npm run preview              # recommended local preview
+cp .env.example .env.local   # Supabase + Resend + admin bootstrap vars
+# Apply SQL migrations in supabase/migrations/ (Supabase SQL editor or CLI)
+node --env-file=.env.local scripts/provision-admin.mjs
+npm run preview
 ```
 
-Open [http://localhost:3000](http://localhost:3000) · Committee portal: [/dashboard](http://localhost:3000/dashboard)
+Open [http://localhost:3000](http://localhost:3000)  
+Committee portal: [/login](http://localhost:3000/login) → [/dashboard](http://localhost:3000/dashboard)
+
+Initial administrator email: `admin@promaxevent.com` (password via `ADMIN_PASSWORD` env — never commit it).
 
 ---
 
@@ -25,28 +30,46 @@ Open [http://localhost:3000](http://localhost:3000) · Committee portal: [/dashb
 
 | Doc | Description |
 |-----|-------------|
-| [docs/PLATFORM.md](./docs/PLATFORM.md) | **Platform overview & engines** |
+| [docs/PLATFORM.md](./docs/PLATFORM.md) | Platform overview & engines |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel + Supabase deploy |
-| [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Friday demo presentation flow |
-| [docs/DAMOLA_HANDOVER.md](./docs/DAMOLA_HANDOVER.md) | Deployment handover for Damola |
-| [docs/EMAIL.md](./docs/EMAIL.md) | Resend integration |
+| [docs/EMAIL.md](./docs/EMAIL.md) | Resend / confirmation emails |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases & status |
 | [docs/SMS.md](./docs/SMS.md) | Twilio architecture (future) |
 | [docs/AI.md](./docs/AI.md) | AI engine architecture (future) |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases 1–4 |
 | [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Dev workflow |
-| [docs/QUALITY_AUDIT.md](./docs/QUALITY_AUDIT.md) | Quality audit & morning checklist |
 
 ---
 
-## Platform structure
+## Architecture
 
 ```
-config/events/     Per-customer branding & content
-platform/          Reusable engines (RSVP, notifications, dashboard, AI)
-app/               Next.js routes
-components/        Public UI + committee portal
+config/events/<slug>/     Event branding & content (EVENT_SLUG)
+platform/core/            Types + active event resolver
+platform/engines/         RSVP, sponsors, volunteers, tasks, programme,
+                          announcements, notifications, dashboard
+app/                      Routes, server actions, API
+components/               Public site + enterprise dashboard UI
+lib/                      Supabase clients, auth/RBAC, calendar, security
+supabase/migrations/      Ordered PostgreSQL + RLS migrations
 ```
+
+Operational data lives in **Supabase**. Marketing/branding content lives in **event configuration**. There is no production demo-data fallback.
+
+---
+
+## Environment variables
+
+See `.env.example`. Required for production:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server only)
+- `RESEND_API_KEY`
+- `MAIL_FROM` (or legacy `RESEND_FROM_EMAIL`)
+- `EVENT_SLUG` (optional; defaults to `yoruba-day-canberra-2026`)
+
+Never put secrets in `NEXT_PUBLIC_*` or source control.
 
 ---
 
@@ -54,54 +77,15 @@ components/        Public UI + committee portal
 
 | Command | Purpose |
 |---------|---------|
-| `npm run preview` | Production build + start |
-| `npm run dev` | Dev server (Turbopack) |
+| `npm run dev` | Next.js dev server |
 | `npm run build` | Production build |
+| `npm run preview` | Build + start |
 | `npm run lint` | ESLint |
+| `node --env-file=.env.local scripts/provision-admin.mjs` | Create/update SUPER_ADMIN |
 
 ---
 
-## Environment variables
+## Health
 
-See [`.env.example`](./.env.example). Minimum for RSVP:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-
-Optional for confirmation emails:
-
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-
----
-
-## Deploy checklist (Damola)
-
-1. Push latest to GitHub
-2. Import in Vercel · set env vars
-3. Run Supabase migrations (3 files)
-4. Verify `/api/health` → `ok`
-5. Test Register Interest + optional email
-6. Test RSVP dashboard at `/dashboard/rsvps`
-7. Rehearse demo — [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)
-
-See [docs/QUALITY_AUDIT.md](./docs/QUALITY_AUDIT.md) for the full morning checklist.
-
----
-
-## Morning Checklist for Joshua and Damola
-
-- [ ] Push latest commits to GitHub
-- [ ] Run Supabase migrations (3 files)
-- [ ] Verify `/api/health`
-- [ ] Deploy to Vercel · set env vars
-- [ ] Test Register Interest
-- [ ] Test RSVP dashboard
-- [ ] Rehearse demo — [docs/DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)
-
-Full Joshua and Damola sub-checklists: [docs/QUALITY_AUDIT.md § Morning Checklist](./docs/QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola)
-
----
-
-**Promax IT Solutions** · Event Management SaaS
+`GET /api/health` — verifies env presence, event config, Supabase connectivity, and email configuration status (presence only).  
+`POST /api/health/rsvp-insert-test` — development-only unless `ENABLE_RSVP_INSERT_TEST=true`.

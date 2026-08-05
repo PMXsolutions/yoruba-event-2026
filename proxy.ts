@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { normalizeSupabaseProjectUrl } from "@/lib/supabase/normalize-url";
 
-export async function middleware(request: NextRequest) {
+/**
+ * Next.js 16 Proxy — protects committee routes and refreshes Supabase auth cookies.
+ * (Replaces deprecated middleware.ts convention.)
+ */
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

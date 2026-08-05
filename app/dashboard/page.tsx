@@ -24,7 +24,7 @@ export default async function DashboardPage() {
         </IntegrationBanner>
       ) : null}
 
-      <StatGrid stats={data.stats} columns={6} />
+      <StatGrid stats={data.stats} columns={4} />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2 space-y-6">

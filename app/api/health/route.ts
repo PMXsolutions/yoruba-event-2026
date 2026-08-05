@@ -4,20 +4,48 @@ import {
   getSupabaseEnvPresence,
   missingSupabaseEnvVarNames,
 } from "@/lib/supabase/env-status";
+import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
+import { getActiveEventConfig } from "@/platform/core/config/active-event";
 
 export const dynamic = "force-dynamic";
 
-type HealthOk = { status: "ok"; supabase: true; env: true };
+type HealthOk = {
+  status: "ok";
+  supabase: true;
+  env: true;
+  event: string;
+  emailConfigured: boolean;
+};
+
 type HealthError = {
   status: "error";
   supabase: boolean;
   env: boolean;
   code: string;
   missingEnvVars?: string[];
+  event?: string;
+  emailConfigured?: boolean;
 };
 
 export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
   const presence = getSupabaseEnvPresence();
+  const email = getEmailEnvPresence();
+
+  let eventSlug = "unknown";
+  try {
+    eventSlug = getActiveEventConfig().slug;
+  } catch {
+    return NextResponse.json(
+      {
+        status: "error",
+        supabase: false,
+        env: presence.allPresent,
+        code: "EVENT_CONFIG_MISSING",
+        emailConfigured: email.ready,
+      },
+      { status: 503 },
+    );
+  }
 
   if (!presence.allPresent) {
     const missing = missingSupabaseEnvVarNames(presence);
@@ -32,6 +60,8 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
         env: false,
         code: "MISSING_ENV_VARS",
         missingEnvVars: missing,
+        event: eventSlug,
+        emailConfigured: email.ready,
       },
       { status: 503 },
     );
@@ -50,11 +80,6 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
         );
       } else {
         console.error("[api/health] Supabase query failed:", error.message, error.code);
-        if (error.code === "PGRST125") {
-          console.error(
-            "[api/health] PGRST125: check NEXT_PUBLIC_SUPABASE_URL is exactly https://<ref>.supabase.co (no /rest/v1 suffix, no stray characters).",
-          );
-        }
       }
       return NextResponse.json(
         {
@@ -62,6 +87,8 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
           supabase: false,
           env: true,
           code: tableMissing ? "RSVPS_TABLE_MISSING" : "SUPABASE_QUERY_FAILED",
+          event: eventSlug,
+          emailConfigured: email.ready,
         },
         { status: 503 },
       );
@@ -75,11 +102,24 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
         supabase: false,
         env: true,
         code: "SUPABASE_CONNECTION_FAILED",
+        event: eventSlug,
+        emailConfigured: email.ready,
       },
       { status: 503 },
     );
   }
 
-  console.info("[api/health] Supabase env present and REST query to public.rsvps succeeded.");
-  return NextResponse.json({ status: "ok", supabase: true, env: true });
+  console.info(
+    "[api/health] OK — event=",
+    eventSlug,
+    "emailConfigured=",
+    email.ready,
+  );
+  return NextResponse.json({
+    status: "ok",
+    supabase: true,
+    env: true,
+    event: eventSlug,
+    emailConfigured: email.ready,
+  });
 }

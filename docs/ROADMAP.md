@@ -1,110 +1,43 @@
-# Yoruba Day Canberra 2026 — Platform Roadmap
+# Roadmap
 
-**Last updated:** July 2026  
-**Owner:** Yoruba Association Canberra / PMX Solutions
-
----
-
-## Phase 1 — Public launch (current)
-
-**Goal:** Premium public website with interest registration.
-
-| Item | Status |
-|------|--------|
-| Marketing site (Hero, About, Experience, Sponsors, RSVP, Footer) | ✅ Done |
-| Register Interest form → Supabase | ✅ Done |
-| Health check API | ✅ Done |
-| GitHub backup | ✅ Done |
-| Vercel deployment | ⏳ Damola |
-| Rate limiting / CAPTCHA | ⏳ Post-launch hardening |
-| Final sponsor logos & social URLs | ⏳ Business decision |
-| Confirmed event date & ticket prices | ⏳ Business decision |
+Promax Event Platform — status after production hardening (Yoruba Day Canberra 2026).
 
 ---
 
-## Phase 2 — Organiser dashboard
+## Completed (v1 production foundation)
 
-**Goal:** Internal tools for committee members.
-
-| Item | Status |
-|------|--------|
-| Dashboard route scaffold (`/dashboard/*`) | ✅ Scaffold only |
-| Authentication (Supabase Auth or similar) | ❌ Not started |
-| RSVP list / export | ❌ Blocked on auth |
-| Sponsor pipeline CRM | ❌ Blocked on auth |
-| Volunteer roster | ❌ Not started |
-| Task board | ❌ Not started |
-
-See [PHASE_2_SPEC.md](./PHASE_2_SPEC.md).
-
----
-
-## Phase 3 — Communications & analytics
-
-**Goal:** Notify organisers and measure engagement.
-
-| Item | Status |
-|------|--------|
-| Email on new RSVP (Resend) | ⚠️ Scaffold — activates with `RESEND_API_KEY` + `RESEND_FROM_EMAIL` |
-| Admin notification preferences | ❌ Not started |
-| Analytics (Plausible / GA4) | ❌ Not started |
-| SEO (sitemap, OG images) | ❌ Not started |
-
-See [PHASE_3_SPEC.md](./PHASE_3_SPEC.md).
+- [x] Public marketing site with config-driven branding
+- [x] Save the Date (.ics / Google / Outlook)
+- [x] RSVP → Zod → Server Action → Supabase
+- [x] Registration references + confirmation email (Resend)
+- [x] Live RSVP CRM (search, filters, status, tags, notes, CSV)
+- [x] Sponsor registration + CRM
+- [x] Volunteer registration + management
+- [x] Task board
+- [x] Programme items (Supabase operational)
+- [x] Announcements (publish / archive)
+- [x] Live analytics (no fake charts)
+- [x] Supabase Auth + middleware + RBAC
+- [x] RLS policies for operational tables
+- [x] Rate limiting on public forms
+- [x] SEO (metadata, sitemap, robots, Event JSON-LD)
+- [x] Health checks (env / DB / event / email presence)
 
 ---
 
-## Phase 4 — Ticketing & payments
+## Next
 
-**Goal:** Paid ticketing when packages are finalised.
-
-| Item | Status |
-|------|--------|
-| Ticket pricing | ❌ Business decision required |
-| Payment provider (Stripe, etc.) | ❌ Not started |
-| QR check-in | ❌ Not started |
-| Refund policy | ❌ Business decision required |
-
-**Do not implement until Phase 1 is live and committee approves pricing.**
+- [ ] CAPTCHA on public forms (architecture ready)
+- [ ] Committee alert emails on new RSVP / sponsor
+- [ ] Sponsor / volunteer confirmation emails
+- [ ] Soft multi-tenant routing (subdomain / path)
+- [ ] SMS via Twilio (`docs/SMS.md`)
+- [ ] Ticketing / payments / check-in (Phase 4)
 
 ---
 
-## Risk register
+## Explicitly deferred
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| RSVP spam | Medium | Rate limiting + CAPTCHA (Phase 1 hardening) |
-| Unprotected `/dashboard` routes | Medium | Do not link publicly; add auth in Phase 2 |
-| Service role key exposure | High | Server-only client; never commit `.env.local` |
-| Turbopack dev hang | Low | Use `npm run preview` for local testing |
-| Missing Supabase migration | High | Run SQL before deploy; verify `/api/health` |
-| Placeholder content at launch | Low | Replace sponsors/social when assets ready |
-
----
-
-## Remaining business decisions
-
-1. **Exact event date** (currently November 2026, placeholder 22 Nov for countdown)
-2. **Venue confirmation**
-3. **Ticket types and pricing**
-4. **Sponsor tier amounts and benefits**
-5. **Official social media URLs**
-6. **Contact phone number**
-7. **Sponsor logo assets**
-8. **Photography / video for hero and OG images**
-
----
-
-## Friday launch checklist
-
-- [ ] Push latest commits to GitHub (`main`)
-- [ ] All three Supabase migrations applied
-- [ ] Vercel env vars set (3 Supabase vars minimum)
-- [ ] `GET /api/health` returns `{ "status": "ok" }`
-- [ ] Register Interest form submits successfully
-- [ ] RSVP dashboard (`/dashboard/rsvps`) shows live data when connected
-- [ ] Rehearse demo — [DEMO_SCRIPT.md](./DEMO_SCRIPT.md)
-- [ ] Damola reviews site on mobile and desktop
-- [ ] Custom domain configured (if ready)
-
-Full morning checklist: [QUALITY_AUDIT.md](./QUALITY_AUDIT.md#morning-checklist-for-joshua-and-damola).
+- Full multi-org SaaS billing
+- AI content generation (registry only)
+- Automated E2E suite (add when CI budget allows)
