@@ -1,5 +1,3 @@
-import { requireAuth } from "@/lib/auth/rbac";
-import { redirect } from "next/navigation";
 import { getFeatureFlags } from "@/lib/feature-flags";
 import {
   fetchFloorPlans,
@@ -9,12 +7,14 @@ import {
 import { fetchDashboardRsvps } from "@/platform/engines/dashboard/rsvp/queries";
 import { SeatingManagementPanel } from "@/components/dashboard/SeatingManagementPanel";
 import { IntegrationBanner } from "@/components/dashboard/dashboard-ui";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
+import { hasPermission } from "@/lib/auth/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function SeatingPage() {
-  const auth = await requireAuth("rsvp.read");
-  if (!auth.ok) redirect("/login?redirect=/dashboard/seating");
+  const user = await requireDashboardPage("seating.read");
+  const canWrite = hasPermission(user, "seating.write");
 
   const flags = getFeatureFlags();
   if (!flags.SEATING_ENABLED) {
@@ -49,6 +49,7 @@ export default async function SeatingPage() {
       assignments={assignments}
       floorPlans={plans}
       guests={guests}
+      canWrite={canWrite}
     />
   );
 }

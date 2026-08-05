@@ -1,15 +1,13 @@
-import { requireAuth } from "@/lib/auth/rbac";
-import { redirect } from "next/navigation";
 import { getFeatureFlags } from "@/lib/feature-flags";
 import { fetchSeatingAssignments } from "@/platform/engines/seating/queries";
 import { CheckInPanel } from "@/components/dashboard/CheckInPanel";
 import { IntegrationBanner } from "@/components/dashboard/dashboard-ui";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function CheckInPage() {
-  const auth = await requireAuth("rsvp.write");
-  if (!auth.ok) redirect("/login?redirect=/dashboard/check-in");
+  await requireDashboardPage("checkin.write");
 
   const flags = getFeatureFlags();
   if (!flags.QR_CHECKIN_ENABLED) {

@@ -158,3 +158,89 @@ export async function updateSponsorNotes(
     return { ok: false, error: "Could not save notes." };
   }
 }
+
+export type SponsorDetailsPatch = {
+  companyName?: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string | null;
+  website?: string | null;
+  package?: string;
+};
+
+export async function updateSponsorDetails(
+  id: string,
+  patch: SponsorDetailsPatch,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const payload: Record<string, unknown> = {};
+  if (patch.companyName !== undefined) payload.company_name = patch.companyName.trim();
+  if (patch.contactPerson !== undefined) payload.contact_person = patch.contactPerson.trim();
+  if (patch.email !== undefined) payload.email = patch.email.trim().toLowerCase();
+  if (patch.phone !== undefined) payload.phone = patch.phone?.trim() || null;
+  if (patch.website !== undefined) payload.website = patch.website?.trim() || null;
+  if (patch.package !== undefined) payload.package = patch.package;
+
+  if (Object.keys(payload).length === 0) return { ok: false, error: "Nothing to update." };
+
+  try {
+    const supabase = createServiceRoleClient();
+    const { error } = await supabase.from("sponsors").update(payload).eq("id", id);
+    if (error) return { ok: false, error: "Could not update sponsor details." };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not update sponsor details." };
+  }
+}
+
+export type CreateCommitteeSponsorInput = {
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone?: string;
+  website?: string;
+  package: string;
+  message?: string;
+  status?: SponsorStatus;
+  committeeNotes?: string;
+};
+
+/** Committee-initiated sponsor record (e.g. from a phone call or in-person pledge). */
+export async function createCommitteeSponsor(
+  input: CreateCommitteeSponsorInput,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const companyName = input.companyName.trim();
+  const contactPerson = input.contactPerson.trim();
+  const email = input.email.trim().toLowerCase();
+  if (!companyName || !contactPerson || !email) {
+    return { ok: false, error: "Company, contact and email are required." };
+  }
+
+  const event = getActiveEventConfig();
+  try {
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase
+      .from("sponsors")
+      .insert({
+        event_slug: event.slug,
+        company_name: companyName,
+        contact_person: contactPerson,
+        email,
+        phone: input.phone?.trim() || null,
+        website: input.website?.trim() || null,
+        package: input.package,
+        message: input.message?.trim() || null,
+        status: input.status ?? "new",
+        committee_notes: input.committeeNotes?.trim() || null,
+      })
+      .select("id")
+      .single();
+    if (error || !data) {
+      console.error("[sponsors] Committee create failed:", error?.message);
+      return { ok: false, error: "Could not create sponsor record." };
+    }
+    return { ok: true, id: data.id as string };
+  } catch (e) {
+    console.error("[sponsors] Unexpected:", e);
+    return { ok: false, error: "Could not create sponsor record." };
+  }
+}

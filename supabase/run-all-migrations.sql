@@ -608,4 +608,94 @@ CREATE POLICY seating_assignments_authenticated_all
 -- Public seat lookup uses service role in Next.js (no anon full guest list).
 
 
+-- ---------------------------------------------------------------------------
+-- FILE: supabase/migrations/20260805140000_rbac_product_roles.sql
+-- ---------------------------------------------------------------------------
+
+-- Expand committee RBAC roles for V1 production completion.
+-- Adds EVENT_DIRECTOR, RSVP_MANAGER, SPONSOR_MANAGER, VOLUNTEER_COORDINATOR,
+-- PROGRAMME_COORDINATOR, and READ_ONLY roles alongside the existing
+-- SUPER_ADMIN, ADMIN, COMMITTEE, VOLUNTEER roles.
+-- Safe to re-run.
+
+-- ── Widen the profiles.role check constraint ────────────────────────
+DO $$
+DECLARE
+  cname TEXT;
+BEGIN
+  SELECT con.conname INTO cname
+  FROM pg_constraint con
+  JOIN pg_class rel ON rel.oid = con.conrelid
+  JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+  WHERE nsp.nspname = 'public'
+    AND rel.relname = 'profiles'
+    AND con.contype = 'c'
+    AND pg_get_constraintdef(con.oid) ILIKE '%role%';
+
+  IF cname IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE public.profiles DROP CONSTRAINT %I', cname);
+  END IF;
+END $$;
+
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_role_check CHECK (
+    role IN (
+      'SUPER_ADMIN',
+      'ADMIN',
+      'EVENT_DIRECTOR',
+      'COMMITTEE',
+      'RSVP_MANAGER',
+      'SPONSOR_MANAGER',
+      'VOLUNTEER_COORDINATOR',
+      'PROGRAMME_COORDINATOR',
+      'READ_ONLY',
+      'VOLUNTEER'
+    )
+  );
+
+-- New signups default to the least-privileged role; an admin must elevate.
+ALTER TABLE public.profiles
+  ALTER COLUMN role SET DEFAULT 'READ_ONLY';
+
+-- ── Update handle_new_user() default role ───────────────────────────
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'role', 'READ_ONLY')
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+-- ── Recognise all committee-facing roles as "is committee member" ──
+CREATE OR REPLACE FUNCTION public.is_committee_member()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND is_active = true
+      AND role IN (
+        'SUPER_ADMIN', 'ADMIN', 'EVENT_DIRECTOR', 'COMMITTEE',
+        'RSVP_MANAGER', 'SPONSOR_MANAGER', 'VOLUNTEER_COORDINATOR',
+        'PROGRAMME_COORDINATOR', 'READ_ONLY', 'VOLUNTEER'
+      )
+  );
+$$;
+
+
 -- ── Feature flags (documented; enforced in app via lib/feature-flags.ts) ──

@@ -9,7 +9,10 @@ import { getFeatureFlags } from "@/lib/feature-flags";
 import {
   assignGuestSeat,
   createSeatingTable,
+  deleteSeatingTable,
   setCheckIn,
+  unassignSeat,
+  updateSeatingTable,
   upsertFloorPlan,
 } from "@/platform/engines/seating/queries";
 import { SEATING_ZONES } from "@/platform/engines/seating/types";
@@ -21,12 +24,11 @@ function seatingGuard() {
   return { ok: true as const };
 }
 
+const idSchema = z.string().uuid();
+
 export async function saveFloorPlanAction(raw: unknown) {
-  const auth = await requireAuth("programme.write");
-  if (!auth.ok) {
-    const rsvpAuth = await requireAuth("rsvp.write");
-    if (!rsvpAuth.ok) return { ok: false as const, error: rsvpAuth.message };
-  }
+  const auth = await requireAuth("seating.write");
+  if (!auth.ok) return { ok: false as const, error: auth.message };
   const gate = seatingGuard();
   if (!gate.ok) return gate;
 
@@ -42,6 +44,14 @@ export async function saveFloorPlanAction(raw: unknown) {
 
   const result = await upsertFloorPlan(parsed.data);
   if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "seating.floor_plan_updated",
+      entityType: "floor_plan",
+      entityId: result.id,
+      actorId: auth.user.id,
+    });
     revalidatePath("/dashboard/seating");
     revalidatePath("/seat");
   }
@@ -49,7 +59,7 @@ export async function saveFloorPlanAction(raw: unknown) {
 }
 
 export async function createTableAction(raw: unknown) {
-  const auth = await requireAuth("rsvp.write");
+  const auth = await requireAuth("seating.write");
   if (!auth.ok) return { ok: false as const, error: auth.message };
   const gate = seatingGuard();
   if (!gate.ok) return gate;
@@ -67,12 +77,99 @@ export async function createTableAction(raw: unknown) {
   }
 
   const result = await createSeatingTable(parsed.data);
-  if (result.ok) revalidatePath("/dashboard/seating");
+  if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "seating.table_created",
+      entityType: "seating_table",
+      entityId: result.id,
+      actorId: auth.user.id,
+      metadata: { name: parsed.data.name, zone: parsed.data.zone },
+    });
+    revalidatePath("/dashboard/seating");
+  }
   return result;
 }
 
+export async function updateTableAction(id: string, raw: unknown) {
+  const auth = await requireAuth("seating.write");
+  if (!auth.ok) return { ok: false as const, error: auth.message };
+  if (!idSchema.safeParse(id).success) return { ok: false as const, error: "Invalid table." };
+  const gate = seatingGuard();
+  if (!gate.ok) return gate;
+
+  const schema = z.object({
+    name: z.string().trim().min(1).max(80).optional(),
+    zone: z.string().trim().min(1).max(40).optional(),
+    capacity: z.coerce.number().int().min(1).max(100).optional(),
+    notes: z.string().max(500).optional(),
+  });
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) return { ok: false as const, error: "Check table details." };
+
+  const result = await updateSeatingTable(id, parsed.data);
+  if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "seating.table_updated",
+      entityType: "seating_table",
+      entityId: id,
+      actorId: auth.user.id,
+    });
+    revalidatePath("/dashboard/seating");
+  }
+  return result;
+}
+
+export async function deleteTableAction(id: string) {
+  const auth = await requireAuth("seating.write");
+  if (!auth.ok) return { ok: false as const, error: auth.message };
+  if (!idSchema.safeParse(id).success) return { ok: false as const, error: "Invalid table." };
+
+  const result = await deleteSeatingTable(id);
+  if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "seating.table_deleted",
+      entityType: "seating_table",
+      entityId: id,
+      actorId: auth.user.id,
+    });
+    revalidatePath("/dashboard/seating");
+  }
+  return result;
+}
+
+export async function unassignSeatAction(assignmentId: string) {
+  const auth = await requireAuth("seating.write");
+  if (!auth.ok) return { ok: false as const, error: auth.message };
+  if (!idSchema.safeParse(assignmentId).success) {
+    return { ok: false as const, error: "Invalid assignment." };
+  }
+
+  const result = await unassignSeat(assignmentId);
+  if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "seating.seat_unassigned",
+      entityType: "rsvp",
+      entityId: result.rsvpId ?? assignmentId,
+      actorId: auth.user.id,
+    });
+    revalidatePath("/dashboard/seating");
+    revalidatePath("/dashboard/check-in");
+    revalidatePath("/dashboard/rsvps");
+    revalidatePath("/seat");
+  }
+  return result.ok ? { ok: true as const } : result;
+}
+
 export async function assignSeatAction(raw: unknown) {
-  const auth = await requireAuth("rsvp.write");
+  const auth = await requireAuth("seating.write");
   if (!auth.ok) return { ok: false as const, error: auth.message };
   const gate = seatingGuard();
   if (!gate.ok) return gate;
@@ -118,7 +215,7 @@ export async function assignSeatAction(raw: unknown) {
 }
 
 export async function setCheckInAction(assignmentId: string, checkedIn: boolean) {
-  const auth = await requireAuth("rsvp.write");
+  const auth = await requireAuth("checkin.write");
   if (!auth.ok) return { ok: false as const, error: auth.message };
   const gate = getFeatureFlags().QR_CHECKIN_ENABLED
     ? seatingGuard()

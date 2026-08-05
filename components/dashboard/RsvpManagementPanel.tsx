@@ -34,7 +34,10 @@ import { downloadCsvFile } from "@/lib/export/csv";
 import { ModalShell } from "@/components/dashboard/ModalShell";
 import { RegisterGuestDialog } from "@/components/dashboard/RegisterGuestDialog";
 import { EditRsvpDialog } from "@/components/dashboard/EditRsvpDialog";
+import { PaginationBar } from "@/components/dashboard/PaginationBar";
+import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import type { ActivityTimelineItem } from "@/lib/activity/queries";
+import { paginateItems } from "@/lib/pagination";
 
 type StatusFilter = "all" | RsvpStatus;
 type TagFilter = "all" | RsvpTag;
@@ -280,30 +283,12 @@ function RsvpDetailModal({
           </div>
         </dl>
 
-        <div className="mt-6 rounded-xl border border-mahogany/[0.06] bg-cream/30 p-4">
-          <p className="font-sans text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">
-            Activity timeline
-          </p>
-          <ul className="mt-3 space-y-3 font-sans text-sm text-mahogany/65">
-            {loadingTimeline ? (
-              <li className="text-mahogany/45">Loading activity…</li>
-            ) : timeline.length === 0 ? (
-              <li className="flex gap-2">
-                <span className="text-gold-deep">·</span>
-                Registered interest — {formatRsvpDateShort(record.createdAt)}
-              </li>
-            ) : (
-              timeline.map((item) => (
-                <li key={item.id} className="flex gap-2">
-                  <span className="text-gold-deep">·</span>
-                  <span>
-                    {item.label}
-                    <span className="text-mahogany/40"> — {formatRsvpDateShort(item.createdAt)}</span>
-                  </span>
-                </li>
-              ))
-            )}
-          </ul>
+        <div className="mt-6">
+          <ActivityTimeline
+            items={timeline}
+            loading={loadingTimeline}
+            emptyFallback={`Registered interest — ${formatRsvpDateShort(record.createdAt)}`}
+          />
         </div>
       </div>
     </ModalShell>
@@ -321,6 +306,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
   const [editTarget, setEditTarget] = useState<DashboardRsvpRecord | null>(null);
   const [registerGuestOpen, setRegisterGuestOpen] = useState(false);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [isPending, startTransition] = useTransition();
 
   const kpis = useMemo(() => computeRsvpKpis(records), [records]);
@@ -341,6 +327,8 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
       );
     });
   }, [records, search, statusFilter, ticketFilter, tagFilter]);
+
+  const pageSlice = useMemo(() => paginateItems(filtered, page), [filtered, page]);
 
   function handleExport() {
     const header = [
@@ -503,7 +491,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-mahogany/[0.04]">
-                  {filtered.map((r) => (
+                  {pageSlice.items.map((r) => (
                     <tr key={r.id} className="transition-colors hover:bg-cream/30">
                       <td className="max-w-[8rem] px-5 py-4 font-mono text-xs text-mahogany/65 sm:px-6">
                         <span className="block truncate" title={r.registrationReference ?? undefined}>
@@ -563,7 +551,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
             </div>
 
             <div className="space-y-3 p-4 xl:hidden">
-              {filtered.map((r) => (
+              {pageSlice.items.map((r) => (
                 <article key={r.id} className="rounded-xl border border-mahogany/[0.06] bg-cream/20 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <button type="button" onClick={() => setDetailTarget(r)} className="min-w-0 text-left">
@@ -613,6 +601,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                 </article>
               ))}
             </div>
+            <PaginationBar slice={pageSlice} onPageChange={setPage} label="registrations" />
           </>
         )}
       </section>

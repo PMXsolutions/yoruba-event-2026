@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     title: SITE.name,
     description: SITE.seo.description,
     url: SITE.seo.canonicalUrl,
-    siteName: SITE.platformBrand,
+    siteName: SITE.name,
     locale: "en_AU",
     type: "website",
   },

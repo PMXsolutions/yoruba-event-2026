@@ -7,10 +7,12 @@ import {
   TrendChart,
 } from "@/components/dashboard/dashboard-ui";
 import { fetchAnalytics } from "@/platform/engines/dashboard/overview";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardAnalyticsPage() {
+  await requireDashboardPage("analytics.read");
   const data = await fetchAnalytics();
 
   if (data.error) {

@@ -29,7 +29,7 @@ function formatEventDate(event: EventConfig): string {
 }
 
 /**
- * Professional HTML confirmation email — Promax Event branded.
+ * Professional HTML confirmation email — event-branded with platform footer attribution.
  * Responsive table layout for Gmail / Outlook / Apple Mail.
  */
 export function buildRsvpConfirmationEmail({
@@ -40,7 +40,8 @@ export function buildRsvpConfirmationEmail({
   html: string;
   text: string;
 } {
-  const brand = event.platformBrand;
+  const brand = event.name;
+  const platformAttribution = event.platformBrand;
   const dateLabel = formatEventDate(event);
   const location = event.venue.fullAddress || event.location;
   const mapsUrl = event.venue.mapsUrl;
@@ -79,7 +80,7 @@ export function buildRsvpConfirmationEmail({
     "",
     `Warm regards,`,
     event.organisation,
-    `Powered by ${brand}`,
+    platformAttribution ? `Powered by ${platformAttribution}` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -100,7 +101,7 @@ export function buildRsvpConfirmationEmail({
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #e8dfd0;border-radius:16px;overflow:hidden;">
           <tr>
             <td style="background:#1a0f0a;padding:28px 32px;text-align:center;">
-              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#c9a227;">${escapeHtml(brand)}</p>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#c9a227;">${escapeHtml(event.organisation)}</p>
               <h1 style="margin:10px 0 0;font-size:26px;line-height:1.25;color:#faf6ef;font-weight:600;">${escapeHtml(event.name)}</h1>
             </td>
           </tr>
@@ -164,7 +165,7 @@ export function buildRsvpConfirmationEmail({
           <tr>
             <td style="background:#faf6ef;padding:18px 32px;text-align:center;border-top:1px solid #e8dfd0;">
               <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8a6f38;">
-                Powered by ${escapeHtml(brand)}
+                Powered by ${escapeHtml(platformAttribution)}
               </p>
             </td>
           </tr>

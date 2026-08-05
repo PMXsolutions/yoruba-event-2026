@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { formatActivityLabel } from "@/lib/activity/labels";
 
 export type ActivityTimelineItem = {
   id: string;
@@ -12,39 +13,8 @@ export type ActivityTimelineItem = {
   label: string;
 };
 
-const ACTION_LABELS: Record<string, string> = {
-  "rsvp.created": "Interest registered",
-  "rsvp.committee_created": "Guest registered by committee",
-  "rsvp.updated": "Guest details edited",
-  "rsvp.status_updated": "Status changed",
-  "rsvp.note_updated": "Committee note updated",
-  "rsvp.tag_updated": "Tags updated",
-  "rsvp.email_attempted": "Confirmation email attempted",
-  "rsvp.email_sent": "Confirmation email sent",
-  "rsvp.email_failed": "Confirmation email failed",
-  "rsvp.email_resent": "Confirmation email resent",
-  "rsvp.seat_assigned": "Seat assigned",
-  "rsvp.qr_generated": "QR generated",
-  "rsvp.checked_in": "Checked in",
-  "rsvp.check_in_undone": "Check-in undone",
-};
+export { formatActivityLabel } from "@/lib/activity/labels";
 
-export function formatActivityLabel(action: string, metadata?: Record<string, unknown>): string {
-  const base = ACTION_LABELS[action] ?? action.replace(/\./g, " · ");
-  if (action === "rsvp.status_updated" && metadata?.status) {
-    return `${base} → ${String(metadata.status)}`;
-  }
-  if (action === "rsvp.tag_updated" && metadata?.tag) {
-    const verb = metadata.added ? "added" : "removed";
-    return `Tag ${verb}: ${String(metadata.tag)}`;
-  }
-  if (action === "rsvp.seat_assigned" && (metadata?.table || metadata?.seat)) {
-    return `Seat assigned — ${[metadata.zone, metadata.table, metadata.seat].filter(Boolean).join(" · ")}`;
-  }
-  return base;
-}
-
-/** Fetch activity for a single entity (newest first). */
 export async function fetchEntityActivity(
   entityType: string,
   entityId: string,

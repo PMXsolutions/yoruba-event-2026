@@ -2,93 +2,21 @@ import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  type Permission,
+  type PlatformRole,
+  isPlatformRole,
+  permissionsForRole,
+} from "@/lib/auth/permissions";
 
-export const PLATFORM_ROLES = ["SUPER_ADMIN", "ADMIN", "COMMITTEE", "VOLUNTEER"] as const;
-export type PlatformRole = (typeof PLATFORM_ROLES)[number];
-
-export type Permission =
-  | "rsvp.read"
-  | "rsvp.write"
-  | "rsvp.export"
-  | "sponsor.read"
-  | "sponsor.write"
-  | "sponsor.export"
-  | "volunteer.read"
-  | "volunteer.write"
-  | "task.read"
-  | "task.write"
-  | "programme.read"
-  | "programme.write"
-  | "announcement.read"
-  | "announcement.write"
-  | "analytics.read"
-  | "settings.read"
-  | "user.manage";
-
-const ROLE_PERMISSIONS: Record<PlatformRole, readonly Permission[]> = {
-  SUPER_ADMIN: [
-    "rsvp.read",
-    "rsvp.write",
-    "rsvp.export",
-    "sponsor.read",
-    "sponsor.write",
-    "sponsor.export",
-    "volunteer.read",
-    "volunteer.write",
-    "task.read",
-    "task.write",
-    "programme.read",
-    "programme.write",
-    "announcement.read",
-    "announcement.write",
-    "analytics.read",
-    "settings.read",
-    "user.manage",
-  ],
-  ADMIN: [
-    "rsvp.read",
-    "rsvp.write",
-    "rsvp.export",
-    "sponsor.read",
-    "sponsor.write",
-    "sponsor.export",
-    "volunteer.read",
-    "volunteer.write",
-    "task.read",
-    "task.write",
-    "programme.read",
-    "programme.write",
-    "announcement.read",
-    "announcement.write",
-    "analytics.read",
-    "settings.read",
-  ],
-  COMMITTEE: [
-    "rsvp.read",
-    "rsvp.write",
-    "rsvp.export",
-    "sponsor.read",
-    "sponsor.write",
-    "volunteer.read",
-    "volunteer.write",
-    "task.read",
-    "task.write",
-    "programme.read",
-    "programme.write",
-    "announcement.read",
-    "announcement.write",
-    "analytics.read",
-    "settings.read",
-  ],
-  VOLUNTEER: [
-    "rsvp.read",
-    "volunteer.read",
-    "task.read",
-    "programme.read",
-    "announcement.read",
-    "analytics.read",
-  ],
-};
+export type { Permission, PlatformRole };
+export {
+  PLATFORM_ROLES,
+  ROLE_PERMISSIONS,
+  formatRoleLabel,
+  isPlatformRole,
+  permissionsForRole,
+} from "@/lib/auth/permissions";
 
 export type AuthUser = {
   id: string;
@@ -97,14 +25,6 @@ export type AuthUser = {
   role: PlatformRole;
   permissions: readonly Permission[];
 };
-
-function isPlatformRole(value: string): value is PlatformRole {
-  return (PLATFORM_ROLES as readonly string[]).includes(value);
-}
-
-export function permissionsForRole(role: PlatformRole): readonly Permission[] {
-  return ROLE_PERMISSIONS[role];
-}
 
 export function hasPermission(user: AuthUser, permission: Permission): boolean {
   if (user.role === "SUPER_ADMIN") return true;
@@ -163,4 +83,47 @@ export async function requireAuth(permission?: Permission): Promise<AuthResult> 
     };
   }
   return { ok: true, user };
+}
+
+export async function listProfiles(): Promise<
+  { id: string; email: string; fullName: string | null; role: PlatformRole; isActive: boolean }[]
+> {
+  try {
+    const supabase = createServiceRoleClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, role, is_active")
+      .order("email", { ascending: true });
+    if (error) return [];
+    return (data ?? [])
+      .filter((p) => isPlatformRole(p.role))
+      .map((p) => ({
+        id: p.id as string,
+        email: p.email as string,
+        fullName: (p.full_name as string | null) ?? null,
+        role: p.role as PlatformRole,
+        isActive: Boolean(p.is_active),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function updateProfileRole(
+  profileId: string,
+  patch: { role?: PlatformRole; isActive?: boolean },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const supabase = createServiceRoleClient();
+    const payload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (patch.role !== undefined) payload.role = patch.role;
+    if (patch.isActive !== undefined) payload.is_active = patch.isActive;
+    const { error } = await supabase.from("profiles").update(payload).eq("id", profileId);
+    if (error) return { ok: false, error: "Could not update user role." };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not update user role." };
+  }
 }

@@ -4,7 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import {
   assignSeatAction,
   createTableAction,
+  deleteTableAction,
   saveFloorPlanAction,
+  unassignSeatAction,
 } from "@/app/actions/seating";
 import {
   EmptyState,
@@ -13,6 +15,8 @@ import {
   ToolbarButton,
 } from "@/components/dashboard/dashboard-ui";
 import { downloadCsvFile } from "@/lib/export/csv";
+import { paginateItems, DEFAULT_PAGE_SIZE } from "@/lib/pagination";
+import { PaginationBar } from "@/components/dashboard/PaginationBar";
 import {
   SEATING_ZONES,
   type SeatingAssignment,
@@ -36,16 +40,24 @@ export function SeatingManagementPanel({
   assignments,
   floorPlans,
   guests,
+  canWrite = true,
 }: {
   tables: SeatingTable[];
   assignments: SeatingAssignment[];
   floorPlans: VenueFloorPlan[];
   guests: GuestOption[];
+  canWrite?: boolean;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [assignmentsPage, setAssignmentsPage] = useState(1);
   const activePlan = floorPlans.find((p) => p.isActive) ?? floorPlans[0] ?? null;
+
+  const assignmentsPagination = useMemo(
+    () => paginateItems(assignments, assignmentsPage, DEFAULT_PAGE_SIZE),
+    [assignments, assignmentsPage],
+  );
 
   const unassignedGuests = useMemo(() => {
     const assigned = new Set(assignments.map((a) => a.rsvpId));
@@ -129,31 +141,33 @@ export function SeatingManagementPanel({
         ) : (
           <p className="mt-3 text-sm text-mahogany/45">No floor plan uploaded yet.</p>
         )}
-        <form
-          className="mt-4 grid gap-3 sm:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            run(
-              () =>
-                saveFloorPlanAction({
-                  title: String(fd.get("title") ?? "Main hall"),
-                  fileUrl: String(fd.get("fileUrl") ?? ""),
-                  fileLabel: String(fd.get("fileLabel") ?? "") || undefined,
-                  notes: String(fd.get("notes") ?? "") || undefined,
-                }),
-              "Floor plan saved.",
-            );
-          }}
-        >
-          <input name="title" placeholder="Title" defaultValue="Main hall" className={field} />
-          <input name="fileLabel" placeholder="Label (optional)" className={field} />
-          <input name="fileUrl" required placeholder="https://… or storage path reference" className={`${field} sm:col-span-2`} />
-          <input name="notes" placeholder="Notes (optional)" className={`${field} sm:col-span-2`} />
-          <ToolbarButton primary type="submit" disabled={isPending}>
-            Save floor plan
-          </ToolbarButton>
-        </form>
+        {canWrite ? (
+          <form
+            className="mt-4 grid gap-3 sm:grid-cols-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              run(
+                () =>
+                  saveFloorPlanAction({
+                    title: String(fd.get("title") ?? "Main hall"),
+                    fileUrl: String(fd.get("fileUrl") ?? ""),
+                    fileLabel: String(fd.get("fileLabel") ?? "") || undefined,
+                    notes: String(fd.get("notes") ?? "") || undefined,
+                  }),
+                "Floor plan saved.",
+              );
+            }}
+          >
+            <input name="title" placeholder="Title" defaultValue="Main hall" className={field} />
+            <input name="fileLabel" placeholder="Label (optional)" className={field} />
+            <input name="fileUrl" required placeholder="https://… or storage path reference" className={`${field} sm:col-span-2`} />
+            <input name="notes" placeholder="Notes (optional)" className={`${field} sm:col-span-2`} />
+            <ToolbarButton primary type="submit" disabled={isPending}>
+              Save floor plan
+            </ToolbarButton>
+          </form>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-mahogany/[0.06] bg-white p-5 shadow-sm">
@@ -200,6 +214,14 @@ export function SeatingManagementPanel({
                 <span className="text-mahogany/70">
                   {t.assignedCount}/{t.capacity} seated
                 </span>
+                {canWrite ? (
+                  <ToolbarButton
+                    disabled={isPending || t.assignedCount > 0}
+                    onClick={() => run(() => deleteTableAction(t.id), "Table deleted.")}
+                  >
+                    Delete
+                  </ToolbarButton>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -266,22 +288,42 @@ export function SeatingManagementPanel({
           {assignments.length === 0 ? (
             <EmptyState title="No seats assigned" message="Assign confirmed guests to tables to generate personal QR tokens." />
           ) : (
-            <ul className="mt-3 divide-y divide-mahogany/[0.05]">
-              {assignments.slice(0, 40).map((a) => (
-                <li key={a.id} className="py-3 font-sans text-sm">
-                  <p className="font-semibold text-mahogany">{a.guestName}</p>
-                  <p className="text-mahogany/55">
-                    {[a.zone, a.tableName, a.seatLabel ? `Seat ${a.seatLabel}` : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    {a.checkedInAt ? " · Checked in" : ""}
-                  </p>
-                  <p className="mt-1 font-mono text-[0.65rem] text-mahogany/40">
-                    QR …{a.qrToken.slice(-8)} · {a.registrationReference ?? "no ref"}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="mt-3 divide-y divide-mahogany/[0.05]">
+                {assignmentsPagination.items.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex flex-col gap-2 py-3 font-sans text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-mahogany">{a.guestName}</p>
+                      <p className="text-mahogany/55">
+                        {[a.zone, a.tableName, a.seatLabel ? `Seat ${a.seatLabel}` : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                        {a.checkedInAt ? " · Checked in" : ""}
+                      </p>
+                      <p className="mt-1 font-mono text-[0.65rem] text-mahogany/40">
+                        QR …{a.qrToken.slice(-8)} · {a.registrationReference ?? "no ref"}
+                      </p>
+                    </div>
+                    {canWrite ? (
+                      <ToolbarButton
+                        disabled={isPending}
+                        onClick={() => run(() => unassignSeatAction(a.id), "Seat unassigned.")}
+                      >
+                        Unassign
+                      </ToolbarButton>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <PaginationBar
+                slice={assignmentsPagination}
+                onPageChange={setAssignmentsPage}
+                label="assignments"
+              />
+            </>
           )}
         </div>
       </section>

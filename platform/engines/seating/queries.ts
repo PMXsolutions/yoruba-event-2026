@@ -157,6 +157,77 @@ export async function createSeatingTable(input: {
   }
 }
 
+export async function updateSeatingTable(
+  id: string,
+  input: { name?: string; zone?: string; capacity?: number; notes?: string | null },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!getSupabaseEnvPresence().serviceRoleReady) return notReady();
+  const payload: Record<string, unknown> = {};
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Table name is required." };
+    payload.name = name;
+  }
+  if (input.zone !== undefined) payload.zone = input.zone.trim() || "General";
+  if (input.capacity !== undefined) {
+    payload.capacity = Math.min(100, Math.max(1, Math.floor(input.capacity) || 8));
+  }
+  if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
+
+  if (Object.keys(payload).length === 0) return { ok: false, error: "Nothing to update." };
+
+  try {
+    const supabase = createServiceRoleClient();
+    const { error } = await supabase.from("seating_tables").update(payload).eq("id", id);
+    if (error) return { ok: false, error: "Could not update table." };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not update table." };
+  }
+}
+
+export async function deleteSeatingTable(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!getSupabaseEnvPresence().serviceRoleReady) return notReady();
+  try {
+    const supabase = createServiceRoleClient();
+    const { count } = await supabase
+      .from("seating_assignments")
+      .select("id", { count: "exact", head: true })
+      .eq("table_id", id);
+    if ((count ?? 0) > 0) {
+      return { ok: false, error: "Unassign all guests from this table before deleting it." };
+    }
+    const { error } = await supabase.from("seating_tables").delete().eq("id", id);
+    if (error) return { ok: false, error: "Could not delete table." };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not delete table." };
+  }
+}
+
+export async function unassignSeat(
+  assignmentId: string,
+): Promise<{ ok: true; rsvpId: string | null } | { ok: false; error: string }> {
+  if (!getSupabaseEnvPresence().serviceRoleReady) return { ok: false, error: "Database not connected." };
+  try {
+    const supabase = createServiceRoleClient();
+    const { data } = await supabase
+      .from("seating_assignments")
+      .select("rsvp_id")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    const rsvpId = (data as { rsvp_id?: string } | null)?.rsvp_id ?? null;
+
+    const { error } = await supabase.from("seating_assignments").delete().eq("id", assignmentId);
+    if (error) return { ok: false, error: "Could not unassign seat." };
+    return { ok: true, rsvpId };
+  } catch {
+    return { ok: false, error: "Could not unassign seat." };
+  }
+}
+
 export async function fetchSeatingAssignments(): Promise<SeatingAssignment[]> {
   if (!getSupabaseEnvPresence().serviceRoleReady) return [];
   const event = getActiveEventConfig();

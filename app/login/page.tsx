@@ -67,7 +67,7 @@ function LoginForm() {
   return (
     <div className="w-full max-w-md rounded-[1.75rem] border border-gold/20 bg-mahogany/60 p-8 shadow-[0_32px_80px_-28px_rgba(0,0,0,0.65)] backdrop-blur-xl sm:p-10">
       <p className="font-sans text-[0.62rem] font-bold uppercase tracking-[0.32em] text-gold-bright">
-        {SITE.platformBrand}
+        Committee portal
       </p>
       <h1 className="mt-2 font-display text-3xl font-semibold text-cream">
         {mode === "login" ? "Committee sign in" : "Reset password"}
@@ -174,7 +174,7 @@ export default function LoginPage() {
       <div className="relative z-10 mb-8 text-center">
         <p className="font-display text-2xl font-semibold text-cream">{SITE.name}</p>
         <p className="mt-1 font-sans text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-gold-muted">
-          {SITE.platformBrand} · Committee portal
+          Committee portal · {SITE.presenter}
         </p>
       </div>
 

@@ -3,7 +3,10 @@ import {
   IntegrationStatus,
   StatGrid,
 } from "@/components/dashboard/dashboard-ui";
-import { getAuthUser } from "@/lib/auth/rbac";
+import { UserManagementPanel } from "@/components/dashboard/UserManagementPanel";
+import { requireDashboardPage } from "@/lib/auth/page-gate";
+import { hasPermission, listProfiles } from "@/lib/auth/rbac";
+import { getFeatureFlags } from "@/lib/feature-flags";
 import { SITE } from "@/lib/site";
 import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
@@ -13,13 +16,19 @@ import packageJson from "@/package.json";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardSettingsPage() {
+  const user = await requireDashboardPage("settings.read", "/dashboard/settings");
   const event = getActiveEventConfig();
   const supabase = getSupabaseEnvPresence();
   const email = getEmailEnvPresence();
-  const admin = await getAuthUser();
+  const flags = getFeatureFlags();
+  const canManageUsers = hasPermission(user, "user.manage");
+  const profiles = canManageUsers ? await listProfiles() : [];
   const version = typeof packageJson.version === "string" ? packageJson.version : "1.0.0";
-  const platformName =
-    typeof packageJson.name === "string" ? packageJson.name : "promax-event-platform";
+
+  const flagRows = Object.entries(flags).map(([key, value]) => ({
+    key,
+    value: value ? "On" : "Off",
+  }));
 
   return (
     <>
@@ -35,7 +44,7 @@ export default async function DashboardSettingsPage() {
           {
             label: "Platform version",
             value: version,
-            change: platformName,
+            change: SITE.name,
             icon: "⚙",
           },
         ]}
@@ -106,26 +115,41 @@ export default async function DashboardSettingsPage() {
         </DashboardCard>
       </div>
 
-      <DashboardCard title="Current admin" description="Signed-in committee account">
-        {admin ? (
-          <dl className="space-y-4 font-sans text-sm">
-            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
-              <dt className="text-mahogany/50">Name</dt>
-              <dd className="font-medium text-mahogany">{admin.fullName || "—"}</dd>
+      <DashboardCard
+        title="Feature flags"
+        description="Read-only snapshot from environment (safe defaults keep Register Interest open)"
+      >
+        <dl className="grid gap-3 sm:grid-cols-2">
+          {flagRows.map((row) => (
+            <div
+              key={row.key}
+              className="flex items-center justify-between rounded-xl border border-mahogany/[0.06] bg-cream/40 px-4 py-3 font-sans text-sm"
+            >
+              <dt className="text-mahogany/60">{row.key}</dt>
+              <dd className="font-semibold text-mahogany">{row.value}</dd>
             </div>
-            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
-              <dt className="text-mahogany/50">Email</dt>
-              <dd className="font-medium text-mahogany">{admin.email}</dd>
-            </div>
-            <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
-              <dt className="text-mahogany/50">Role</dt>
-              <dd className="font-medium text-mahogany">{admin.role.replaceAll("_", " ")}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="font-sans text-sm text-mahogany/60">No signed-in admin session.</p>
-        )}
+          ))}
+        </dl>
       </DashboardCard>
+
+      <DashboardCard title="Signed-in account" description="Your committee credentials">
+        <dl className="space-y-4 font-sans text-sm">
+          <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
+            <dt className="text-mahogany/50">Name</dt>
+            <dd className="font-medium text-mahogany">{user.fullName || "—"}</dd>
+          </div>
+          <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-4 sm:flex-row sm:justify-between">
+            <dt className="text-mahogany/50">Email</dt>
+            <dd className="font-medium text-mahogany">{user.email}</dd>
+          </div>
+          <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
+            <dt className="text-mahogany/50">Role</dt>
+            <dd className="font-medium text-mahogany">{user.role.replaceAll("_", " ")}</dd>
+          </div>
+        </dl>
+      </DashboardCard>
+
+      {canManageUsers ? <UserManagementPanel profiles={profiles} currentUserId={user.id} /> : null}
     </>
   );
 }
