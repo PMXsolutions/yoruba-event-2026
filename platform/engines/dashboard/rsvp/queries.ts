@@ -86,7 +86,7 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
 /** Fetch all RSVPs for the active event via service role (server-only). */
 export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> {
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return {
       ok: false,
       reason: "missing_env",
@@ -143,7 +143,7 @@ export async function updateDashboardRsvpStatus(
   if (!id) return { ok: false, error: "Record not found." };
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return { ok: false, error: "Database not connected." };
   }
 
@@ -194,7 +194,7 @@ export async function updateDashboardRsvpCommitteeNote(
   }
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return { ok: false, error: "Database not connected." };
   }
 
@@ -232,7 +232,7 @@ export async function toggleDashboardRsvpTag(
   }
 
   const env = getSupabaseEnvPresence();
-  if (!env.allPresent) {
+  if (!env.serviceRoleReady) {
     return { ok: false, error: "Database not connected." };
   }
 
