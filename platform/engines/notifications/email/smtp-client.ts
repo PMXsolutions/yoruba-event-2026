@@ -2,7 +2,9 @@ import "server-only";
 
 import nodemailer from "nodemailer";
 import {
+  emailConfigLogSummary,
   getSmtpConfig,
+  redactSmtpErrorMessage,
   resolveMailFrom,
 } from "@/platform/engines/notifications/email/env-status";
 
@@ -25,17 +27,36 @@ export async function sendViaSmtp(input: SmtpSendInput): Promise<SmtpSendResult>
   const smtp = getSmtpConfig();
   const from = resolveMailFrom();
   if (!smtp || !from) {
+    console.info(
+      "[notification-engine] SMTP skipped — incomplete config.",
+      emailConfigLogSummary(),
+    );
     return { ok: false, reason: "NOT_CONFIGURED", message: "SMTP not configured" };
   }
+
+  const toDomain = input.to.includes("@") ? input.to.split("@").pop() : "unknown";
+  console.info(
+    "[notification-engine] SMTP send attempt",
+    emailConfigLogSummary(),
+    `toDomain=${toDomain}`,
+  );
 
   try {
     const transporter = nodemailer.createTransport({
       host: smtp.host,
       port: smtp.port,
       secure: smtp.secure,
+      // Port 587 typically needs STARTTLS upgrade
+      requireTLS: !smtp.secure,
+      connectionTimeout: 15_000,
+      greetingTimeout: 15_000,
+      socketTimeout: 20_000,
       auth: {
         user: smtp.user,
         pass: smtp.password,
+      },
+      tls: {
+        minVersion: "TLSv1.2",
       },
     });
 
@@ -47,12 +68,26 @@ export async function sendViaSmtp(input: SmtpSendInput): Promise<SmtpSendResult>
       text: input.text,
     });
 
-    console.info("[notification-engine] SMTP email sent:", info.messageId ?? "ok");
+    try {
+      transporter.close();
+    } catch {
+      /* ignore */
+    }
+
+    console.info(
+      "[notification-engine] SMTP email accepted by server:",
+      info.messageId ?? "ok",
+      `response=${typeof info.response === "string" ? info.response.slice(0, 120) : "n/a"}`,
+    );
     return { ok: true, id: typeof info.messageId === "string" ? info.messageId : undefined };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    // Never include auth credentials in logs
-    console.error("[notification-engine] SMTP send failed:", msg.replace(/pass(word)?[=:].*/gi, "[redacted]"));
+    const safe = redactSmtpErrorMessage(msg);
+    console.error(
+      "[notification-engine] SMTP send failed:",
+      safe,
+      emailConfigLogSummary(),
+    );
     return { ok: false, reason: "SEND_FAILED", message: "Email delivery failed" };
   }
 }

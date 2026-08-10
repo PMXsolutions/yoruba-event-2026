@@ -49,6 +49,12 @@ export async function dispatchRsvpNotifications(
 
   // ── Email ──────────────────────────────────────────────────────────
   if (doEmail) {
+  console.info(
+    "[notification-engine] RSVP email channel",
+    `rsvpId=${rsvpId ?? "unknown"}`,
+    `emailConsent=${record.email_consent}`,
+    `flagEnabled=${flags.emailConfirmationsEnabled}`,
+  );
   if (!flags.emailConfirmationsEnabled) {
     emailStatus = "skipped";
     if (rsvpId) await updateRsvpEmailDelivery({ rsvpId, status: "skipped" });
@@ -98,7 +104,11 @@ export async function dispatchRsvpNotifications(
           action: "email.confirmation.sent",
           entityType: "rsvp",
           entityId: rsvpId,
-          metadata: { providerId: emailResult.id ?? null },
+          metadata: {
+            providerId: emailResult.id ?? null,
+            transport: emailEnv.transport,
+            fromDomain: emailEnv.diagnostics.fromDomain,
+          },
         });
       } else if (emailResult.reason === "NOT_CONFIGURED") {
         emailStatus = "not_configured";
@@ -108,18 +118,27 @@ export async function dispatchRsvpNotifications(
           action: "email.confirmation.not_configured",
           entityType: "rsvp",
           entityId: rsvpId,
-          metadata: {},
+          metadata: { transport: emailEnv.transport },
         });
       } else {
         emailStatus = "failed";
         if (rsvpId) await updateRsvpEmailDelivery({ rsvpId, status: "failed" });
-        console.warn("[notification-engine] RSVP saved but confirmation email failed.");
+        console.warn(
+          "[notification-engine] RSVP saved but confirmation email failed.",
+          `transport=${emailEnv.transport}`,
+          `fromDomain=${emailEnv.diagnostics.fromDomain ?? "none"}`,
+          `smtpHost=${emailEnv.diagnostics.smtpHost ?? "none"}`,
+        );
         await logActivity({
           eventSlug: event.slug,
           action: "email.confirmation.failed",
           entityType: "rsvp",
           entityId: rsvpId,
-          metadata: { reason: emailResult.reason },
+          metadata: {
+            reason: emailResult.reason,
+            transport: emailEnv.transport,
+            fromDomain: emailEnv.diagnostics.fromDomain,
+          },
         });
       }
     }
