@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import {
+  resendRsvpConfirmationEmailAction,
+  sendRsvpConfirmationSmsAction,
   toggleRsvpTagAction,
   updateRsvpCommitteeNoteAction,
   updateRsvpStatusAction,
@@ -28,6 +30,10 @@ import {
   formatRsvpDateShort,
   formatRsvpStatusLabel,
 } from "@/platform/engines/dashboard/rsvp/types";
+import {
+  formatEmailDeliveryLabel,
+  formatSmsDeliveryLabel,
+} from "@/platform/engines/notifications/types";
 import { downloadCsvFile } from "@/lib/export/csv";
 import { ModalShell } from "@/components/dashboard/ModalShell";
 
@@ -72,6 +78,8 @@ function ActionMenu({
   onEditNote,
   onStatusChange,
   onTagToggle,
+  onResendEmail,
+  onSendSms,
 }: {
   record: DashboardRsvpRecord;
   disabled: boolean;
@@ -79,9 +87,12 @@ function ActionMenu({
   onEditNote: (r: DashboardRsvpRecord) => void;
   onStatusChange: (id: string, status: RsvpStatus) => void;
   onTagToggle: (id: string, tag: RsvpTag) => void;
+  onResendEmail: (id: string) => void;
+  onSendSms: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const canSms = record.smsConsent && Boolean(record.phone);
 
   return (
     <div className="relative">
@@ -129,8 +140,17 @@ function ActionMenu({
               />
             ))}
             <div className="my-1 border-t border-mahogany/[0.06]" />
-            <MenuItem label="Send email — coming soon" disabled muted />
-            <MenuItem label="Send SMS — coming soon" disabled muted />
+            <MenuItem
+              label="Resend confirmation email"
+              disabled={disabled}
+              onClick={() => { onResendEmail(record.id); close(); }}
+            />
+            <MenuItem
+              label={canSms ? "Send SMS confirmation" : "Send SMS (no consent)"}
+              disabled={disabled || !canSms}
+              muted={!canSms}
+              onClick={() => { onSendSms(record.id); close(); }}
+            />
           </div>
         </>
       ) : null}
@@ -198,12 +218,19 @@ function RsvpDetailModal({
   record,
   onClose,
   onEditNote,
+  onResendEmail,
+  onSendSms,
+  busy,
 }: {
   record: DashboardRsvpRecord;
   onClose: () => void;
   onEditNote: (r: DashboardRsvpRecord) => void;
+  onResendEmail: (id: string) => void;
+  onSendSms: (id: string) => void;
+  busy: boolean;
 }) {
   const headingId = `rsvp-detail-${record.id}`;
+  const canSms = record.smsConsent && Boolean(record.phone);
 
   return (
     <ModalShell
@@ -269,6 +296,43 @@ function RsvpDetailModal({
 
         <div className="mt-6 rounded-xl border border-mahogany/[0.06] bg-cream/30 p-4">
           <p className="font-sans text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">
+            Communication Status
+          </p>
+          <dl className="mt-3 space-y-3 font-sans text-sm text-mahogany/75">
+            <div className="flex flex-col gap-1 border-b border-mahogany/[0.05] pb-3">
+              <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">Email</dt>
+              <dd>
+                {formatEmailDeliveryLabel(record.emailStatus)}
+                {record.emailSentAt ? ` · ${formatRsvpDate(record.emailSentAt)}` : ""}
+              </dd>
+              <dd className="text-xs text-mahogany/45">
+                Consent: {record.emailConsent ? "Yes" : "No"}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-1 pb-1">
+              <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">SMS</dt>
+              <dd>
+                {formatSmsDeliveryLabel(record.smsStatus)}
+                {record.smsSentAt ? ` · ${formatRsvpDate(record.smsSentAt)}` : ""}
+              </dd>
+              <dd className="text-xs text-mahogany/45">
+                Consent: {record.smsConsent ? "Yes" : "No"}
+                {!record.phone ? " · No phone on file" : ""}
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ToolbarButton disabled={busy} onClick={() => onResendEmail(record.id)}>
+              Resend confirmation email
+            </ToolbarButton>
+            <ToolbarButton disabled={busy || !canSms} onClick={() => onSendSms(record.id)}>
+              Send SMS confirmation
+            </ToolbarButton>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-mahogany/[0.06] bg-cream/30 p-4">
+          <p className="font-sans text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">
             Activity timeline
           </p>
           <ul className="mt-3 space-y-3 font-sans text-sm text-mahogany/65">
@@ -276,6 +340,28 @@ function RsvpDetailModal({
               <span className="text-gold-deep">·</span>
               Registered interest — {formatRsvpDateShort(record.createdAt)}
             </li>
+            {record.emailSentAt ? (
+              <li className="flex gap-2">
+                <span className="text-gold-deep">·</span>
+                Confirmation email sent — {formatRsvpDateShort(record.emailSentAt)}
+              </li>
+            ) : record.emailStatus === "failed" ? (
+              <li className="flex gap-2">
+                <span className="text-gold-deep">·</span>
+                Confirmation email failed
+              </li>
+            ) : null}
+            {record.smsSentAt ? (
+              <li className="flex gap-2">
+                <span className="text-gold-deep">·</span>
+                Confirmation SMS sent — {formatRsvpDateShort(record.smsSentAt)}
+              </li>
+            ) : record.smsStatus === "failed" ? (
+              <li className="flex gap-2">
+                <span className="text-gold-deep">·</span>
+                Confirmation SMS failed
+              </li>
+            ) : null}
             {record.contactedAt ? (
               <li className="flex gap-2">
                 <span className="text-gold-deep">·</span>
@@ -362,6 +448,16 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
       if (!result.ok) setActionError(result.error ?? "Something went wrong.");
     });
   }
+
+  const actionMenuHandlers = {
+    onView: setDetailTarget,
+    onEditNote: setNoteTarget,
+    onStatusChange: (id: string, status: RsvpStatus) =>
+      runAction(() => updateRsvpStatusAction(id, status)),
+    onTagToggle: (id: string, tag: RsvpTag) => runAction(() => toggleRsvpTagAction(id, tag)),
+    onResendEmail: (id: string) => runAction(() => resendRsvpConfirmationEmailAction(id)),
+    onSendSms: (id: string) => runAction(() => sendRsvpConfirmationSmsAction(id)),
+  };
 
   return (
     <div className="space-y-6">
@@ -506,10 +602,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                         <ActionMenu
                           record={r}
                           disabled={isPending}
-                          onView={setDetailTarget}
-                          onEditNote={setNoteTarget}
-                          onStatusChange={(id, status) => runAction(() => updateRsvpStatusAction(id, status))}
-                          onTagToggle={(id, tag) => runAction(() => toggleRsvpTagAction(id, tag))}
+                          {...actionMenuHandlers}
                         />
                       </td>
                     </tr>
@@ -546,10 +639,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                     <ActionMenu
                       record={r}
                       disabled={isPending}
-                      onView={setDetailTarget}
-                      onEditNote={setNoteTarget}
-                      onStatusChange={(id, status) => runAction(() => updateRsvpStatusAction(id, status))}
-                      onTagToggle={(id, tag) => runAction(() => toggleRsvpTagAction(id, tag))}
+                      {...actionMenuHandlers}
                     />
                   </div>
                 </article>
@@ -580,6 +670,9 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
           record={detailTarget}
           onClose={() => setDetailTarget(null)}
           onEditNote={setNoteTarget}
+          onResendEmail={actionMenuHandlers.onResendEmail}
+          onSendSms={actionMenuHandlers.onSendSms}
+          busy={isPending}
         />
       ) : null}
 

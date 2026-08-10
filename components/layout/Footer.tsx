@@ -54,8 +54,7 @@ export function Footer() {
               <div className="mt-5 flex flex-col items-start gap-3 sm:items-end">
                 <CommitteePortalLink variant="footer" />
                 <p className="max-w-xs font-sans text-xs leading-relaxed text-cream/40">
-                  Sign in with your committee credentials to manage RSVPs, sponsors, and
-                  programme.
+                  Authorised committee access. Sign in to manage RSVPs, sponsors, and programme.
                 </p>
               </div>
             </div>

@@ -1,52 +1,99 @@
-# SMS — Twilio Integration (Future)
+# SMS — Twilio Integration
 
-Promax Notification Engine · SMS channel — **not implemented in v1**
+Promax Notification Engine · SMS channel
 
 ---
 
 ## Overview
 
-SMS will complement email for:
-- RSVP confirmation (opt-in)
-- Day-of event reminders
-- Volunteer shift alerts
-- Urgent announcements
+SMS confirmation is **optional** and only sends when all of the following are true:
 
-Architecture stub: `platform/engines/notifications/sms/twilio-stub.ts`
+1. `SMS_ENABLED=true` (or `NOTIFY_SMS_ENABLED=true`)
+2. Twilio credentials are present (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`)
+3. The registrant explicitly consented to SMS (`sms_consent = true`, never pre-ticked)
+4. A phone number was provided
+
+SMS failure **never** fails the RSVP save.
+
+Implementation: `platform/engines/notifications/sms/twilio-client.ts`  
+Env presence: `platform/engines/notifications/sms/twilio-stub.ts`
 
 ---
 
-## Planned environment variables
+## Environment variables
 
 ```bash
+SMS_ENABLED=false
 TWILIO_ACCOUNT_SID=ACxxxxxxxx
 TWILIO_AUTH_TOKEN=xxxxxxxx
 TWILIO_FROM_NUMBER=+61xxxxxxxx
-NOTIFY_SMS_ENABLED=false   # feature flag
 ```
 
----
+When Twilio is not configured:
 
-## Activation steps (when ready)
-
-1. Create Twilio account and purchase AU number
-2. Add env vars to Vercel
-3. Implement `platform/engines/notifications/sms/twilio-client.ts`
-4. Wire into `dispatchRsvpNotifications()` behind `NOTIFY_SMS_ENABLED`
-5. Add opt-in checkbox on RSVP form (consent required)
-6. Update privacy policy
+- No public errors
+- SMS stays disabled / `not_configured`
+- Settings shows integration status
 
 ---
 
-## Design principles
+## Message copy
 
-- **Opt-in only** — never send SMS without explicit consent
-- **Non-blocking** — same as email; RSVP succeeds if SMS fails
-- **Rate limited** — prevent abuse
-- **Per-event config** — message templates from EventConfig
+Concise, premium, interest-only (never claims a ticket):
+
+> Ẹ ṣé, [First Name]. Your interest in [Event Name] has been registered. Ticketing and programme updates are coming soon. Details: [website]
+
+Built via EventConfig — not hardcoded to a single client.
 
 ---
 
-## Estimated effort
+## Delivery statuses
 
-0.5–1 day after Twilio credentials and legal copy approved.
+Stored on `rsvps.sms_status`:
+
+| Status | Meaning |
+|--------|---------|
+| `not_attempted` | Default |
+| `sent` | Twilio accepted |
+| `failed` | Twilio error |
+| `disabled` | `SMS_ENABLED` is false |
+| `not_configured` | Missing Twilio credentials |
+| `skipped` | No consent or no phone |
+
+---
+
+## Consent & privacy
+
+- SMS checkbox is **unchecked** by default.
+- If SMS is ticked without a phone, validation asks for a phone number.
+- Marketing consent is separate (`marketing_consent`).
+- Documented on the public form; store only what is needed for opted-in messages.
+
+---
+
+## Committee actions
+
+Dashboard RSVP detail:
+
+- Shows SMS status + timestamp
+- **Send SMS confirmation** only when consent + phone exist
+- No mass SMS in this release
+
+---
+
+## Test procedure
+
+### Disabled path (default)
+
+1. Leave `SMS_ENABLED=false`.
+2. Submit RSVP → `sms_status = disabled`.
+3. RSVP succeeds.
+
+### Enabled path
+
+1. Set Twilio env vars + `SMS_ENABLED=true`.
+2. Submit with phone + SMS consent ticked.
+3. Confirm SMS received and `sms_status = sent`.
+4. Break auth token → RSVP still OK, status `failed`.
+
+Settings → Integrations shows Twilio status without exposing secrets.

@@ -41,6 +41,11 @@ export const FUTURE_RSVP_JOURNEY = [
   "Completed",
 ] as const;
 
+import type {
+  EmailDeliveryStatus,
+  SmsDeliveryStatus,
+} from "@/platform/engines/notifications/types";
+
 export type DashboardRsvpRecord = {
   id: string;
   fullName: string;
@@ -55,6 +60,13 @@ export type DashboardRsvpRecord = {
   contactedAt: string | null;
   tags: readonly RsvpTag[];
   registrationReference: string | null;
+  emailConsent: boolean;
+  smsConsent: boolean;
+  marketingConsent: boolean;
+  emailStatus: EmailDeliveryStatus;
+  emailSentAt: string | null;
+  smsStatus: SmsDeliveryStatus;
+  smsSentAt: string | null;
 };
 
 export type FetchDashboardRsvpsResult =

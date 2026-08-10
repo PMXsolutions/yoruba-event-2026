@@ -17,6 +17,14 @@ export type SponsorTier = {
 export type EventBranding = {
   primaryFont?: string;
   accentColor?: string;
+  /** Email / notification palette (hex). Falls back to platform defaults. */
+  espresso?: string;
+  cream?: string;
+  gold?: string;
+  goldMuted?: string;
+  bodyText?: string;
+  surface?: string;
+  border?: string;
 };
 
 export type EventContact = {

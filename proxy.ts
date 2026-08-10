@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { getFeatureFlags } from "@/platform/core/flags";
 import { normalizeSupabaseProjectUrl } from "@/lib/supabase/normalize-url";
 
 /**
@@ -14,6 +15,11 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isDashboard = pathname.startsWith("/dashboard");
   const isLogin = pathname === "/login" || pathname.startsWith("/login/");
+  const { dashboardAuthRequired } = getFeatureFlags();
+
+  if (!dashboardAuthRequired) {
+    return supabaseResponse;
+  }
 
   if (!rawUrl || !anonKey) {
     if (isDashboard) {

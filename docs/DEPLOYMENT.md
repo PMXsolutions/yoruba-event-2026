@@ -17,10 +17,14 @@ Vercel + Supabase production checklist for Promax Event Platform.
    - `20260702100000_rsvp_management_columns.sql`
    - `20260703100000_rsvp_crm_enhancements.sql`
    - `20260805100000_platform_production.sql`
+   - `20260810100000_rsvp_comms_consent.sql` (consent + email/SMS delivery status)
 3. Confirm tables exist: `events`, `rsvps`, `profiles`, `sponsors`, `volunteers`, `tasks`, `programme_items`, `announcements`, `activity_logs`
-4. Confirm RLS is enabled (policies included in the production migration)
+4. Confirm `rsvps` has communication columns: `email_consent`, `sms_consent`, `email_status`, `sms_status`
+5. Confirm RLS is enabled (policies included in the production migration)
 
 Do **not** run `supabase/seed/` in production. Seed content is for explicit local QA only.
+
+> Public launch readiness: [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) · Email: [EMAIL.md](./EMAIL.md) · SMS: [SMS.md](./SMS.md)
 
 ---
 
@@ -70,6 +74,11 @@ the password cannot work — Supabase Auth has no matching user yet.
 | `SMTP_USER` | Yes for SMTP | Sender mailbox |
 | `SMTP_PASSWORD` | Yes for SMTP | Never commit |
 | `EVENT_SLUG` | Optional | Defaults to Yoruba Day |
+| `PUBLIC_REGISTRATION_OPEN` | Recommended | Default `true` |
+| `EMAIL_CONFIRMATIONS_ENABLED` | Recommended | Default `true` |
+| `SMS_ENABLED` | Optional | Default `false` until Twilio ready |
+| `DASHBOARD_AUTH_REQUIRED` | Recommended | Default `true` |
+| `TWILIO_*` | Optional | Required only when `SMS_ENABLED=true` |
 
 Optional Resend alternative: `RESEND_API_KEY` (+ From) when SMTP is unset.
 

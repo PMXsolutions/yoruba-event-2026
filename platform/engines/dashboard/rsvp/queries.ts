@@ -13,6 +13,13 @@ import {
 } from "@/platform/engines/dashboard/rsvp/types";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 
+import {
+  isEmailDeliveryStatus,
+  isSmsDeliveryStatus,
+  type EmailDeliveryStatus,
+  type SmsDeliveryStatus,
+} from "@/platform/engines/notifications/types";
+
 type RsvpRow = {
   id: string;
   full_name: string;
@@ -28,13 +35,29 @@ type RsvpRow = {
   contacted_at: string | null;
   tags?: string[] | null;
   registration_reference?: string | null;
+  email_consent?: boolean | null;
+  sms_consent?: boolean | null;
+  marketing_consent?: boolean | null;
+  email_status?: string | null;
+  email_sent_at?: string | null;
+  sms_status?: string | null;
+  sms_sent_at?: string | null;
 };
 
 const RSVP_SELECT =
+  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference, email_consent, sms_consent, marketing_consent, email_status, email_sent_at, sms_status, sms_sent_at";
+
+const RSVP_SELECT_LEGACY =
   "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference";
 
 function mapRow(row: RsvpRow): DashboardRsvpRecord {
   const status = row.status && isRsvpStatus(row.status) ? row.status : "new";
+  const emailStatus: EmailDeliveryStatus =
+    row.email_status && isEmailDeliveryStatus(row.email_status)
+      ? row.email_status
+      : "not_attempted";
+  const smsStatus: SmsDeliveryStatus =
+    row.sms_status && isSmsDeliveryStatus(row.sms_status) ? row.sms_status : "not_attempted";
   return {
     id: row.id,
     fullName: row.full_name,
@@ -49,6 +72,13 @@ function mapRow(row: RsvpRow): DashboardRsvpRecord {
     contactedAt: row.contacted_at,
     tags: normalizeTags(row.tags),
     registrationReference: row.registration_reference ?? null,
+    emailConsent: row.email_consent ?? true,
+    smsConsent: row.sms_consent ?? false,
+    marketingConsent: row.marketing_consent ?? false,
+    emailStatus,
+    emailSentAt: row.email_sent_at ?? null,
+    smsStatus,
+    smsSentAt: row.sms_sent_at ?? null,
   };
 }
 
@@ -64,7 +94,7 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
   }
 
   const columnsMissing =
-    /column.*does not exist|committee_notes|internal_notes|contacted_at|tags|rsvps\.status/i.test(
+    /column.*does not exist|committee_notes|internal_notes|contacted_at|tags|rsvps\.status|email_consent|sms_consent|email_status|sms_status/i.test(
       message,
     );
   if (columnsMissing) {
@@ -98,18 +128,37 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
 
   try {
     const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
+    const primary = await supabase
       .from("rsvps")
       .select(RSVP_SELECT)
       .eq("event_slug", event.slug)
       .order("created_at", { ascending: false });
+
+    let rows: unknown[] | null = primary.data;
+    let error = primary.error;
+
+    // Fallback without consent / delivery columns if migration not applied yet
+    if (
+      error &&
+      /email_consent|sms_consent|marketing_consent|email_status|sms_status|email_sent_at|sms_sent_at/i.test(
+        error.message,
+      )
+    ) {
+      const legacy = await supabase
+        .from("rsvps")
+        .select(RSVP_SELECT_LEGACY)
+        .eq("event_slug", event.slug)
+        .order("created_at", { ascending: false });
+      rows = legacy.data;
+      error = legacy.error;
+    }
 
     if (error) {
       // Fallback without event_slug filter if column not yet migrated
       if (/event_slug/i.test(error.message)) {
         const fallback = await supabase
           .from("rsvps")
-          .select(RSVP_SELECT.replace(", registration_reference", ""))
+          .select(RSVP_SELECT_LEGACY)
           .order("created_at", { ascending: false });
         if (fallback.error) return classifyQueryError(fallback.error.message, fallback.error.code);
         return {
@@ -122,11 +171,56 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
 
     return {
       ok: true,
-      records: (data ?? []).map((row) => mapRow(row as RsvpRow)),
+      records: (rows ?? []).map((row) => mapRow(row as RsvpRow)),
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return classifyQueryError(message);
+  }
+}
+
+/** Fetch a single RSVP for committee communication actions. */
+export async function fetchDashboardRsvpById(
+  id: string,
+): Promise<{ ok: true; record: DashboardRsvpRecord } | { ok: false; error: string }> {
+  if (!id) return { ok: false, error: "Record not found." };
+
+  const env = getSupabaseEnvPresence();
+  if (!env.serviceRoleReady) {
+    return { ok: false, error: "Database not connected." };
+  }
+
+  try {
+    const supabase = createServiceRoleClient();
+    const primary = await supabase
+      .from("rsvps")
+      .select(RSVP_SELECT)
+      .eq("id", id)
+      .maybeSingle();
+
+    let row: unknown = primary.data;
+    let error = primary.error;
+
+    if (
+      error &&
+      /email_consent|sms_consent|marketing_consent|email_status|sms_status/i.test(error.message)
+    ) {
+      const legacy = await supabase
+        .from("rsvps")
+        .select(RSVP_SELECT_LEGACY)
+        .eq("id", id)
+        .maybeSingle();
+      row = legacy.data;
+      error = legacy.error;
+    }
+
+    if (error || !row) {
+      return { ok: false, error: "Record not found." };
+    }
+
+    return { ok: true, record: mapRow(row as RsvpRow) };
+  } catch {
+    return { ok: false, error: "Record not found." };
   }
 }
 
