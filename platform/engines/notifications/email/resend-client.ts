@@ -1,7 +1,10 @@
 import "server-only";
 
 import {
+  cleanEnv,
+  emailConfigLogSummary,
   getEmailEnvPresence,
+  redactSmtpErrorMessage,
   resolveMailFrom,
 } from "@/platform/engines/notifications/email/env-status";
 import { sendViaSmtp } from "@/platform/engines/notifications/email/smtp-client";
@@ -23,11 +26,19 @@ export async function sendRsvpConfirmationEmail(
 ): Promise<SendEmailResult> {
   const env = getEmailEnvPresence();
   if (!env.ready) {
-    console.info("[notification-engine] Email skipped — no transport configured.");
+    console.info(
+      "[notification-engine] Email skipped — no transport configured.",
+      emailConfigLogSummary(),
+    );
     return { ok: false, reason: "NOT_CONFIGURED", message: "Email not configured" };
   }
 
   const { subject, html, text } = buildRsvpConfirmationEmail(params);
+  console.info(
+    "[notification-engine] Confirmation email dispatch",
+    emailConfigLogSummary(),
+    `subjectLen=${subject.length}`,
+  );
 
   if (env.transport === "smtp") {
     return sendViaSmtp({
@@ -39,9 +50,13 @@ export async function sendRsvpConfirmationEmail(
   }
 
   // Resend fallback
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const apiKey = cleanEnv(process.env.RESEND_API_KEY);
   const from = resolveMailFrom();
   if (!apiKey || !from) {
+    console.info(
+      "[notification-engine] Resend skipped — incomplete config.",
+      emailConfigLogSummary(),
+    );
     return { ok: false, reason: "NOT_CONFIGURED", message: "Email not configured" };
   }
 
@@ -63,16 +78,25 @@ export async function sendRsvpConfirmationEmail(
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      console.error("[notification-engine] Resend API error:", res.status, body.slice(0, 200));
+      console.error(
+        "[notification-engine] Resend API error:",
+        res.status,
+        redactSmtpErrorMessage(body).slice(0, 200),
+        emailConfigLogSummary(),
+      );
       return { ok: false, reason: "SEND_FAILED", message: `Resend HTTP ${res.status}` };
     }
 
     const data = (await res.json()) as { id?: string };
-    console.info("[notification-engine] Confirmation email sent:", data.id ?? "ok");
+    console.info("[notification-engine] Confirmation email sent via Resend:", data.id ?? "ok");
     return { ok: true, id: data.id };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[notification-engine] Email send failed:", msg);
+    console.error(
+      "[notification-engine] Resend send failed:",
+      redactSmtpErrorMessage(msg),
+      emailConfigLogSummary(),
+    );
     return { ok: false, reason: "SEND_FAILED", message: "Email delivery failed" };
   }
 }

@@ -5,10 +5,18 @@
 
 function envFlag(name: string, defaultValue: boolean): boolean {
   const raw = process.env[name];
-  if (raw == null || raw.trim() === "") return defaultValue;
-  const v = raw.trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(v)) return true;
-  if (["0", "false", "no", "off"].includes(v)) return false;
+  if (raw == null) return defaultValue;
+  let v = raw.trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"') && v.length >= 2) ||
+    (v.startsWith("'") && v.endsWith("'") && v.length >= 2)
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  if (v === "") return defaultValue;
+  const lower = v.toLowerCase();
+  if (["1", "true", "yes", "on"].includes(lower)) return true;
+  if (["0", "false", "no", "off"].includes(lower)) return false;
   return defaultValue;
 }
 

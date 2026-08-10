@@ -18,6 +18,9 @@ type HealthOk = {
   event: string;
   emailConfigured: boolean;
   emailTransport: "smtp" | "resend" | "none";
+  emailConfirmationsEnabled: boolean;
+  emailFromDomain: string | null;
+  smtpHost: string | null;
 };
 
 type HealthError = {
@@ -30,11 +33,21 @@ type HealthError = {
   event?: string;
   emailConfigured?: boolean;
   emailTransport?: "smtp" | "resend" | "none";
+  emailConfirmationsEnabled?: boolean;
+  emailFromDomain?: string | null;
+  smtpHost?: string | null;
 };
 
 export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
   const presence = getSupabaseEnvPresence();
   const email = getEmailEnvPresence();
+  const emailDiag = {
+    emailConfigured: email.ready,
+    emailTransport: email.transport,
+    emailConfirmationsEnabled: email.diagnostics.emailConfirmationsEnabled,
+    emailFromDomain: email.diagnostics.fromDomain,
+    smtpHost: email.diagnostics.smtpHost,
+  };
 
   let eventSlug = "unknown";
   try {
@@ -47,8 +60,11 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
         env: presence.serviceRoleReady,
         authConfigured: presence.authReady,
         code: "EVENT_CONFIG_MISSING",
-        emailConfigured: email.ready,
-        emailTransport: email.transport,
+        emailConfigured: emailDiag.emailConfigured,
+        emailTransport: emailDiag.emailTransport,
+        emailConfirmationsEnabled: emailDiag.emailConfirmationsEnabled,
+        emailFromDomain: emailDiag.emailFromDomain,
+        smtpHost: emailDiag.smtpHost,
       },
       { status: 503 },
     );
@@ -71,8 +87,7 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
         code: "MISSING_ENV_VARS",
         missingEnvVars: allMissing.length > 0 ? allMissing : missing,
         event: eventSlug,
-        emailConfigured: email.ready,
-        emailTransport: email.transport,
+        ...emailDiag,
       },
       { status: 503 },
     );
@@ -100,8 +115,7 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
           authConfigured: presence.authReady,
           code: tableMissing ? "RSVPS_TABLE_MISSING" : "SUPABASE_QUERY_FAILED",
           event: eventSlug,
-          emailConfigured: email.ready,
-          emailTransport: email.transport,
+          ...emailDiag,
         },
         { status: 503 },
       );
@@ -117,8 +131,7 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
         authConfigured: presence.authReady,
         code: "SUPABASE_CONNECTION_FAILED",
         event: eventSlug,
-        emailConfigured: email.ready,
-        emailTransport: email.transport,
+        ...emailDiag,
       },
       { status: 503 },
     );
@@ -128,7 +141,11 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
     "[api/health] OK — event=",
     eventSlug,
     "emailConfigured=",
-    email.ready,
+    emailDiag.emailConfigured,
+    "emailTransport=",
+    emailDiag.emailTransport,
+    "fromDomain=",
+    emailDiag.emailFromDomain,
     "authConfigured=",
     presence.authReady,
   );
@@ -138,7 +155,6 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
     env: true,
     authConfigured: presence.authReady,
     event: eventSlug,
-    emailConfigured: email.ready,
-    emailTransport: email.transport,
+    ...emailDiag,
   });
 }
