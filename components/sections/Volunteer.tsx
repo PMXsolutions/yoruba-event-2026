@@ -61,8 +61,8 @@ export function Volunteer() {
       <div className="relative mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
         <SectionHeading
           eyebrow="Serve with us"
-          title="Volunteer at Yoruba Day"
-          subtitle="Help welcome guests, support the programme, and bring the celebration to life. Share your skills and availability and our committee will be in touch."
+          title="Volunteer interest"
+          subtitle="Roles will be confirmed with the programme. Share your skills and availability to register your interest in volunteering — our committee will be in touch."
         />
 
         <div className="mx-auto mt-12 max-w-3xl rounded-[1.75rem] border border-gold/20 bg-mahogany/50 p-6 backdrop-blur-sm sm:p-8">
@@ -71,7 +71,8 @@ export function Volunteer() {
               role="status"
               className="mb-6 rounded-xl border border-gold/25 bg-gold/[0.08] px-4 py-3 text-sm text-cream/90"
             >
-              Thank you — your volunteer registration has been received.
+              Thank you — your volunteer interest has been received. Role assignments will follow
+              once the programme is confirmed.
             </p>
           ) : null}
           {error ? (
@@ -170,7 +171,7 @@ export function Volunteer() {
             </div>
             <div className="sm:col-span-2">
               <Button type="submit" disabled={pending}>
-                {pending ? "Submitting…" : "Register as volunteer"}
+                {pending ? "Submitting…" : "Register volunteer interest"}
               </Button>
             </div>
           </form>

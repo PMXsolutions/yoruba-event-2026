@@ -7,12 +7,14 @@ import {
   fieldErrorsFromZod,
   toRsvpRecord,
   type RsvpFormValues,
+  type RsvpRecord,
 } from "@/platform/engines/rsvp/schema";
 import { mapConfigError, mapSupabaseRsvpError } from "@/platform/engines/rsvp/errors";
 import type { EventConfig } from "@/platform/core/types/event";
+import { getFeatureFlags } from "@/platform/core/flags";
 
 export type SubmitRsvpResult =
-  | { ok: true; record: ReturnType<typeof toRsvpRecord> }
+  | { ok: true; record: RsvpRecord }
   | {
       ok: false;
       error: string;
@@ -28,6 +30,16 @@ export async function submitRsvpToDatabase(
   raw: unknown,
   event: EventConfig,
 ): Promise<SubmitRsvpResult> {
+  const flags = getFeatureFlags();
+  if (!flags.publicRegistrationOpen) {
+    return {
+      ok: false,
+      error:
+        "Registration of interest is temporarily closed. Please check back soon or contact us by email.",
+      errorCode: "REGISTRATION_CLOSED",
+    };
+  }
+
   const schema = createRsvpFormSchema(event.ticketTypes);
   const parsed = schema.safeParse(raw);
 
@@ -90,11 +102,16 @@ export async function submitRsvpToDatabase(
       };
     }
 
-    let { error } = await supabase.from("rsvps").insert(record);
+    let { data, error } = await supabase.from("rsvps").insert(record).select("id").single();
 
-    // Compatibility: older schemas without production columns
-    if (error && /event_slug|registration_reference/i.test(error.message)) {
-      const legacy = {
+    // Compatibility: older schemas without production / consent columns
+    if (
+      error &&
+      /event_slug|registration_reference|email_consent|sms_consent|marketing_consent|email_status|sms_status/i.test(
+        error.message,
+      )
+    ) {
+      const legacy: Record<string, unknown> = {
         full_name: record.full_name,
         email: record.email,
         phone: record.phone,
@@ -103,7 +120,11 @@ export async function submitRsvpToDatabase(
         notes: record.notes,
         status: record.status,
       };
-      ({ error } = await supabase.from("rsvps").insert(legacy));
+      if (!/event_slug/i.test(error.message)) {
+        legacy.event_slug = record.event_slug;
+        legacy.registration_reference = record.registration_reference;
+      }
+      ({ data, error } = await supabase.from("rsvps").insert(legacy).select("id").single());
     }
 
     if (error) {
@@ -112,7 +133,11 @@ export async function submitRsvpToDatabase(
       return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
     }
 
-    return { ok: true, record };
+    const insertedId = data?.id;
+    return {
+      ok: true,
+      record: { ...record, id: insertedId },
+    };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[rsvp-engine] Unexpected error:", msg);

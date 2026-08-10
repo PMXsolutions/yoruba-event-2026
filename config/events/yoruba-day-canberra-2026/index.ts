@@ -30,12 +30,22 @@ export const yorubaDayCanberra2026: EventConfig = {
   description:
     "Yoruba Day Canberra 2026 celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity — presented by Yoruba Association Canberra.",
   website: null,
+  branding: {
+    espresso: "#1a0f0a",
+    cream: "#faf6ef",
+    gold: "#c9a227",
+    goldMuted: "#8a6f38",
+    bodyText: "#3a2419",
+    surface: "#ffffff",
+    border: "#e8dfd0",
+  },
   launchCopy: {
     comingSoonNote:
-      "Ticketing, sponsorship packages, and the full programme will be announced soon.",
+      "Register your interest to receive priority updates when ticketing, sponsorship packages and the full programme are announced.",
     registerInterest: "Register Interest",
-    becomeSponsor: "Become a Sponsor",
-    sponsorshipAnnouncedSoon: "Sponsorship packages will be announced soon.",
+    becomeSponsor: "Express Sponsor Interest",
+    sponsorshipAnnouncedSoon:
+      "Sponsorship packages will be announced soon — express interest to receive the deck when packages are finalised.",
     saveTheDate: "Save the Date",
   },
   navItems: [

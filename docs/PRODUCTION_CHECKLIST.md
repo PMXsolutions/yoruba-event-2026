@@ -43,6 +43,10 @@ Until these are set on **Vercel → Project → Settings → Environment Variabl
 | `SMTP_PASSWORD` | SMTP send |
 | `ADMIN_EMAIL` | Provisioning |
 | `ADMIN_PASSWORD` | Provisioning |
+| `PUBLIC_REGISTRATION_OPEN` | Public Register Interest (`true`) |
+| `EMAIL_CONFIRMATIONS_ENABLED` | Confirmation emails (`true`) |
+| `SMS_ENABLED` | SMS (`false` until Twilio ready) |
+| `DASHBOARD_AUTH_REQUIRED` | Protect `/dashboard` (`true`) |
 
 After saving env vars: **Redeploy** (required for `NEXT_PUBLIC_*`).
 
@@ -71,14 +75,17 @@ Expect:
 ## 5. Manual smoke test
 
 1. Public RSVP → success + registration reference (+ email if SMTP configured)
-2. Sponsor enquiry → success
-3. Volunteer registration → success
-4. `/login` → dashboard
-5. RSVP CRM → status / notes / tags / CSV
-6. Sponsors / Volunteers / Tasks / Programme / Announcements → create & edit
-7. Analytics / Settings → live status (no secrets shown)
-8. Sign out
+2. Consent checkboxes: SMS remains **unchecked** by default
+3. Sponsor enquiry → success
+4. Volunteer interest → success
+5. `/login` → dashboard
+6. RSVP CRM → Communication Status + resend email
+7. Sponsors / Volunteers / Tasks / Programme / Announcements → create & edit
+8. Analytics / Settings → flags + integrations (no secrets shown)
+9. Sign out
 
-## 6. Email
+## 6. Email & SMS
 
 SMTP is preferred when `SMTP_*` + `MAIL_FROM` are set. RSVP still succeeds if email fails.
+SMS only when `SMS_ENABLED=true`, Twilio credentials exist, and the registrant consented.
+See [EMAIL.md](./EMAIL.md), [SMS.md](./SMS.md), [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md).

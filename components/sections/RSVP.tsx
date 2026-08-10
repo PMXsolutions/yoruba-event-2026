@@ -15,7 +15,7 @@ import {
 } from "@/lib/validation/rsvp";
 
 const RSVP_SUBTITLE =
-  "Register your interest and our planning committee will share ticketing and event updates as details are confirmed.";
+  "Register your interest to receive priority updates when ticketing, sponsorship packages and the full programme are announced.";
 
 type FormState = {
   fullName: string;
@@ -24,6 +24,9 @@ type FormState = {
   attendees: string;
   ticketType: string;
   notes: string;
+  emailConsent: boolean;
+  smsConsent: boolean;
+  marketingConsent: boolean;
 };
 
 const initial: FormState = {
@@ -33,6 +36,9 @@ const initial: FormState = {
   attendees: "1",
   ticketType: TICKET_TYPES[0],
   notes: "",
+  emailConsent: true,
+  smsConsent: false,
+  marketingConsent: false,
 };
 
 const fieldWrap = "group relative";
@@ -81,6 +87,9 @@ export function RSVP() {
       attendees: form.attendees,
       ticketType: form.ticketType,
       notes: form.notes,
+      emailConsent: form.emailConsent,
+      smsConsent: form.smsConsent,
+      marketingConsent: form.marketingConsent,
     };
 
     const local = rsvpFormSchema.safeParse(payload);
@@ -96,6 +105,9 @@ export function RSVP() {
         ...local.data,
         phone: local.data.phone ?? "",
         notes: local.data.notes ?? "",
+        emailConsent: local.data.emailConsent,
+        smsConsent: local.data.smsConsent,
+        marketingConsent: local.data.marketingConsent,
       };
       const result = await submitRsvp(serializable);
       if (result.ok) {
@@ -353,6 +365,72 @@ export function RSVP() {
                   <div className="rounded-2xl border border-gold/15 bg-espresso/40 px-4 py-3 font-sans text-xs leading-relaxed text-cream/60 sm:text-[0.8rem]">
                     {LAUNCH_COPY.comingSoonNote}
                   </div>
+
+                  <fieldset className="space-y-3 rounded-2xl border border-white/[0.08] bg-espresso/30 px-4 py-4">
+                    <legend className="px-1 font-sans text-[0.62rem] font-bold uppercase tracking-[0.24em] text-gold-muted">
+                      Communication preferences
+                    </legend>
+                    <label className="flex items-start gap-3 font-sans text-sm text-cream/80">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 rounded border-gold/30 bg-mahogany accent-gold"
+                        checked={form.emailConsent}
+                        onChange={(e) => {
+                          clearMessages();
+                          setForm((f) => ({ ...f, emailConsent: e.target.checked }));
+                        }}
+                      />
+                      <span>
+                        Email me updates about ticketing, programme, and event news for this
+                        celebration.
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 font-sans text-sm text-cream/80">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 rounded border-gold/30 bg-mahogany accent-gold"
+                        checked={form.smsConsent}
+                        onChange={(e) => {
+                          clearMessages();
+                          setForm((f) => ({ ...f, smsConsent: e.target.checked }));
+                        }}
+                      />
+                      <span>
+                        Send me SMS updates (optional). Only if a mobile number is provided above.
+                        SMS is never sent without this consent.
+                      </span>
+                    </label>
+                    {fieldErrors.smsConsent ? (
+                      <p className={errText}>{fieldErrors.smsConsent}</p>
+                    ) : null}
+                    <label className="flex items-start gap-3 font-sans text-sm text-cream/80">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 rounded border-gold/30 bg-mahogany accent-gold"
+                        checked={form.marketingConsent}
+                        onChange={(e) => {
+                          clearMessages();
+                          setForm((f) => ({ ...f, marketingConsent: e.target.checked }));
+                        }}
+                      />
+                      <span>
+                        I am happy to receive occasional community updates from the organisers
+                        beyond this event (optional).
+                      </span>
+                    </label>
+                    <p className="font-sans text-[0.7rem] leading-relaxed text-cream/45">
+                      Privacy: we use your details only to manage this event interest list and
+                      related communications you opt into. You can ask to be removed at any time via{" "}
+                      <a
+                        href="mailto:info@yorubadaycanberra.org"
+                        className="text-gold-light underline-offset-2 hover:underline"
+                      >
+                        email
+                      </a>
+                      .
+                    </p>
+                  </fieldset>
+
                   <div className="border-t border-white/10 pt-6 pb-2 sm:pt-7">
                     <Button
                       type="submit"
@@ -362,9 +440,8 @@ export function RSVP() {
                       {isPending ? "Sending…" : LAUNCH_COPY.registerInterest}
                     </Button>
                     <p className="mt-4 max-w-lg font-sans text-xs leading-relaxed text-cream/45 sm:mt-5 sm:text-[0.8rem]">
-                      By submitting, you agree to be contacted about Yoruba Day Canberra 2026.
-                      This form registers interest only; ticketing will open separately once
-                      confirmed.
+                      This form registers interest only — it is not a paid ticket or confirmed
+                      reservation. Ticketing will open separately once announced.
                     </p>
                   </div>
                 </form>

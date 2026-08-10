@@ -1,48 +1,73 @@
 import { z } from "zod";
 
+function optionalBool(defaultValue: boolean) {
+  return z.preprocess((v) => {
+    if (v === true || v === "true" || v === 1 || v === "1" || v === "on") return true;
+    if (v === false || v === "false" || v === 0 || v === "0" || v === "off") return false;
+    if (v == null || v === "") return defaultValue;
+    return Boolean(v);
+  }, z.boolean());
+}
+
 export function createRsvpFormSchema(ticketTypes: readonly string[]) {
   const types = ticketTypes as readonly string[];
 
-  return z.object({
-    fullName: z
-      .string()
-      .trim()
-      .min(1, "Please enter your full name.")
-      .max(200, "Name is too long."),
-    email: z
-      .string()
-      .trim()
-      .min(1, "Please enter your email.")
-      .email("Please enter a valid email address.")
-      .max(320, "Email is too long."),
-    phone: z.preprocess(
-      (v) => (v == null ? "" : String(v)),
-      z
+  return z
+    .object({
+      fullName: z
         .string()
         .trim()
-        .max(50, "Phone number is too long.")
-        .transform((s) => (s.length > 0 ? s : undefined)),
-    ),
-    attendees: z.coerce
-      .number()
-      .int("Number of guests must be a whole number.")
-      .min(1, "At least one guest is required.")
-      .max(50, "For groups over 50, please contact us by email."),
-    ticketType: z
-      .string()
-      .min(1, "Please select a ticket type.")
-      .refine((t): t is string => types.includes(t), {
-        message: "Please select a valid ticket type.",
-      }),
-    notes: z.preprocess(
-      (v) => (v == null ? "" : String(v)),
-      z
+        .min(1, "Please enter your full name.")
+        .max(200, "Name is too long."),
+      email: z
         .string()
         .trim()
-        .max(2000, "Notes are too long (maximum 2000 characters).")
-        .transform((s) => (s.length > 0 ? s : undefined)),
-    ),
-  });
+        .min(1, "Please enter your email.")
+        .email("Please enter a valid email address.")
+        .max(320, "Email is too long."),
+      phone: z.preprocess(
+        (v) => (v == null ? "" : String(v)),
+        z
+          .string()
+          .trim()
+          .max(50, "Phone number is too long.")
+          .transform((s) => (s.length > 0 ? s : undefined)),
+      ),
+      attendees: z.coerce
+        .number()
+        .int("Number of guests must be a whole number.")
+        .min(1, "At least one guest is required.")
+        .max(50, "For groups over 50, please contact us by email."),
+      ticketType: z
+        .string()
+        .min(1, "Please select a ticket type.")
+        .refine((t): t is string => types.includes(t), {
+          message: "Please select a valid ticket type.",
+        }),
+      notes: z.preprocess(
+        (v) => (v == null ? "" : String(v)),
+        z
+          .string()
+          .trim()
+          .max(2000, "Notes are too long (maximum 2000 characters).")
+          .transform((s) => (s.length > 0 ? s : undefined)),
+      ),
+      /** Email updates about this event — default on for confirmation delivery */
+      emailConsent: optionalBool(true),
+      /** SMS updates — must be explicitly opted in (never pre-ticked) */
+      smsConsent: optionalBool(false),
+      /** Broader community / marketing updates */
+      marketingConsent: optionalBool(false),
+    })
+    .superRefine((data, ctx) => {
+      if (data.smsConsent && !data.phone) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["phone"],
+          message: "Please add a phone number to receive SMS updates.",
+        });
+      }
+    });
 }
 
 export type RsvpFormValues = z.infer<ReturnType<typeof createRsvpFormSchema>>;
@@ -54,6 +79,9 @@ const formFieldKeys: (keyof RsvpFormValues)[] = [
   "attendees",
   "ticketType",
   "notes",
+  "emailConsent",
+  "smsConsent",
+  "marketingConsent",
 ];
 
 export function fieldErrorsFromZod(
@@ -74,6 +102,7 @@ export function fieldErrorsFromZod(
 }
 
 export type RsvpRecord = {
+  id?: string;
   full_name: string;
   email: string;
   phone: string | null;
@@ -83,14 +112,18 @@ export type RsvpRecord = {
   event_slug: string;
   registration_reference: string;
   status: "new";
+  email_consent: boolean;
+  sms_consent: boolean;
+  marketing_consent: boolean;
 };
 
 export function generateRegistrationReference(eventSlug: string): string {
-  const prefix = eventSlug
-    .split("-")
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("")
-    .slice(0, 4) || "EVT";
+  const prefix =
+    eventSlug
+      .split("-")
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 4) || "EVT";
   const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
   const time = Date.now().toString(36).slice(-4).toUpperCase();
   return `${prefix}-${time}${rand}`;
@@ -107,5 +140,8 @@ export function toRsvpRecord(data: RsvpFormValues, eventSlug: string): RsvpRecor
     event_slug: eventSlug,
     registration_reference: generateRegistrationReference(eventSlug),
     status: "new",
+    email_consent: data.emailConsent,
+    sms_consent: data.smsConsent,
+    marketing_consent: data.marketingConsent,
   };
 }

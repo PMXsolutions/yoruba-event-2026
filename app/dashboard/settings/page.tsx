@@ -7,7 +7,10 @@ import { getAuthUser } from "@/lib/auth/rbac";
 import { SITE } from "@/lib/site";
 import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
+import { getFeatureFlags } from "@/platform/core/flags";
 import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
+import { EMAIL_TEMPLATE_CATALOG } from "@/platform/engines/notifications/email/templates/catalog";
+import { getSmsEnvPresence } from "@/platform/engines/notifications/sms/twilio-stub";
 import packageJson from "@/package.json";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +19,13 @@ export default async function DashboardSettingsPage() {
   const event = getActiveEventConfig();
   const supabase = getSupabaseEnvPresence();
   const email = getEmailEnvPresence();
+  const sms = getSmsEnvPresence();
+  const flags = getFeatureFlags();
   const admin = await getAuthUser();
   const version = typeof packageJson.version === "string" ? packageJson.version : "1.0.0";
   const platformName =
     typeof packageJson.name === "string" ? packageJson.name : "promax-event-platform";
+  const smsActive = flags.smsEnabled && sms.ready;
 
   return (
     <>
@@ -101,10 +107,66 @@ export default async function DashboardSettingsPage() {
                     : "Resend transport ready"
                   : "Email transport environment variables are incomplete",
               },
+              {
+                name: "Twilio (SMS)",
+                status: smsActive
+                  ? "Enabled"
+                  : sms.ready
+                    ? "Configured (flag off)"
+                    : "Not configured",
+                ok: smsActive,
+                detail: smsActive
+                  ? "SMS confirmations active when consent is given"
+                  : flags.smsEnabled
+                    ? "SMS_ENABLED is on but Twilio credentials are incomplete"
+                    : "Set SMS_ENABLED=true and Twilio credentials to activate",
+              },
             ]}
           />
         </DashboardCard>
       </div>
+
+      <DashboardCard title="Feature flags" description="Controlled public launch switches">
+        <dl className="grid gap-3 font-sans text-sm sm:grid-cols-2">
+          {(
+            [
+              ["PUBLIC_REGISTRATION_OPEN", flags.publicRegistrationOpen],
+              ["EMAIL_CONFIRMATIONS_ENABLED", flags.emailConfirmationsEnabled],
+              ["SMS_ENABLED", flags.smsEnabled],
+              ["DASHBOARD_AUTH_REQUIRED", flags.dashboardAuthRequired],
+            ] as const
+          ).map(([name, on]) => (
+            <div
+              key={name}
+              className="flex items-center justify-between rounded-xl border border-mahogany/[0.06] bg-cream/40 px-4 py-3"
+            >
+              <dt className="font-mono text-xs text-mahogany/60">{name}</dt>
+              <dd className={`font-semibold ${on ? "text-emerald-800" : "text-mahogany/50"}`}>
+                {on ? "true" : "false"}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </DashboardCard>
+
+      <DashboardCard
+        title="Email templates"
+        description="Reusable communication templates — only Register Interest Confirmation is auto-active"
+      >
+        <ul className="space-y-2 font-sans text-sm text-mahogany/70">
+          {EMAIL_TEMPLATE_CATALOG.map((t) => (
+            <li
+              key={t.id}
+              className="flex flex-col gap-0.5 border-b border-mahogany/[0.05] py-2 last:border-0 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <span className="font-medium text-mahogany">{t.name}</span>
+              <span className="text-xs uppercase tracking-wide text-mahogany/45">
+                {t.autoActive ? "Auto-active" : "Template only"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </DashboardCard>
 
       <DashboardCard title="Current admin" description="Signed-in committee account">
         {admin ? (
