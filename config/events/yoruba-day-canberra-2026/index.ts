@@ -114,7 +114,7 @@ export const yorubaDayCanberra2026: EventConfig = {
     "Corporate table",
   ],
   contact: {
-    email: "info@yorubadaycanberra.org",
+    email: "yoruba-events@promaxcare.com.au",
     phone: null,
   },
   socialLinks: [],
@@ -122,7 +122,7 @@ export const yorubaDayCanberra2026: EventConfig = {
     title: "Yoruba Day Canberra 2026 | Premium Cultural Celebration",
     description:
       "22 November 2026 in Canberra, ACT—Yoruba Day celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity. Presented by Yoruba Association Canberra.",
-    canonicalUrl: "https://yorubadaycanberra.org",
+    canonicalUrl: "https://yoruba-event-2026-eight.vercel.app",
   },
 };
 
