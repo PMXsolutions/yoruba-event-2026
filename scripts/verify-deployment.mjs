@@ -13,7 +13,7 @@ const base = (process.env.DEPLOYMENT_URL || "https://yoruba-event-2026.vercel.ap
 );
 
 async function getJson(path) {
-  const res = await fetch(`${base}${path}`, { redirect: "follow" });
+  const res = await fetch(`${base}${path}`, { redirect: "follow", signal: AbortSignal.timeout(15_000) });
   const text = await res.text();
   let json = null;
   try {
@@ -32,11 +32,20 @@ async function main() {
     const result = await getJson(path);
     const ok =
       path === "/api/health"
-        ? result.status === 200 && result.json?.status === "ok"
+        ? result.status === 200 && result.json?.status === "ok" && result.json?.authConfigured === true && result.json?.emailConfigured === true && result.json?.emailConfirmationsEnabled === true
         : result.status >= 200 && result.status < 400;
     checks.push({ path, ok, status: result.status, detail: result.json ?? result.text });
     console.info(ok ? "OK " : "FAIL", path, result.status, JSON.stringify(result.json ?? result.text));
   }
+
+  const protectedRoute = await fetch(`${base}/dashboard/rsvps`, {
+    redirect: "manual", signal: AbortSignal.timeout(15_000),
+  });
+  const location = protectedRoute.headers.get("location");
+  const protectedOk = [302, 303, 307, 308].includes(protectedRoute.status)
+    && location && new URL(location, base).pathname === "/login";
+  checks.push({path: "/dashboard/rsvps", ok: protectedOk, status: protectedRoute.status});
+  console.info(protectedOk ? "OK " : "FAIL", "/dashboard/rsvps unauthenticated redirect", protectedRoute.status);
 
   const health = checks.find((c) => c.path === "/api/health");
   if (health?.detail && typeof health.detail === "object") {

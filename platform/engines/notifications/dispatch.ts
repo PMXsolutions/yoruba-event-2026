@@ -47,102 +47,31 @@ export async function dispatchRsvpNotifications(
   let emailStatus = "not_attempted";
   let smsStatus = "not_attempted";
 
-  // ── Email ──────────────────────────────────────────────────────────
+  // Persist every branch; never send when tracking cannot be written.
   if (doEmail) {
-  console.info(
-    "[notification-engine] RSVP email channel",
-    `rsvpId=${rsvpId ?? "unknown"}`,
-    `emailConsent=${record.email_consent}`,
-    `flagEnabled=${flags.emailConfirmationsEnabled}`,
-  );
-  if (!flags.emailConfirmationsEnabled) {
-    emailStatus = "skipped";
-    if (rsvpId) await updateRsvpEmailDelivery({ rsvpId, status: "skipped" });
-    await logActivity({
-      eventSlug: event.slug,
-      action: "email.confirmation.skipped",
-      entityType: "rsvp",
-      entityId: rsvpId,
-      metadata: { reason: "EMAIL_CONFIRMATIONS_ENABLED=false" },
-    });
-  } else if (!record.email_consent) {
-    emailStatus = "skipped";
-    if (rsvpId) await updateRsvpEmailDelivery({ rsvpId, status: "skipped" });
-    await logActivity({
-      eventSlug: event.slug,
-      action: "email.confirmation.skipped",
-      entityType: "rsvp",
-      entityId: rsvpId,
-      metadata: { reason: "no_email_consent" },
-    });
-  } else {
+    if (!rsvpId) throw new Error("Notification dispatch requires a persisted RSVP id");
     const emailEnv = getEmailEnvPresence();
-    if (!emailEnv.ready) {
-      emailStatus = "not_configured";
-      if (rsvpId) await updateRsvpEmailDelivery({ rsvpId, status: "not_configured" });
-      await logActivity({
-        eventSlug: event.slug,
-        action: "email.confirmation.not_configured",
-        entityType: "rsvp",
-        entityId: rsvpId,
-        metadata: {},
-      });
-    } else {
-      const emailResult = await sendRsvpConfirmationEmail({ event, record });
-      if (emailResult.ok) {
-        emailSent = true;
-        emailStatus = "sent";
-        if (rsvpId) {
-          await updateRsvpEmailDelivery({
-            rsvpId,
-            status: "sent",
-            providerId: emailResult.id ?? null,
-          });
-        }
-        await logActivity({
-          eventSlug: event.slug,
-          action: "email.confirmation.sent",
-          entityType: "rsvp",
-          entityId: rsvpId,
-          metadata: {
-            providerId: emailResult.id ?? null,
-            transport: emailEnv.transport,
-            fromDomain: emailEnv.diagnostics.fromDomain,
-          },
-        });
-      } else if (emailResult.reason === "NOT_CONFIGURED") {
-        emailStatus = "not_configured";
-        if (rsvpId) await updateRsvpEmailDelivery({ rsvpId, status: "not_configured" });
-        await logActivity({
-          eventSlug: event.slug,
-          action: "email.confirmation.not_configured",
-          entityType: "rsvp",
-          entityId: rsvpId,
-          metadata: { transport: emailEnv.transport },
-        });
-      } else {
-        emailStatus = "failed";
-        if (rsvpId) await updateRsvpEmailDelivery({ rsvpId, status: "failed" });
-        console.warn(
-          "[notification-engine] RSVP saved but confirmation email failed.",
-          `transport=${emailEnv.transport}`,
-          `fromDomain=${emailEnv.diagnostics.fromDomain ?? "none"}`,
-          `smtpHost=${emailEnv.diagnostics.smtpHost ?? "none"}`,
-        );
-        await logActivity({
-          eventSlug: event.slug,
-          action: "email.confirmation.failed",
-          entityType: "rsvp",
-          entityId: rsvpId,
-          metadata: {
-            reason: emailResult.reason,
-            transport: emailEnv.transport,
-            fromDomain: emailEnv.diagnostics.fromDomain,
-          },
-        });
+    const status = !flags.emailConfirmationsEnabled ? "disabled"
+      : !record.email_consent ? "consent_declined"
+      : !emailEnv.ready ? "not_configured" : "pending";
+    await updateRsvpEmailDelivery({ rsvpId, status });
+    emailStatus = status;
+    if (status === "pending") {
+      await logActivity({ eventSlug: event.slug, action: "email.confirmation.attempt",
+        entityType: "rsvp", entityId: rsvpId, metadata: { transport: emailEnv.transport } });
+      let result;
+      try {
+        result = await sendRsvpConfirmationEmail({ event, record });
+      } catch {
+        result = { ok: false as const, reason: "SEND_FAILED" as const };
       }
+      emailSent = result.ok;
+      emailStatus = result.ok ? "sent" : result.reason === "NOT_CONFIGURED" ? "not_configured" : "failed";
+      await updateRsvpEmailDelivery({ rsvpId, status: emailStatus as "sent" | "failed" | "not_configured",
+        providerId: result.ok ? result.id : null });
     }
-  }
+    await logActivity({ eventSlug: event.slug, action: `email.confirmation.${emailStatus}`,
+      entityType: "rsvp", entityId: rsvpId, metadata: { transport: emailEnv.transport } });
   }
 
   // ── SMS ────────────────────────────────────────────────────────────

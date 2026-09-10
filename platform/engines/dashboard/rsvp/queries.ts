@@ -1,3 +1,4 @@
+import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -46,9 +47,6 @@ type RsvpRow = {
 
 const RSVP_SELECT =
   "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference, email_consent, sms_consent, marketing_consent, email_status, email_sent_at, sms_status, sms_sent_at";
-
-const RSVP_SELECT_LEGACY =
-  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference";
 
 function mapRow(row: RsvpRow): DashboardRsvpRecord {
   const status = row.status && isRsvpStatus(row.status) ? row.status : "new";
@@ -115,6 +113,7 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
 
 /** Fetch all RSVPs for the active event via service role (server-only). */
 export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> {
+  await assertPermission("rsvp.read");
   const env = getSupabaseEnvPresence();
   if (!env.serviceRoleReady) {
     return {
@@ -134,40 +133,8 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
       .eq("event_slug", event.slug)
       .order("created_at", { ascending: false });
 
-    let rows: unknown[] | null = primary.data;
-    let error = primary.error;
-
-    // Fallback without consent / delivery columns if migration not applied yet
-    if (
-      error &&
-      /email_consent|sms_consent|marketing_consent|email_status|sms_status|email_sent_at|sms_sent_at/i.test(
-        error.message,
-      )
-    ) {
-      const legacy = await supabase
-        .from("rsvps")
-        .select(RSVP_SELECT_LEGACY)
-        .eq("event_slug", event.slug)
-        .order("created_at", { ascending: false });
-      rows = legacy.data;
-      error = legacy.error;
-    }
-
-    if (error) {
-      // Fallback without event_slug filter if column not yet migrated
-      if (/event_slug/i.test(error.message)) {
-        const fallback = await supabase
-          .from("rsvps")
-          .select(RSVP_SELECT_LEGACY)
-          .order("created_at", { ascending: false });
-        if (fallback.error) return classifyQueryError(fallback.error.message, fallback.error.code);
-        return {
-          ok: true,
-          records: (fallback.data ?? []).map((row) => mapRow(row as unknown as RsvpRow)),
-        };
-      }
-      return classifyQueryError(error.message, error.code ?? undefined);
-    }
+    const rows = primary.data;
+    if (primary.error) return classifyQueryError(primary.error.message, primary.error.code);
 
     return {
       ok: true,
@@ -183,6 +150,7 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
 export async function fetchDashboardRsvpById(
   id: string,
 ): Promise<{ ok: true; record: DashboardRsvpRecord } | { ok: false; error: string }> {
+  await assertPermission("rsvp.read");
   if (!id) return { ok: false, error: "Record not found." };
 
   const env = getSupabaseEnvPresence();
@@ -198,21 +166,8 @@ export async function fetchDashboardRsvpById(
       .eq("id", id)
       .maybeSingle();
 
-    let row: unknown = primary.data;
-    let error = primary.error;
-
-    if (
-      error &&
-      /email_consent|sms_consent|marketing_consent|email_status|sms_status/i.test(error.message)
-    ) {
-      const legacy = await supabase
-        .from("rsvps")
-        .select(RSVP_SELECT_LEGACY)
-        .eq("id", id)
-        .maybeSingle();
-      row = legacy.data;
-      error = legacy.error;
-    }
+    const row = primary.data;
+    const error = primary.error;
 
     if (error || !row) {
       return { ok: false, error: "Record not found." };

@@ -164,3 +164,9 @@ export async function requireAuth(permission?: Permission): Promise<AuthResult> 
   }
   return { ok: true, user };
 }
+
+/** Guard service-role dashboard reads as well as their route entry points. */
+export async function assertPermission(permission: Permission): Promise<void> {
+  const auth = await requireAuth(permission);
+  if (!auth.ok) throw new Error(auth.error);
+}

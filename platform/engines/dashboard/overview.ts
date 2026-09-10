@@ -1,3 +1,4 @@
+import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -22,6 +23,7 @@ function daysUntil(iso: string): number {
 }
 
 export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData> {
+  await assertPermission("analytics.read");
   const event = getActiveEventConfig();
   const empty: ExecutiveDashboardData = {
     stats: [
@@ -251,6 +253,7 @@ export type AnalyticsData = {
 };
 
 export async function fetchAnalytics(): Promise<AnalyticsData> {
+  await assertPermission("analytics.read");
   const empty: AnalyticsData = {
     rsvpsOverTime: [],
     statusBreakdown: [],

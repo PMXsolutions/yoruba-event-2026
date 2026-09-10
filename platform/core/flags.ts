@@ -39,6 +39,6 @@ export function getFeatureFlags(): PlatformFeatureFlags {
     publicRegistrationOpen: envFlag("PUBLIC_REGISTRATION_OPEN", true),
     emailConfirmationsEnabled: envFlag("EMAIL_CONFIRMATIONS_ENABLED", true),
     smsEnabled,
-    dashboardAuthRequired: envFlag("DASHBOARD_AUTH_REQUIRED", true),
+    dashboardAuthRequired: process.env.NODE_ENV === "production" || envFlag("DASHBOARD_AUTH_REQUIRED", true),
   };
 }

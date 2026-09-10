@@ -119,7 +119,7 @@ export async function resendRsvpConfirmationEmailAction(
     event_slug: event.slug,
     registration_reference: r.registrationReference ?? "",
     status: "new" as const,
-    email_consent: true,
+    email_consent: r.emailConsent,
     sms_consent: r.smsConsent,
     marketing_consent: r.marketingConsent,
   };
@@ -141,7 +141,7 @@ export async function resendRsvpConfirmationEmailAction(
         error:
           notify.emailStatus === "not_configured"
             ? "Email is not configured."
-            : "Confirmation email could not be sent. RSVP record is unchanged.",
+            : "Confirmation email could not be sent. Registration is saved; check communication status.",
       };
     }
     return { ok: true };
@@ -212,7 +212,7 @@ export async function sendRsvpConfirmationSmsAction(
         error:
           notify.smsStatus === "not_configured"
             ? "Twilio is not configured."
-            : "SMS could not be sent. RSVP record is unchanged.",
+            : "SMS could not be sent. Registration is saved; check communication status.",
       };
     }
     return { ok: true };

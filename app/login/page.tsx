@@ -51,7 +51,7 @@ function LoginForm() {
         return;
       }
 
-      router.push(redirect.startsWith("/") ? redirect : "/dashboard");
+      router.push(redirect.startsWith("/dashboard") && !redirect.includes("\\") ? redirect : "/dashboard");
       router.refresh();
     } catch (err) {
       if (err instanceof AuthConfigError) {

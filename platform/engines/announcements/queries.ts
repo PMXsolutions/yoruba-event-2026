@@ -1,3 +1,4 @@
+import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -44,6 +45,7 @@ export type FetchAnnouncementsResult =
 export async function fetchAnnouncements(opts?: {
   publishedOnly?: boolean;
 }): Promise<FetchAnnouncementsResult> {
+  if (!opts?.publishedOnly) await assertPermission("announcement.read");
   const env = getSupabaseEnvPresence();
   if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
   const event = getActiveEventConfig();

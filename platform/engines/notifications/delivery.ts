@@ -11,21 +11,17 @@ export async function updateRsvpEmailDelivery(params: {
   status: EmailDeliveryStatus;
   providerId?: string | null;
 }): Promise<void> {
-  try {
-    const supabase = createServiceRoleClient();
-    const payload: Record<string, unknown> = {
-      email_status: params.status,
-    };
-    if (params.status === "sent") {
-      payload.email_sent_at = new Date().toISOString();
-      if (params.providerId) payload.email_provider_id = params.providerId;
-    }
-    const { error } = await supabase.from("rsvps").update(payload).eq("id", params.rsvpId);
-    if (error) {
-      console.warn("[notification-engine] email_status update failed:", error.message);
-    }
-  } catch (e) {
-    console.warn("[notification-engine] email_status update error:", e);
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase.from("rsvps").update({
+    email_status: params.status,
+    email_sent_at: params.status === "sent" ? new Date().toISOString() : null,
+    email_provider_id: params.status === "sent" ? params.providerId ?? null : null,
+  }).eq("id", params.rsvpId).select("id").single();
+  if (error || !data) {
+    console.error("[notification-engine] email_status persistence failed", {
+      rsvpId: params.rsvpId, status: params.status, code: error?.code ?? "NO_ROW",
+    });
+    throw new Error("Email delivery status could not be persisted");
   }
 }
 
