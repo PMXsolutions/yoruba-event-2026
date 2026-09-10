@@ -100,3 +100,15 @@ Joshua's screenshot and a subsequent authenticated page inspection confirm NEXT_
 User explicitly approved creating yoruba-events@promaxcare.com.au. SmarterASP Email Manager confirmed creation and listed seven mailboxes, including the new mailbox. Existing support mailbox was not changed. Provider UI confirms secure SMTP hostname mail5010.site4now.net and ports 465/587.
 
 Updated new Joshua-team Vercel project variables in Production and Preview: SMTP_PASSWORD (new random secret, never printed or committed), SMTP_HOST=mail5010.site4now.net, SMTP_PORT=465, SMTP_USER and MAIL_FROM=yoruba-events@promaxcare.com.au, MAIL_FROM_NAME=Yoruba Association in the ACT. Password save returned success. Deployment and actual SMTP authentication/delivery remain unverified; do not report email operational yet.
+
+### Domain purchase and deployed release checkpoint
+
+Official ACT public register search for YORUBA returned active record A06093, YORUBA ASSOCIATION IN ACT (AWON OMO O'ODUA), incorporated 21/10/2019. Source: https://services.accesscanberra.act.gov.au/s/public-registers/generic-register?registerid=incorporated-associations-public-register . This matches the supplied letterhead identity. Active ABN Lookup search for YORUBA returned no matching entity; Yoruba Parapo Australia is a distinct ACT association and its ABN must not be substituted.
+
+SmarterASP confirmed yorubaassociationact.org.au available for one year at US$15. User explicitly authorised registration using account credit. Payment succeeded; balance decreased from US$73.42 to US$58.42. Registration setup ID 112313 remains incomplete. Form requests registrant contacts, Registrant Name and ABN Number; do not represent paid checkout as completed domain registration. No DNS changes made and no second purchase needed.
+
+Code committed as d9b6569 and pushed to release/production-readiness. PR: https://github.com/PMXsolutions/yoruba-event-2026/pull/18 . New Joshua-team Vercel project reports Ready deployment of this commit at https://yoruba-event-2026-eight.vercel.app . Old promax-it-solutions Vercel PR check failed; no merge performed.
+
+Public deployment verifier: home 200, login 200, unauthenticated dashboard 307 to login; health 503 MISSING_ENV_VARS (Supabase URL, anon key, service-role key). Email configuration detected but delivery untested. Supabase dashboard session expired and sign-in is required; keys were not recovered from storage or printed.
+
+New Vercel configuration updated after that deployment: NEXT_PUBLIC_SUPABASE_URL created as Config for Production; EVENT_SLUG=yoruba-day-canberra-2026; PUBLIC_REGISTRATION_OPEN=false pending launch validation; DASHBOARD_AUTH_REQUIRED=true; SMS_ENABLED=false; EMAIL_CONFIRMATIONS_ENABLED=true. Requires redeployment after remaining keys are securely set. Public anonymous key, service-role value, admin provisioning and authenticated RSVP/email checks still outstanding. Release remains NO GO.
