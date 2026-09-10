@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 
 export default async function DashboardRootLayout({ children }: { children: ReactNode }) {
   const user = await getAuthUser();
+  if (!user) redirect("/login?access=denied");
   const admin = user
     ? { fullName: user.fullName, email: user.email, role: user.role }
     : null;

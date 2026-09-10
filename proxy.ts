@@ -57,7 +57,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLogin && user) {
+  if (isLogin && user && request.nextUrl.searchParams.get("access") !== "denied") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

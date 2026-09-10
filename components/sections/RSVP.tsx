@@ -6,7 +6,7 @@ import { submitRsvp } from "@/app/actions/rsvp";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { LAUNCH_COPY, TICKET_TYPES } from "@/lib/site";
+import { LAUNCH_COPY, SITE, TICKET_TYPES } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 import {
   fieldErrorsFromZod,
@@ -422,7 +422,7 @@ export function RSVP() {
                       Privacy: we use your details only to manage this event interest list and
                       related communications you opt into. You can ask to be removed at any time via{" "}
                       <a
-                        href="mailto:info@yorubadaycanberra.org"
+                        href={`mailto:${SITE.contactEmail}`}
                         className="text-gold-light underline-offset-2 hover:underline"
                       >
                         email

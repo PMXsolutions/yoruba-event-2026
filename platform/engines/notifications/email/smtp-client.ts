@@ -41,25 +41,25 @@ export async function sendViaSmtp(input: SmtpSendInput): Promise<SmtpSendResult>
     `toDomain=${toDomain}`,
   );
 
-  try {
-    const transporter = nodemailer.createTransport({
-      host: smtp.host,
-      port: smtp.port,
-      secure: smtp.secure,
-      // Port 587 typically needs STARTTLS upgrade
-      requireTLS: !smtp.secure,
-      connectionTimeout: 15_000,
-      greetingTimeout: 15_000,
-      socketTimeout: 20_000,
-      auth: {
-        user: smtp.user,
-        pass: smtp.password,
-      },
-      tls: {
-        minVersion: "TLSv1.2",
-      },
-    });
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    // Port 587 typically needs STARTTLS upgrade
+    requireTLS: !smtp.secure,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 20_000,
+    auth: {
+      user: smtp.user,
+      pass: smtp.password,
+    },
+    tls: {
+      minVersion: "TLSv1.2",
+    },
+  });
 
+  try {
     const info = await transporter.sendMail({
       from,
       to: input.to,
@@ -67,12 +67,6 @@ export async function sendViaSmtp(input: SmtpSendInput): Promise<SmtpSendResult>
       html: input.html,
       text: input.text,
     });
-
-    try {
-      transporter.close();
-    } catch {
-      /* ignore */
-    }
 
     console.info(
       "[notification-engine] SMTP email accepted by server:",
@@ -89,5 +83,7 @@ export async function sendViaSmtp(input: SmtpSendInput): Promise<SmtpSendResult>
       emailConfigLogSummary(),
     );
     return { ok: false, reason: "SEND_FAILED", message: "Email delivery failed" };
+  } finally {
+    transporter.close();
   }
 }

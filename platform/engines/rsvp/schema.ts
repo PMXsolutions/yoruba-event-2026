@@ -5,7 +5,7 @@ function optionalBool(defaultValue: boolean) {
     if (v === true || v === "true" || v === 1 || v === "1" || v === "on") return true;
     if (v === false || v === "false" || v === 0 || v === "0" || v === "off") return false;
     if (v == null || v === "") return defaultValue;
-    return Boolean(v);
+    return v; // Unknown values must fail validation rather than imply consent.
   }, z.boolean());
 }
 

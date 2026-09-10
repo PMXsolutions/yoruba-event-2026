@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
@@ -62,7 +63,7 @@ export async function submitRsvpToDatabase(
     };
   }
 
-  const record = toRsvpRecord(parsed.data, event.slug);
+  const record = { ...toRsvpRecord(parsed.data, event.slug), id: randomUUID() };
 
   try {
     const supabase = createServiceRoleClient();
@@ -102,30 +103,12 @@ export async function submitRsvpToDatabase(
       };
     }
 
-    let { data, error } = await supabase.from("rsvps").insert(record).select("id").single();
-
-    // Compatibility: older schemas without production / consent columns
-    if (
-      error &&
-      /event_slug|registration_reference|email_consent|sms_consent|marketing_consent|email_status|sms_status/i.test(
-        error.message,
-      )
-    ) {
-      const legacy: Record<string, unknown> = {
-        full_name: record.full_name,
-        email: record.email,
-        phone: record.phone,
-        number_of_attendees: record.number_of_attendees,
-        ticket_type: record.ticket_type,
-        notes: record.notes,
-        status: record.status,
-      };
-      if (!/event_slug/i.test(error.message)) {
-        legacy.event_slug = record.event_slug;
-        legacy.registration_reference = record.registration_reference;
-      }
-      ({ data, error } = await supabase.from("rsvps").insert(legacy).select("id").single());
-    }
+    // Persist identity and pending state atomically. An old schema must fail visibly,
+    // rather than accepting a registration whose consent/delivery cannot be tracked.
+    const { error } = await supabase.from("rsvps").insert({
+      ...record,
+      email_status: "pending",
+    });
 
     if (error) {
       console.error("[rsvp-engine] Supabase insert error:", error.message, error.code);
@@ -133,10 +116,9 @@ export async function submitRsvpToDatabase(
       return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
     }
 
-    const insertedId = data?.id;
     return {
       ok: true,
-      record: { ...record, id: insertedId },
+      record,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -322,7 +322,7 @@ function RsvpDetailModal({
             </div>
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
-            <ToolbarButton disabled={busy} onClick={() => onResendEmail(record.id)}>
+            <ToolbarButton disabled={busy || !record.emailConsent} onClick={() => onResendEmail(record.id)}>
               Resend confirmation email
             </ToolbarButton>
             <ToolbarButton disabled={busy || !canSms} onClick={() => onSendSms(record.id)}>
@@ -349,6 +349,11 @@ function RsvpDetailModal({
               <li className="flex gap-2">
                 <span className="text-gold-deep">·</span>
                 Confirmation email failed
+              </li>
+            ) : record.emailStatus !== "not_attempted" ? (
+              <li className="flex gap-2">
+                <span className="text-gold-deep">·</span>
+                Confirmation email: {formatEmailDeliveryLabel(record.emailStatus)}
               </li>
             ) : null}
             {record.smsSentAt ? (

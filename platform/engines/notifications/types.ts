@@ -1,6 +1,9 @@
 /** Delivery statuses persisted on RSVP records and shown in the committee portal. */
 
 export const EMAIL_DELIVERY_STATUSES = [
+  "pending",
+  "disabled",
+  "consent_declined",
   "not_attempted",
   "sent",
   "failed",
@@ -23,6 +26,12 @@ export type SmsDeliveryStatus = (typeof SMS_DELIVERY_STATUSES)[number];
 
 export function formatEmailDeliveryLabel(status: EmailDeliveryStatus | null | undefined): string {
   switch (status) {
+    case "pending":
+      return "Pending — outcome not yet confirmed";
+    case "disabled":
+      return "Disabled by configuration";
+    case "consent_declined":
+      return "Consent declined";
     case "sent":
       return "Sent";
     case "failed":

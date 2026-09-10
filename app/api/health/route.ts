@@ -95,7 +95,7 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
 
   try {
     const supabase = createServiceRoleClient();
-    const { error } = await supabase.from("rsvps").select("id").limit(1);
+    const { error } = await supabase.from("rsvps").select("id,event_slug,registration_reference,email_consent,sms_consent,marketing_consent,email_status,email_sent_at,email_provider_id,sms_status,sms_sent_at,sms_provider_id").limit(0);
     if (error) {
       const tableMissing =
         error.code === "42P01" || /relation|does not exist|schema cache/i.test(error.message);

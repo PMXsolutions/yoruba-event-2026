@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 function insertTestAllowed(): boolean {
   return (
-    process.env.NODE_ENV !== "production" || process.env.ENABLE_RSVP_INSERT_TEST === "true"
+    process.env.NODE_ENV !== "production"
   );
 }
 
@@ -29,7 +29,7 @@ type ErrorBody = {
 
 /**
  * Temporary POST-only check: insert a disposable row into `rsvps`, then delete it.
- * Disabled in production unless ENABLE_RSVP_INSERT_TEST=true. Never returns secrets.
+ * Always disabled in production. Never returns secrets.
  */
 export async function POST(): Promise<NextResponse<OkBody | ErrorBody>> {
   if (!insertTestAllowed()) {
