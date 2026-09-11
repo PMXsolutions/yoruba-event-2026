@@ -154,7 +154,7 @@ export function DashboardLayout({
             aria-label="Committee portal"
             className="flex-1 space-y-1 overflow-y-auto px-2 py-4"
           >
-            {DASHBOARD_NAV.map((item) => {
+            {DASHBOARD_NAV.filter(item => item.href !== "/dashboard/members" || admin?.role === "SUPER_ADMIN").map((item) => {
               const active =
                 pathname === item.href ||
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));

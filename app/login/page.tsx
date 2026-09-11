@@ -31,7 +31,7 @@ function LoginForm() {
 
       if (mode === "forgot") {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-          redirectTo: `${window.location.origin}/login`,
+          redirectTo: `${window.location.origin}/account/setup`,
         });
         if (resetError) {
           setError("Unable to send reset email. Please try again or contact your administrator.");
