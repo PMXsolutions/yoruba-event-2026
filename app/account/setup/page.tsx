@@ -17,8 +17,8 @@ export default function AccountSetup() {
         const params = new URLSearchParams(window.location.hash.slice(1));
         const hash = params.get("token_hash"), type = params.get("type");
         // Read browser-only invitation data after hydration.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (hash && (type === "invite" || type === "recovery")) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate browser fragment after mount.
             setToken({ token_hash: hash, type });
             window.history.replaceState(null, "", "/account/setup");
             setReady(true);
