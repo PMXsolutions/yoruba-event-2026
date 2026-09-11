@@ -52,6 +52,7 @@ export const DASHBOARD_PAGE_META: Record<string, DashboardPageMeta> = {
       "Traffic, conversion, and engagement metrics across the public site and RSVP funnel.",
     breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "Analytics" }],
   },
+  "/dashboard/members": {title: "Committee members", description: "Invite your team and manage portal access.", breadcrumbs: [{label:"Members"}]},
   "/dashboard/settings": {
     title: "Settings",
     description: "Organisation profile, integrations, and platform configuration.",

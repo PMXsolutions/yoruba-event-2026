@@ -17,6 +17,7 @@ export const DASHBOARD_NAV: readonly DashboardNavItem[] = [
   { href: "/dashboard/programme", label: "Programme", description: "Run of show", icon: "♪" },
   { href: "/dashboard/announcements", label: "Announcements", description: "Comms hub", icon: "📣" },
   { href: "/dashboard/analytics", label: "Analytics", description: "Engagement metrics", icon: "◆" },
+  { href: "/dashboard/members", label: "Members", description: "Invitations & access", icon: "◎" },
   { href: "/dashboard/settings", label: "Settings", description: "Integrations", icon: "⚙" },
 ] as const;
 

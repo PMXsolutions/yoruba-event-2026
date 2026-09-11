@@ -83,3 +83,28 @@ test('public action preserves saved RSVP after notification persistence failure'
  });
  const result=await submitRsvp({});assert.equal(result.ok,true);assert.equal(result.registrationReference,'TEST-REF');assert.equal(result.emailSent,false);
 });
+
+test('member actions deny unauthorised callers before service access', async()=>{
+ const actions=load('app/actions/members.ts',{
+  'next/cache':{revalidatePath(){}}, '@/lib/auth/rbac':{requireAuth:async()=>({ok:false,message:'Forbidden'})},
+  '@/lib/supabase/admin':{createServiceRoleClient(){throw Error('must not access database');}},
+ });
+ assert.equal((await actions.inviteMember({name:'Test',email:'test@example.org'})).ok,false);
+ assert.equal((await actions.changeMemberAccess({})).ok,false);
+});
+test('member access rejects self changes and invalid roles before RPC',async()=>{
+ const id='11111111-1111-4111-8111-111111111111';
+ const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id}})},'@/lib/supabase/server':{createServerSupabaseClient(){throw Error('must not call RPC');}}});
+ assert.equal((await actions.changeMemberAccess({id,role:'COMMITTEE',active:false})).ok,false);
+ assert.equal((await actions.changeMemberAccess({id:'22222222-2222-4222-8222-222222222222',role:'OWNER',active:true})).ok,false);
+});
+test('member access uses authenticated RPC and reports database failures',async()=>{
+ let args;
+ const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id:'actor'}})},'@/lib/supabase/server':{createServerSupabaseClient:async()=>({rpc:async(name,input)=>{args={name,input};return {error:{message:'rejected'}};}})}});
+ assert.equal((await actions.changeMemberAccess({id:'22222222-2222-4222-8222-222222222222',role:'COMMITTEE',active:false})).ok,false);
+ assert.equal(args.name,'manage_member_access');assert.equal(args.input.active,false);
+});
+test('resending invitation cannot reactivate an inactive member',async()=>{
+ const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id:'actor'}})},'@/lib/supabase/admin':{createServiceRoleClient:()=>({from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{id:'target',is_active:false},error:null})})})}),auth:{admin:{generateLink(){throw Error('must not create link');}}}})}});
+ assert.equal((await actions.inviteMember({name:'Member',email:'member@example.org'})).ok,false);
+});
