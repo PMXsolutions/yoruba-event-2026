@@ -7,7 +7,8 @@
 **Version:** 1.0  
 **Status:** Draft for review  
 **Date:** 13 September 2026  
-**Reference implementation:** Yoruba Day Canberra 2026 (this repository)
+**Reference implementation:** Yoruba Day Canberra 2026 (this repository)  
+**Word download:** [Eventa_SaaS_PRD_v1.0.docx](./Eventa_SaaS_PRD_v1.0.docx) (regenerate with `python3 scripts/build-prd-docx.py`)
 
 ---
 

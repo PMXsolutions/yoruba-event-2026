@@ -31,6 +31,7 @@ Initial administrator email: `admin@promaxevent.com` (password via `ADMIN_PASSWO
 | Doc | Description |
 |-----|-------------|
 | [docs/PRD_EVENTA_SAAS.md](./docs/PRD_EVENTA_SAAS.md) | **Eventa** multi-tenant SaaS PRD (C# / SQL Server / React) |
+| [docs/Eventa_SaaS_PRD_v1.0.docx](./docs/Eventa_SaaS_PRD_v1.0.docx) | Eventa PRD as a downloadable Word document |
 | [docs/PLATFORM.md](./docs/PLATFORM.md) | Platform overview & engines |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel + Supabase deploy |
