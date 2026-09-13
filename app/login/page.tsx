@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserSupabaseClient, AuthConfigError } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { PasswordField } from "@/components/ui/PasswordField";
 import { SITE } from "@/lib/site";
 
 function LoginForm() {
@@ -114,23 +115,15 @@ function LoginForm() {
         </div>
 
         {mode === "login" ? (
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-2 block font-sans text-xs font-semibold uppercase tracking-[0.18em] text-gold-muted"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-espresso/80 px-4 py-3 font-sans text-sm text-cream outline-none transition focus:border-gold-bright/50 focus:ring-2 focus:ring-gold/20"
-            />
-          </div>
+          <PasswordField
+            id="password"
+            label="Password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isPending}
+          />
         ) : null}
 
         <Button type="submit" className="w-full" disabled={isPending}>
