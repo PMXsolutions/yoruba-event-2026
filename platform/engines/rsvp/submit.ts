@@ -10,6 +10,7 @@ import {
   type RsvpFormValues,
   type RsvpRecord,
 } from "@/platform/engines/rsvp/schema";
+import { isSupabaseConnectivityFailure, supabaseErrorText } from "@/lib/supabase/connectivity";
 import { mapConfigError, mapSupabaseRsvpError } from "@/platform/engines/rsvp/errors";
 import type { EventConfig } from "@/platform/core/types/event";
 import { getFeatureFlags } from "@/platform/core/flags";
@@ -81,6 +82,19 @@ export async function submitRsvpToDatabase(
       .limit(1)
       .maybeSingle();
 
+    if (withSlug.error && isSupabaseConnectivityFailure(supabaseErrorText(withSlug.error))) {
+      console.error(
+        "[rsvp-engine] Supabase lookup failed:",
+        withSlug.error.message,
+        withSlug.error.code ?? "",
+      );
+      const mapped = mapSupabaseRsvpError(
+        supabaseErrorText(withSlug.error),
+        withSlug.error.code ?? undefined,
+      );
+      return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
+    }
+
     if (withSlug.error && /event_slug/i.test(withSlug.error.message)) {
       const fallback = await supabase
         .from("rsvps")
@@ -89,6 +103,13 @@ export async function submitRsvpToDatabase(
         .gte("created_at", since)
         .limit(1)
         .maybeSingle();
+      if (fallback.error && isSupabaseConnectivityFailure(supabaseErrorText(fallback.error))) {
+        const mapped = mapSupabaseRsvpError(
+          supabaseErrorText(fallback.error),
+          fallback.error.code ?? undefined,
+        );
+        return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
+      }
       existing = fallback.data;
     } else if (!withSlug.error) {
       existing = withSlug.data;
@@ -111,8 +132,8 @@ export async function submitRsvpToDatabase(
     });
 
     if (error) {
-      console.error("[rsvp-engine] Supabase insert error:", error.message, error.code);
-      const mapped = mapSupabaseRsvpError(error.message, error.code ?? undefined);
+      console.error("[rsvp-engine] Supabase insert error:", error.message, error.code ?? "");
+      const mapped = mapSupabaseRsvpError(supabaseErrorText(error), error.code ?? undefined);
       return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
     }
 

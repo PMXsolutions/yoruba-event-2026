@@ -104,6 +104,49 @@ test('member access uses authenticated RPC and reports database failures',async(
  assert.equal((await actions.changeMemberAccess({id:'22222222-2222-4222-8222-222222222222',role:'COMMITTEE',active:false})).ok,false);
  assert.equal(args.name,'manage_member_access');assert.equal(args.input.active,false);
 });
+test('unreachable database is not reported as a generic save failure', () => {
+  const { mapSupabaseRsvpError } = load('platform/engines/rsvp/errors.ts');
+  const fetchFailed = mapSupabaseRsvpError('TypeError: fetch failed\n\nCaused by: Error: getaddrinfo ENOTFOUND example.supabase.co (ENOTFOUND)');
+  assert.equal(fetchFailed.errorCode, 'NETWORK');
+  assert.match(fetchFailed.userMessage, /could not reach our servers/i);
+  const missingColumn = mapSupabaseRsvpError('email_status missing from schema cache', 'PGRST204');
+  assert.equal(missingColumn.errorCode, 'TABLE_MISSING');
+});
+test('quoted Supabase URL and key are usable', () => {
+  const { cleanEnvValue, normalizeSupabaseProjectUrl } = load('lib/supabase/normalize-url.ts');
+  assert.equal(cleanEnvValue('"service-role-key"'), 'service-role-key');
+  assert.equal(normalizeSupabaseProjectUrl(' "https://example.supabase.co/rest/v1/" '), 'https://example.supabase.co');
+});
+test('vanity SMTP host verifies TLS against its CNAME target', async () => {
+  const prev = { ...process.env };
+  process.env.SMTP_HOST = 'mail.promaxcare.com.au';
+  process.env.SMTP_PORT = '465';
+  process.env.SMTP_USER = 'events@promaxcare.com.au';
+  process.env.SMTP_PASSWORD = 'secret';
+  process.env.MAIL_FROM = 'Events <events@promaxcare.com.au>';
+  let tls;
+  try {
+    const { sendViaSmtp } = load('platform/engines/notifications/email/smtp-client.ts', {
+      nodemailer: {
+        createTransport(options) {
+          tls = options.tls;
+          return { sendMail: async () => ({ messageId: 'accepted', response: '250 ok' }), close() {} };
+        },
+      },
+      'node:dns': {
+        promises: {
+          resolveCname: async (host) => host === 'mail.promaxcare.com.au' ? ['mail5010.site4now.net.'] : Promise.reject(Object.assign(new Error('ENODATA'), { code: 'ENODATA' })),
+        },
+      },
+    });
+    const result = await sendViaSmtp({ to: 'guest@example.invalid', subject: 'Confirm', html: '<p>Hi</p>', text: 'Hi' });
+    assert.equal(result.ok, true);
+    assert.equal(tls.servername, 'mail5010.site4now.net');
+    assert.equal(tls.minVersion, 'TLSv1.2');
+  } finally {
+    process.env = prev;
+  }
+});
 test('resending invitation cannot reactivate an inactive member',async()=>{
  const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id:'actor'}})},'@/lib/supabase/admin':{createServiceRoleClient:()=>({from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{id:'target',is_active:false},error:null})})})}),auth:{admin:{generateLink(){throw Error('must not create link');}}}})}});
  assert.equal((await actions.inviteMember({name:'Member',email:'member@example.org'})).ok,false);
