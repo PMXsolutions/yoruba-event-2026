@@ -4,6 +4,7 @@ import { logActivity } from "@/lib/activity/log";
 import { getFeatureFlags } from "@/platform/core/flags";
 import type { EventConfig } from "@/platform/core/types/event";
 import {
+  isDeliveryColumnMissingError,
   updateRsvpEmailDelivery,
   updateRsvpSmsDelivery,
 } from "@/platform/engines/notifications/delivery";
@@ -47,14 +48,23 @@ export async function dispatchRsvpNotifications(
   let emailStatus = "not_attempted";
   let smsStatus = "not_attempted";
 
-  // Persist every branch; never send when tracking cannot be written.
+  // Persist every branch. A database that has not had the communication migration
+  // cannot store delivery status; the confirmation is still sent from the saved consent.
+  // Any other tracking failure still blocks the send.
   if (doEmail) {
     if (!rsvpId) throw new Error("Notification dispatch requires a persisted RSVP id");
     const emailEnv = getEmailEnvPresence();
     const status = !flags.emailConfirmationsEnabled ? "disabled"
       : !record.email_consent ? "consent_declined"
       : !emailEnv.ready ? "not_configured" : "pending";
-    await updateRsvpEmailDelivery({ rsvpId, status });
+    let trackEmail = true;
+    try {
+      await updateRsvpEmailDelivery({ rsvpId, status });
+    } catch (e) {
+      if (!isDeliveryColumnMissingError(e)) throw e;
+      trackEmail = false;
+      console.warn("[notification-engine] Email delivery columns are missing; sending without a stored status.");
+    }
     emailStatus = status;
     if (status === "pending") {
       await logActivity({ eventSlug: event.slug, action: "email.confirmation.attempt",
@@ -67,8 +77,10 @@ export async function dispatchRsvpNotifications(
       }
       emailSent = result.ok;
       emailStatus = result.ok ? "sent" : result.reason === "NOT_CONFIGURED" ? "not_configured" : "failed";
-      await updateRsvpEmailDelivery({ rsvpId, status: emailStatus as "sent" | "failed" | "not_configured",
-        providerId: result.ok ? result.id : null });
+      if (trackEmail) {
+        await updateRsvpEmailDelivery({ rsvpId, status: emailStatus as "sent" | "failed" | "not_configured",
+          providerId: result.ok ? result.id : null });
+      }
     }
     await logActivity({ eventSlug: event.slug, action: `email.confirmation.${emailStatus}`,
       entityType: "rsvp", entityId: rsvpId, metadata: { transport: emailEnv.transport } });
