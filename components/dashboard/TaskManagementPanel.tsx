@@ -8,6 +8,7 @@ import {
   SectionHeader,
   StatGrid,
   StatusBadge,
+  TableScroll,
   ToolbarButton,
 } from "@/components/dashboard/dashboard-ui";
 import { ModalShell } from "@/components/dashboard/ModalShell";
@@ -187,10 +188,10 @@ export function TaskManagementPanel({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-left font-sans text-sm">
+          <TableScroll label="Scroll horizontally to see every task column">
+            <table className="w-full table-fixed text-left font-sans text-sm">
               <thead>
-                <tr className="border-b border-mahogany/[0.05] bg-cream/40">
+                <tr className="bg-cream/40">
                   {["Task", "Due", "Priority", "Status"].map((h) => (
                     <th
                       key={h}
@@ -202,7 +203,7 @@ export function TaskManagementPanel({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-mahogany/[0.04]">
+              <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id} className="transition-colors hover:bg-cream/30">
                     <td className="max-w-[20rem] px-5 py-4 sm:px-6">
@@ -230,7 +231,7 @@ export function TaskManagementPanel({
                       </select>
                     </td>
                     <td className="px-5 py-4 sm:px-6">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={formatTaskStatus(r.status)} />
                         <select
                           value={r.status}
@@ -251,7 +252,7 @@ export function TaskManagementPanel({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
 

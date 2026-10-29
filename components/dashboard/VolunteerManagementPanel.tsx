@@ -11,6 +11,7 @@ import {
   SectionHeader,
   StatGrid,
   StatusBadge,
+  TableScroll,
   ToolbarButton,
 } from "@/components/dashboard/dashboard-ui";
 import { ModalShell } from "@/components/dashboard/ModalShell";
@@ -187,10 +188,10 @@ export function VolunteerManagementPanel({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[56rem] text-left font-sans text-sm">
+          <TableScroll label="Scroll horizontally to see every volunteer column">
+            <table className="w-full table-fixed text-left font-sans text-sm">
               <thead>
-                <tr className="border-b border-mahogany/[0.05] bg-cream/40">
+                <tr className="bg-cream/40">
                   {["Name", "Area", "Role", "Status", "Submitted", "Actions"].map((h) => (
                     <th
                       key={h}
@@ -202,7 +203,7 @@ export function VolunteerManagementPanel({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-mahogany/[0.04]">
+              <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id} className="transition-colors hover:bg-cream/30">
                     <td className="max-w-[12rem] px-5 py-4 font-medium text-mahogany sm:px-6">
@@ -251,7 +252,7 @@ export function VolunteerManagementPanel({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
 

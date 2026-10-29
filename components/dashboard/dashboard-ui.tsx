@@ -194,9 +194,12 @@ export function StatCard({
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-mahogany/[0.06] bg-white p-5 shadow-[0_1px_2px_rgba(36,21,15,0.04),0_8px_24px_-8px_rgba(36,21,15,0.08)] transition-all hover:border-gold/15 hover:shadow-[0_12px_32px_-12px_rgba(201,162,39,0.15)]">
       <div className="pointer-events-none absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gold/[0.04] transition-transform group-hover:scale-110" />
-      <div className="relative flex items-start justify-between gap-2">
-        <p className="min-w-0 truncate font-sans text-[0.65rem] font-bold uppercase tracking-[0.16em] text-mahogany/45">
-          {label}
+      <p className="relative break-words font-sans text-[0.65rem] font-bold uppercase leading-snug tracking-[0.08em] text-mahogany/45">
+        {label}
+      </p>
+      <div className="relative mt-3 flex items-end justify-between gap-2">
+        <p className="min-w-0 break-words font-display text-[1.75rem] font-semibold leading-tight text-mahogany sm:text-[2rem]">
+          {value}
         </p>
         {icon ? (
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cream/80 text-sm text-gold-deep ring-1 ring-mahogany/[0.04]">
@@ -204,11 +207,8 @@ export function StatCard({
           </span>
         ) : null}
       </div>
-      <p className="relative mt-3 truncate font-display text-[1.75rem] font-semibold leading-none text-mahogany sm:text-[2rem]">
-        {value}
-      </p>
       {change ? (
-        <p className="relative mt-2 truncate font-sans text-xs text-mahogany/50">
+        <p className="relative mt-2 break-words font-sans text-xs text-mahogany/50">
           {trend === "up" ? <span className="mr-1 text-emerald-600">↑</span> : null}
           {change}
         </p>
@@ -276,6 +276,28 @@ export function ProgressBar({ value, label }: { value: number; label?: string })
   );
 }
 
+/* ─── Horizontal table scroller ─── */
+export function TableScroll({
+  children,
+  label = "Scroll horizontally to see every column",
+  className = "",
+}: {
+  children: ReactNode;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`dashboard-table-scroll ${className}`.trim()}
+      tabIndex={0}
+      role="region"
+      aria-label={label}
+    >
+      {children}
+    </div>
+  );
+}
+
 /* ─── Enterprise Data Table ─── */
 const BADGE_COLUMNS = new Set(["status", "priority", "tier"]);
 
@@ -308,10 +330,11 @@ export function DataTable({
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[40rem] text-left font-sans text-sm">
+          <div className="hidden md:block">
+            <TableScroll>
+            <table className="w-full table-fixed text-left font-sans text-sm">
               <thead>
-                <tr className="border-b border-mahogany/[0.05] bg-cream/40">
+                <tr className="bg-cream/40">
                   {keys.map((k) => (
                     <th
                       key={k}
@@ -323,7 +346,7 @@ export function DataTable({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-mahogany/[0.04]">
+              <tbody>
                 {rows.map((row, i) => (
                   <tr key={i} className="transition-colors hover:bg-cream/30">
                     {keys.map((k) => (
@@ -337,7 +360,9 @@ export function DataTable({
                             {row[k] ?? "—"}
                           </span>
                         ) : (
-                          <span className="block truncate text-mahogany/80">{row[k] ?? "—"}</span>
+                          <span className="block truncate text-mahogany/80" title={row[k] || undefined}>
+                            {row[k] ?? "—"}
+                          </span>
                         )}
                       </td>
                     ))}
@@ -345,6 +370,7 @@ export function DataTable({
                 ))}
               </tbody>
             </table>
+            </TableScroll>
           </div>
 
           {/* Mobile cards */}
