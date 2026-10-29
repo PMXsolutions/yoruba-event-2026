@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   resendRsvpConfirmationEmailAction,
   sendRsvpConfirmationSmsAction,
@@ -14,6 +15,7 @@ import {
   SectionHeader,
   StatGrid,
   StatusBadge,
+  TableScroll,
   TagBadge,
   ToolbarButton,
 } from "@/components/dashboard/dashboard-ui";
@@ -71,6 +73,26 @@ function MenuItem({
   );
 }
 
+type MenuPosition = { top: number; left: number; maxHeight: number };
+
+function placeActionMenu(button: HTMLButtonElement): MenuPosition {
+  const rect = button.getBoundingClientRect();
+  const menuWidth = 208;
+  const gutter = 8;
+  const spaceBelow = window.innerHeight - rect.bottom - gutter;
+  const spaceAbove = rect.top - gutter;
+  const openUp = spaceBelow < 220 && spaceAbove > spaceBelow;
+  const maxHeight = Math.max(120, Math.min(384, openUp ? spaceAbove : spaceBelow));
+  const top = openUp
+    ? Math.max(gutter, rect.top - maxHeight - 4)
+    : rect.bottom + 4;
+  const left = Math.max(
+    gutter,
+    Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - gutter),
+  );
+  return { top, left, maxHeight };
+}
+
 function ActionMenu({
   record,
   disabled,
@@ -91,15 +113,49 @@ function ActionMenu({
   onSendSms: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const close = () => setOpen(false);
+  const [position, setPosition] = useState<MenuPosition | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const close = () => {
+    setOpen(false);
+    setPosition(null);
+  };
   const canSms = record.smsConsent && Boolean(record.phone);
 
+  useEffect(() => {
+    if (!open) return;
+    const button = buttonRef.current;
+    if (!button) return;
+    const update = () => setPosition(placeActionMenu(button));
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setPosition(null);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div>
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (open) {
+            close();
+            return;
+          }
+          if (buttonRef.current) setPosition(placeActionMenu(buttonRef.current));
+          setOpen(true);
+        }}
         className="inline-flex items-center gap-1.5 rounded-lg border border-mahogany/10 bg-white px-3 py-1.5 font-sans text-xs font-semibold text-mahogany/75 transition-colors hover:border-gold/25 hover:bg-cream/60 disabled:cursor-not-allowed disabled:opacity-45"
         aria-label={`Actions for ${record.fullName}`}
         aria-expanded={open}
@@ -107,12 +163,14 @@ function ActionMenu({
       >
         Actions <span aria-hidden className="text-mahogany/40">▾</span>
       </button>
-      {open ? (
+      {open && position
+        ? createPortal(
         <>
-          <button type="button" className="fixed inset-0 z-10" aria-label="Close menu" onClick={close} />
+          <div className="fixed inset-0 z-[60]" aria-hidden onClick={close} />
           <div
             role="menu"
-            className="absolute right-0 z-20 mt-1 max-h-[24rem] w-52 overflow-y-auto rounded-xl border border-mahogany/[0.08] bg-white py-1 shadow-lg"
+            style={{ top: position.top, left: position.left, maxHeight: position.maxHeight }}
+            className="fixed z-[70] w-52 overflow-y-auto rounded-xl border border-mahogany/[0.08] bg-white py-1 shadow-lg"
           >
             <MenuItem label="View Details" onClick={() => { onView(record); close(); }} />
             <MenuItem label="Edit RSVP" disabled muted />
@@ -152,8 +210,10 @@ function ActionMenu({
               onClick={() => { onSendSms(record.id); close(); }}
             />
           </div>
-        </>
-      ) : null}
+        </>,
+        document.body,
+      )
+      : null}
     </div>
   );
 }
@@ -239,11 +299,11 @@ function RsvpDetailModal({
       labelledBy={headingId}
       onClose={onClose}
     >
-      <div className="border-b border-mahogany/[0.06] px-6 py-5">
+      <div className="shrink-0 border-b border-mahogany/[0.06] px-6 py-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 id={headingId} className="truncate font-display text-xl font-semibold text-mahogany">{record.fullName}</h3>
-            <p className="mt-1 truncate font-sans text-sm text-mahogany/55">{record.email}</p>
+            <h3 id={headingId} className="break-words font-display text-xl font-semibold text-mahogany">{record.fullName}</h3>
+            <p className="mt-1 break-all font-sans text-sm text-mahogany/55">{record.email}</p>
           </div>
           <button
             type="button"
@@ -262,7 +322,7 @@ function RsvpDetailModal({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         <dl className="space-y-4 font-sans text-sm">
           {[
             ["Reference", record.registrationReference ?? "—"],
@@ -564,16 +624,23 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
           />
         ) : (
           <>
-            <div className="hidden overflow-x-auto xl:block">
-              <table className="w-full min-w-[64rem] text-left font-sans text-sm">
+            <div className="hidden xl:block">
+              <TableScroll label="Scroll horizontally to see every registration column">
+              <table className="w-full table-fixed text-left font-sans text-sm">
                 <thead>
-                  <tr className="border-b border-mahogany/[0.05] bg-cream/40">
+                  <tr className="bg-cream/40">
                     {["Reference", "Name", "Email", "Guests", "Ticket", "Tags", "Submitted", "Status", "Committee Notes", "Actions"].map((h) => (
-                      <th key={h} scope="col" className="px-5 py-3.5 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-mahogany/45 sm:px-6">{h}</th>
+                      <th
+                        key={h}
+                        scope="col"
+                        className="px-5 py-3.5 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-mahogany/45 sm:px-6"
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-mahogany/[0.04]">
+                <tbody>
                   {filtered.map((r) => (
                     <tr key={r.id} className="transition-colors hover:bg-cream/30">
                       <td className="max-w-[8rem] px-5 py-4 font-mono text-xs text-mahogany/65 sm:px-6">
@@ -582,7 +649,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                         </span>
                       </td>
                       <td className="max-w-[10rem] px-5 py-4 font-medium text-mahogany sm:px-6">
-                        <button type="button" onClick={() => setDetailTarget(r)} className="block max-w-full truncate text-left hover:text-gold-deep">
+                        <button type="button" onClick={() => setDetailTarget(r)} title={r.fullName} className="block max-w-full truncate text-left hover:text-gold-deep">
                           {r.fullName}
                         </button>
                       </td>
@@ -614,6 +681,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
                   ))}
                 </tbody>
               </table>
+              </TableScroll>
             </div>
 
             <div className="space-y-3 p-4 xl:hidden">

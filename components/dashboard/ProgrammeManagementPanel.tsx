@@ -10,6 +10,7 @@ import {
   PageToolbar,
   SectionHeader,
   StatusBadge,
+  TableScroll,
   ToolbarButton,
 } from "@/components/dashboard/dashboard-ui";
 import { ModalShell } from "@/components/dashboard/ModalShell";
@@ -175,10 +176,10 @@ export function ProgrammeManagementPanel({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-left font-sans text-sm">
+          <TableScroll label="Scroll horizontally to see every programme column">
+            <table className="w-full table-fixed text-left font-sans text-sm">
               <thead>
-                <tr className="border-b border-mahogany/[0.05] bg-cream/40">
+                <tr className="bg-cream/40">
                   {["Order", "Segment", "Time", "Location", "Status", "Actions"].map((h) => (
                     <th
                       key={h}
@@ -190,7 +191,7 @@ export function ProgrammeManagementPanel({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-mahogany/[0.04]">
+              <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id} className="transition-colors hover:bg-cream/30">
                     <td className="px-5 py-4 text-mahogany/65 sm:px-6">{r.displayOrder}</td>
@@ -217,7 +218,7 @@ export function ProgrammeManagementPanel({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
 

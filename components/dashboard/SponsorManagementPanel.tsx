@@ -11,6 +11,7 @@ import {
   SectionHeader,
   StatGrid,
   StatusBadge,
+  TableScroll,
   ToolbarButton,
 } from "@/components/dashboard/dashboard-ui";
 import { ModalShell } from "@/components/dashboard/ModalShell";
@@ -178,10 +179,10 @@ export function SponsorManagementPanel({
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[56rem] text-left font-sans text-sm">
+          <TableScroll label="Scroll horizontally to see every sponsor column">
+            <table className="w-full table-fixed text-left font-sans text-sm">
               <thead>
-                <tr className="border-b border-mahogany/[0.05] bg-cream/40">
+                <tr className="bg-cream/40">
                   {["Company", "Contact", "Package", "Status", "Submitted", "Notes", "Actions"].map(
                     (h) => (
                       <th
@@ -195,7 +196,7 @@ export function SponsorManagementPanel({
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-mahogany/[0.04]">
+              <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id} className="transition-colors hover:bg-cream/30">
                     <td className="max-w-[12rem] px-5 py-4 font-medium text-mahogany sm:px-6">
@@ -244,7 +245,7 @@ export function SponsorManagementPanel({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         )}
       </section>
 

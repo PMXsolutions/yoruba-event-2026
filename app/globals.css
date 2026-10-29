@@ -175,3 +175,43 @@ body {
     transparent
   );
 }
+
+/*
+ * Dashboard tables scroll sideways only. overflow-x: auto would otherwise
+ * compute overflow-y to auto and paint a vertical bar over the last column.
+ * The bottom padding is what that horizontal bar covers, so the last row stays
+ * fully visible.
+ */
+.dashboard-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: clip;
+  padding-bottom: 0.875rem;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--mahogany) 35%, transparent) transparent;
+}
+
+.dashboard-table-scroll:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.dashboard-table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.dashboard-table-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mahogany) 32%, transparent);
+}
+
+.dashboard-table-scroll table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dashboard-table-scroll th,
+.dashboard-table-scroll td {
+  border-bottom: 1px solid color-mix(in srgb, var(--mahogany) 6%, transparent);
+}

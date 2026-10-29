@@ -130,7 +130,7 @@ export function ModalShell({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative z-10 w-full max-w-lg rounded-2xl border border-mahogany/[0.08] bg-white p-6 shadow-xl outline-none ${className}`}
+        className={`relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-mahogany/[0.08] bg-white p-6 shadow-xl outline-none ${className}`}
       >
         {titleNode}
         {children}
