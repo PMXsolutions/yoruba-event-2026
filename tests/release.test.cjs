@@ -21,12 +21,12 @@ function load(file, mocks = {}, cache = new Map()) {
   new Function('require', 'module', 'exports', code)(localRequire, loaded, loaded.exports);
   return loaded.exports;
 }
-function dispatchHarness({ enabled = true, consent = true, ready = true, result = {ok:true,id:'provider-id'}, persistFailure = false, sendThrows = false } = {}) {
+function dispatchHarness({ enabled = true, consent = true, ready = true, result = {ok:true,id:'provider-id'}, persistFailure = false, sendThrows = false, missingColumn = false } = {}) {
   const writes = [], events = []; let sends = 0;
   const {dispatchRsvpNotifications} = load('platform/engines/notifications/dispatch.ts', {
     '@/platform/core/flags': {getFeatureFlags:()=>({emailConfirmationsEnabled:enabled,smsEnabled:false})},
     '@/lib/activity/log': {logActivity:async x=>events.push(x.action)},
-    '@/platform/engines/notifications/delivery': {updateRsvpEmailDelivery:async x=>{writes.push(x.status);if(persistFailure)throw Error('DB unavailable');}, updateRsvpSmsDelivery:async()=>{}},
+    '@/platform/engines/notifications/delivery': {updateRsvpEmailDelivery:async x=>{writes.push(x.status);if(missingColumn){const err=new Error('column email_status does not exist');err.name='DeliveryColumnMissingError';throw err;}if(persistFailure)throw Error('DB unavailable');}, isDeliveryColumnMissingError:(error)=>error instanceof Error && error.name==='DeliveryColumnMissingError', updateRsvpSmsDelivery:async()=>{}},
     '@/platform/engines/notifications/email/env-status': {getEmailEnvPresence:()=>({ready,transport:'smtp'})},
     '@/platform/engines/notifications/email/resend-client': {sendRsvpConfirmationEmail:async()=>{sends++;assert.equal(writes.at(-1),'pending');if(sendThrows)throw Error('provider exception');return result;}},
   });
@@ -38,6 +38,7 @@ for (const [name, opts, status] of [
   ['declined consent',{consent:false},'consent_declined'],['missing configuration',{ready:false},'not_configured'],
 ]) test(name, async()=>{const h=dispatchHarness(opts);const result=await h.run();assert.equal(result.emailStatus,status);assert.equal(h.writes.at(-1),status);assert.equal(h.sends,['sent','failed'].includes(status)?1:0);assert.ok(h.events.includes(`email.confirmation.${status}`));});
 test('tracking failure prevents untracked email',async()=>{const h=dispatchHarness({persistFailure:true});await assert.rejects(h.run());assert.equal(h.sends,0);});
+test('missing delivery columns still send the confirmation',async()=>{const h=dispatchHarness({missingColumn:true});const result=await h.run();assert.equal(result.emailSent,true);assert.equal(result.emailStatus,'sent');assert.equal(h.sends,1);});
 test('missing id fails explicitly',async()=>{const h=dispatchHarness();await assert.rejects(h.run(null));assert.equal(h.sends,0);});
 test('status write detects no matching row',async()=>{
  const {updateRsvpEmailDelivery}=load('platform/engines/notifications/delivery.ts',{'@/lib/supabase/admin':{createServiceRoleClient:()=>({from:()=>({update:()=>({eq:()=>({select:()=>({single:async()=>({data:null,error:null})})})})})})}});
@@ -66,9 +67,16 @@ test('inactive profile and missing permission fail closed',async()=>{
  const rbac=load('lib/auth/rbac.ts',{'@/lib/supabase/server':{createServerSupabaseClient:async()=>({auth:{getUser:async()=>({data:{user:{id:'test',email:'test@example.invalid'}}})}})},'@/lib/supabase/admin':{createServiceRoleClient:()=>({from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{is_active:false},error:null})})})})})}});
  assert.equal(await rbac.getAuthUser(),null);await assert.rejects(rbac.assertPermission('rsvp.read'));
 });
-test('missing migration rejects registration without legacy insert retry',async()=>{
+test('missing communication columns save the registration without those fields',async()=>{
+ const rows=[];
+ const client={from:()=>({select:()=>({eq(){return this},gte(){return this},limit(){return this},maybeSingle:async()=>({data:null,error:null})}),insert:async row=>{rows.push(row);if('email_consent' in row||'email_status' in row)return {error:{message:"Could not find the 'email_consent' column of 'rsvps' in the schema cache",code:'PGRST204'}};return {error:null};}})};
+ const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{'@/lib/supabase/admin':{createServiceRoleClient:()=>client},'@/lib/supabase/env-status':{getSupabaseEnvPresence:()=>({serviceRoleReady:true})},'@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})}});
+ const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General',emailConsent:true},{slug:'test',ticketTypes:['General']});
+ assert.equal(result.ok,true);assert.equal(rows.length,2);assert.equal('email_consent' in rows[1],false);assert.equal('email_status' in rows[1],false);assert.equal(result.record.email_consent,true);
+});
+test('missing rsvps table does not retry as a legacy insert',async()=>{
  let inserts=0;
- const client={from:()=>({select:()=>({eq(){return this},gte(){return this},limit(){return this},maybeSingle:async()=>({data:null,error:null})}),insert:async()=>{inserts++;return {error:{message:'email_status missing from schema cache',code:'PGRST204'}};}})};
+ const client={from:()=>({select:()=>({eq(){return this},gte(){return this},limit(){return this},maybeSingle:async()=>({data:null,error:null})}),insert:async()=>{inserts++;return {error:{message:'relation "public.rsvps" does not exist',code:'42P01'}};}})};
  const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{'@/lib/supabase/admin':{createServiceRoleClient:()=>client},'@/lib/supabase/env-status':{getSupabaseEnvPresence:()=>({serviceRoleReady:true})},'@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})}});
  const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General'},{slug:'test',ticketTypes:['General']});assert.equal(result.ok,false);assert.equal(inserts,1);
 });
@@ -109,8 +117,10 @@ test('unreachable database is not reported as a generic save failure', () => {
   const fetchFailed = mapSupabaseRsvpError('TypeError: fetch failed\n\nCaused by: Error: getaddrinfo ENOTFOUND example.supabase.co (ENOTFOUND)');
   assert.equal(fetchFailed.errorCode, 'NETWORK');
   assert.match(fetchFailed.userMessage, /could not reach our servers/i);
-  const missingColumn = mapSupabaseRsvpError('email_status missing from schema cache', 'PGRST204');
+  const missingColumn = mapSupabaseRsvpError("Could not find the 'email_consent' column of 'rsvps' in the schema cache", 'PGRST204');
   assert.equal(missingColumn.errorCode, 'TABLE_MISSING');
+  const constraint = mapSupabaseRsvpError('new row for relation "rsvps" violates check constraint "rsvps_email_status_check"', '23514');
+  assert.equal(constraint.errorCode, 'CONSTRAINT');
 });
 test('quoted Supabase URL and key are usable', () => {
   const { cleanEnvValue, normalizeSupabaseProjectUrl } = load('lib/supabase/normalize-url.ts');

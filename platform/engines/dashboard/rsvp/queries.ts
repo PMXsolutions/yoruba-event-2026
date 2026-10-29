@@ -13,6 +13,8 @@ import {
   normalizeTags,
 } from "@/platform/engines/dashboard/rsvp/types";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
+import { isMissingRsvpCommsColumn } from "@/platform/engines/rsvp/columns";
+import { supabaseErrorText } from "@/lib/supabase/connectivity";
 
 import {
   isEmailDeliveryStatus,
@@ -48,6 +50,9 @@ type RsvpRow = {
 const RSVP_SELECT =
   "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference, email_consent, sms_consent, marketing_consent, email_status, email_sent_at, sms_status, sms_sent_at";
 
+const RSVP_SELECT_WITHOUT_COMMS =
+  "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference";
+
 function mapRow(row: RsvpRow): DashboardRsvpRecord {
   const status = row.status && isRsvpStatus(row.status) ? row.status : "new";
   const emailStatus: EmailDeliveryStatus =
@@ -81,8 +86,15 @@ function mapRow(row: RsvpRow): DashboardRsvpRecord {
 }
 
 function classifyQueryError(message: string, code?: string): FetchDashboardRsvpsResult {
+  if (/column\s+\S+\s+does not exist|Could not find the '.+' column/i.test(message)) {
+    return {
+      ok: false,
+      reason: "columns_missing",
+      message: "RSVP CRM columns are missing. Apply the latest migrations.",
+    };
+  }
   const tableMissing =
-    code === "42P01" || /relation|does not exist|schema cache|PGRST205/i.test(message);
+    code === "42P01" || /relation\s+["']?\w+["']?\s+does not exist|schema cache|PGRST205/i.test(message);
   if (tableMissing) {
     return {
       ok: false,
@@ -133,8 +145,18 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
       .eq("event_slug", event.slug)
       .order("created_at", { ascending: false });
 
-    const rows = primary.data;
-    if (primary.error) return classifyQueryError(primary.error.message, primary.error.code);
+    let rows = primary.data as RsvpRow[] | null;
+    let error = primary.error;
+    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
+      const legacy = await supabase
+        .from("rsvps")
+        .select(RSVP_SELECT_WITHOUT_COMMS)
+        .eq("event_slug", event.slug)
+        .order("created_at", { ascending: false });
+      rows = legacy.data as RsvpRow[] | null;
+      error = legacy.error;
+    }
+    if (error) return classifyQueryError(error.message, error.code);
 
     return {
       ok: true,
@@ -166,8 +188,17 @@ export async function fetchDashboardRsvpById(
       .eq("id", id)
       .maybeSingle();
 
-    const row = primary.data;
-    const error = primary.error;
+    let row = primary.data as RsvpRow | null;
+    let error = primary.error;
+    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
+      const legacy = await supabase
+        .from("rsvps")
+        .select(RSVP_SELECT_WITHOUT_COMMS)
+        .eq("id", id)
+        .maybeSingle();
+      row = legacy.data as RsvpRow | null;
+      error = legacy.error;
+    }
 
     if (error || !row) {
       return { ok: false, error: "Record not found." };

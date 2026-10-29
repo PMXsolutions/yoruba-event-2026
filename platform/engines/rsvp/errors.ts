@@ -21,7 +21,11 @@ export function mapSupabaseRsvpError(message: string, code?: string): {
       errorCode: "NETWORK",
     };
   }
-  if (code === "42P01" || /relation|does not exist|schema cache|PGRST205/i.test(message)) {
+  if (
+    /column\s+\S+\s+does not exist|Could not find the '.+' column/i.test(message) ||
+    code === "42P01" ||
+    /relation\s+["']?\w+["']?\s+does not exist|schema cache|PGRST205/i.test(message)
+  ) {
     return {
       userMessage:
         "Registration is temporarily unavailable while we finalise setup. Please try again shortly or email the organisers.",

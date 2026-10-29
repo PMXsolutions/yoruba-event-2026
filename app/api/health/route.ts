@@ -4,6 +4,7 @@ import {
   isSupabaseConnectivityFailure,
   supabaseErrorText,
 } from "@/lib/supabase/connectivity";
+import { isMissingRsvpCommsColumn } from "@/platform/engines/rsvp/columns";
 import {
   getSupabaseEnvPresence,
   missingServiceRoleEnvVarNames,
@@ -25,6 +26,8 @@ type HealthOk = {
   emailConfirmationsEnabled: boolean;
   emailFromDomain: string | null;
   smtpHost: string | null;
+  /** False when registrations can be saved but consent/delivery columns are not migrated yet. */
+  rsvpCommsColumns?: boolean;
 };
 
 type HealthError = {
@@ -100,6 +103,23 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
   try {
     const supabase = createServiceRoleClient();
     const { error } = await supabase.from("rsvps").select("id,event_slug,registration_reference,email_consent,sms_consent,marketing_consent,email_status,email_sent_at,email_provider_id,sms_status,sms_sent_at,sms_provider_id").limit(0);
+    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
+      const base = await supabase.from("rsvps").select("id,event_slug,registration_reference").limit(0);
+      if (!base.error) {
+        console.warn(
+          "[api/health] RSVP communication columns are missing. Registrations save without stored consent until that migration is applied.",
+        );
+        return NextResponse.json({
+          status: "ok",
+          supabase: true,
+          env: true,
+          authConfigured: presence.authReady,
+          event: eventSlug,
+          rsvpCommsColumns: false,
+          ...emailDiag,
+        });
+      }
+    }
     if (error) {
       const diagnostic = supabaseErrorText(error);
       const unreachable = isSupabaseConnectivityFailure(diagnostic);
@@ -167,6 +187,7 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
     env: true,
     authConfigured: presence.authReady,
     event: eventSlug,
+    rsvpCommsColumns: true,
     ...emailDiag,
   });
 }
