@@ -1,5 +1,6 @@
 import "server-only";
 
+import { promises as dns } from "node:dns";
 import nodemailer from "nodemailer";
 import {
   emailConfigLogSummary,
@@ -20,6 +21,27 @@ export type SmtpSendResult =
   | { ok: false; reason: "NOT_CONFIGURED" | "SEND_FAILED"; message: string };
 
 /**
+ * Shared hosts often publish a vanity SMTP name (mail.example.com) whose
+ * certificate belongs to the CNAME target (mail123.host.net). Verify TLS
+ * against that target instead of rejecting a valid certificate.
+ */
+export async function resolveSmtpTlsServername(host: string): Promise<string | undefined> {
+  let current = host.trim().replace(/\.$/, "");
+  for (let hop = 0; hop < 5; hop += 1) {
+    let next: string | undefined;
+    try {
+      const records = await dns.resolveCname(current);
+      next = records.find((record) => record.trim().length > 0)?.replace(/\.$/, "").trim();
+    } catch {
+      next = undefined;
+    }
+    if (!next || next.toLowerCase() === current.toLowerCase()) break;
+    current = next;
+  }
+  return current.toLowerCase() === host.trim().replace(/\.$/, "").toLowerCase() ? undefined : current;
+}
+
+/**
  * SMTP transport via nodemailer.
  * Never logs passwords. Never throws to callers.
  */
@@ -35,10 +57,12 @@ export async function sendViaSmtp(input: SmtpSendInput): Promise<SmtpSendResult>
   }
 
   const toDomain = input.to.includes("@") ? input.to.split("@").pop() : "unknown";
+  const servername = await resolveSmtpTlsServername(smtp.host);
   console.info(
     "[notification-engine] SMTP send attempt",
     emailConfigLogSummary(),
     `toDomain=${toDomain}`,
+    `tlsServername=${servername ?? smtp.host}`,
   );
 
   const transporter = nodemailer.createTransport({
@@ -56,6 +80,7 @@ export async function sendViaSmtp(input: SmtpSendInput): Promise<SmtpSendResult>
     },
     tls: {
       minVersion: "TLSv1.2",
+      ...(servername ? { servername } : {}),
     },
   });
 

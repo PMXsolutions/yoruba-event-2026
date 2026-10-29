@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
+  isSupabaseConnectivityFailure,
+  supabaseErrorText,
+} from "@/lib/supabase/connectivity";
+import {
   getSupabaseEnvPresence,
   missingServiceRoleEnvVarNames,
   missingSupabaseEnvVarNames,
@@ -97,9 +101,13 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
     const supabase = createServiceRoleClient();
     const { error } = await supabase.from("rsvps").select("id,event_slug,registration_reference,email_consent,sms_consent,marketing_consent,email_status,email_sent_at,email_provider_id,sms_status,sms_sent_at,sms_provider_id").limit(0);
     if (error) {
+      const diagnostic = supabaseErrorText(error);
+      const unreachable = isSupabaseConnectivityFailure(diagnostic);
       const tableMissing =
-        error.code === "42P01" || /relation|does not exist|schema cache/i.test(error.message);
-      if (tableMissing) {
+        error.code === "42P01" || /relation|does not exist|schema cache/i.test(diagnostic);
+      if (unreachable) {
+        console.error("[api/health] Supabase host unreachable:", error.message, error.code ?? "");
+      } else if (tableMissing) {
         console.error(
           "[api/health] public.rsvps appears missing or not exposed to PostgREST. Run migrations in Supabase.",
           error.message,
@@ -113,7 +121,11 @@ export async function GET(): Promise<NextResponse<HealthOk | HealthError>> {
           supabase: false,
           env: true,
           authConfigured: presence.authReady,
-          code: tableMissing ? "RSVPS_TABLE_MISSING" : "SUPABASE_QUERY_FAILED",
+          code: unreachable
+            ? "SUPABASE_CONNECTION_FAILED"
+            : tableMissing
+              ? "RSVPS_TABLE_MISSING"
+              : "SUPABASE_QUERY_FAILED",
           event: eventSlug,
           ...emailDiag,
         },

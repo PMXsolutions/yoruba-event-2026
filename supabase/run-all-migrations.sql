@@ -568,3 +568,17 @@ comment on column public.rsvps.sms_status is
 
 create index if not exists rsvps_email_status_idx on public.rsvps (email_status);
 create index if not exists rsvps_sms_status_idx on public.rsvps (sms_status);
+
+-- ============================================================
+-- 20260810120000_rsvp_delivery_status_labels.sql
+-- Must stay after the consent migration. The app inserts email_status
+-- 'pending' and later writes disabled / consent_declined. The previous
+-- check constraint rejects those values and the registration is not saved.
+-- ============================================================
+
+alter table public.rsvps drop constraint if exists rsvps_email_status_check;
+alter table public.rsvps add constraint rsvps_email_status_check
+  check (email_status in ('not_attempted', 'pending', 'sent', 'failed', 'disabled', 'consent_declined', 'not_configured', 'skipped'));
+alter table public.rsvps alter column email_status set default 'pending';
+comment on column public.rsvps.email_status is
+  'pending = outcome unconfirmed; sent = provider accepted, not proof of inbox delivery. Historical not_attempted/skipped retained.';

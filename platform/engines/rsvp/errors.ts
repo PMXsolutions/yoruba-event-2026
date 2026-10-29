@@ -1,3 +1,5 @@
+import { isSupabaseConnectivityFailure } from "@/lib/supabase/connectivity";
+
 /** Maps Supabase / Postgres errors to warm, user-facing RSVP messages. */
 
 export type RsvpErrorCode =
@@ -13,6 +15,12 @@ export function mapSupabaseRsvpError(message: string, code?: string): {
   userMessage: string;
   errorCode: RsvpErrorCode;
 } {
+  if (isSupabaseConnectivityFailure(message)) {
+    return {
+      userMessage: "We could not reach our servers. Check your connection and try again.",
+      errorCode: "NETWORK",
+    };
+  }
   if (code === "42P01" || /relation|does not exist|schema cache|PGRST205/i.test(message)) {
     return {
       userMessage:

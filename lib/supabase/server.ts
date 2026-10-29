@@ -2,15 +2,15 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { normalizeSupabaseProjectUrl } from "@/lib/supabase/normalize-url";
+import { cleanEnvValue, normalizeSupabaseProjectUrl } from "@/lib/supabase/normalize-url";
 
 /**
  * Cookie-backed Supabase client for Server Components, Server Actions, and Route Handlers.
  * Uses the anon key — RLS applies.
  */
 export async function createServerSupabaseClient() {
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const rawUrl = cleanEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = cleanEnvValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   if (!rawUrl || !anonKey) {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.");
   }

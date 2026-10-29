@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cleanEnvValue } from "@/lib/supabase/normalize-url";
+
 export type SupabaseEnvPresence = {
   hasPublicUrl: boolean;
   hasAnonKey: boolean;
@@ -13,7 +15,7 @@ export type SupabaseEnvPresence = {
 };
 
 function isNonEmpty(value: string | undefined): boolean {
-  return typeof value === "string" && value.trim().length > 0;
+  return cleanEnvValue(value).length > 0;
 }
 
 /**
