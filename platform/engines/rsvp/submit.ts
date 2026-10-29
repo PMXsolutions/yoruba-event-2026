@@ -11,6 +11,10 @@ import {
   type RsvpRecord,
 } from "@/platform/engines/rsvp/schema";
 import { isSupabaseConnectivityFailure, supabaseErrorText } from "@/lib/supabase/connectivity";
+import {
+  isMissingRsvpCommsColumn,
+  withoutRsvpCommsColumns,
+} from "@/platform/engines/rsvp/columns";
 import { mapConfigError, mapSupabaseRsvpError } from "@/platform/engines/rsvp/errors";
 import type { EventConfig } from "@/platform/core/types/event";
 import { getFeatureFlags } from "@/platform/core/flags";
@@ -124,12 +128,16 @@ export async function submitRsvpToDatabase(
       };
     }
 
-    // Persist identity and pending state atomically. An old schema must fail visibly,
-    // rather than accepting a registration whose consent/delivery cannot be tracked.
-    const { error } = await supabase.from("rsvps").insert({
-      ...record,
-      email_status: "pending",
-    });
+    // Prefer storing consent and pending delivery together. Databases created before
+    // the communication migration reject those columns; save the registration anyway.
+    const payload: Record<string, unknown> = { ...record, email_status: "pending" };
+    let { error } = await supabase.from("rsvps").insert(payload);
+    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
+      console.warn(
+        "[rsvp-engine] Communication columns are missing; saving registration without them.",
+      );
+      ({ error } = await supabase.from("rsvps").insert(withoutRsvpCommsColumns(payload)));
+    }
 
     if (error) {
       console.error("[rsvp-engine] Supabase insert error:", error.message, error.code ?? "");

@@ -1,10 +1,16 @@
 import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { supabaseErrorText } from "@/lib/supabase/connectivity";
+import { isMissingRsvpCommsColumn } from "@/platform/engines/rsvp/columns";
 import type {
   EmailDeliveryStatus,
   SmsDeliveryStatus,
 } from "@/platform/engines/notifications/types";
+
+export function isDeliveryColumnMissingError(error: unknown): boolean {
+  return error instanceof Error && error.name === "DeliveryColumnMissingError";
+}
 
 export async function updateRsvpEmailDelivery(params: {
   rsvpId: string;
@@ -21,6 +27,11 @@ export async function updateRsvpEmailDelivery(params: {
     console.error("[notification-engine] email_status persistence failed", {
       rsvpId: params.rsvpId, status: params.status, code: error?.code ?? "NO_ROW",
     });
+    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
+      const missing = new Error("Email delivery columns are not in this database");
+      missing.name = "DeliveryColumnMissingError";
+      throw missing;
+    }
     throw new Error("Email delivery status could not be persisted");
   }
 }
