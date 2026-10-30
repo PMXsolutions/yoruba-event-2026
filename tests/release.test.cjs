@@ -201,6 +201,43 @@ test('deploy env writes the SQL Server name with one backslash', () => {
     fs.rmSync(target, { force: true });
   }
 });
+test('the Windows package refuses pages whose JavaScript is missing', () => {
+  const { spawnSync } = require('node:child_process');
+  const os = require('node:os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yoruba-deploy-'));
+  const deploy = path.join(root, 'deploy');
+  const recycle = path.join(root, 'recycle');
+  const write = (relative, contents) => {
+    const full = path.join(deploy, relative);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, contents);
+  };
+  write('server.js', "require('next')\n");
+  write('preload.cjs', '');
+  write('start-node.cmd', '');
+  write('.env', 'MSSQL_SERVER="127.0.0.1\\SQLEXPRESS"\n');
+  write('web.config', '<configuration><system.webServer><httpPlatform /></system.webServer></configuration>\n');
+  write('.next/BUILD_ID', 'build');
+  write('.next/static/chunks/app.js', 'ok');
+  write('.next/static/css/app.css', 'ok');
+  write('.next/server/app/index.html', '<script src="/_next/static/chunks/app.js"></script><link href="/_next/static/css/app.css"/>');
+  try {
+    const ok = spawnSync(process.execPath, ['scripts/prepare-windows-deploy.mjs', deploy, recycle, 'run-1'], { encoding: 'utf8' });
+    assert.equal(ok.status, 0, ok.stderr);
+    assert.match(fs.readFileSync(path.join(recycle, 'web.config'), 'utf8'), /recycle run-1/);
+    write('.next/server/app/index.html', '<script src="/_next/static/chunks/missing.js"></script>');
+    const broken = spawnSync(process.execPath, ['scripts/prepare-windows-deploy.mjs', deploy, recycle, 'run-2'], { encoding: 'utf8' });
+    assert.equal(broken.status, 1);
+    assert.match(broken.stderr, /missing\.js/);
+    fs.mkdirSync(path.join(deploy, 'node_modules'));
+    write('.next/server/app/index.html', '<script src="/_next/static/chunks/app.js"></script>');
+    const withModules = spawnSync(process.execPath, ['scripts/prepare-windows-deploy.mjs', deploy, recycle, 'run-3'], { encoding: 'utf8' });
+    assert.equal(withModules.status, 1);
+    assert.match(withModules.stderr, /node_modules/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 test('vanity SMTP host verifies TLS against its CNAME target', async () => {
   const prev = { ...process.env };
   process.env.SMTP_HOST = 'mail.promaxcare.com.au';
