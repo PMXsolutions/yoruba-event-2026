@@ -30,11 +30,10 @@ jobs:
         run: npm ci
 
       # The platform is a Node server (committee login, RSVP, SQL Server).
-      # A static `out/` export cannot open the database, so this job builds
-      # the Next.js standalone server and uploads that folder over FTPS.
+      # A static export cannot open the database. This job builds the Next.js
+      # standalone server and uploads that folder over FTP.
       # SQL Server is reached only by the app after it is running on the
       # Windows server. This job does not open a database connection.
-      # Fonts live in app/fonts. The build does not call Google Fonts.
       - name: Build Next.js application
         run: npm run build
         env:
@@ -75,8 +74,9 @@ jobs:
           SMTP_HOST: mail.promaxcare.com.au
           SMTP_PORT: "587"
           SMTP_USER: support@promaxcare.com.au
+          DEPLOY_ID: ${{ github.run_id }}-${{ github.sha }}
         run: |
-          rm -rf deploy
+          rm -rf deploy deploy-recycle
           mkdir -p deploy/.next deploy/sql/mssql deploy/logs
           cp -a .next/standalone/. deploy/
           cp -a .next/static deploy/.next/static
@@ -84,16 +84,13 @@ jobs:
           cp sql/mssql/*.sql deploy/sql/mssql/
           cp hosting/iis/preload.cjs hosting/iis/start-node.cmd hosting/iis/web.config hosting/iis/grant-iis-access.ps1 deploy/
           node scripts/write-deploy-env.mjs deploy/.env
-          grep -F 'MSSQL_SERVER="127.0.0.1\SQLEXPRESS"' deploy/.env
-          if grep -F '127.0.0.1\\SQLEXPRESS' deploy/.env; then echo "ERROR: SQL Server name must use one backslash."; exit 1; fi
-          test -f deploy/server.js || { echo "ERROR: standalone server.js was not produced."; exit 1; }
+          # The standalone trace includes node_modules. The Windows site already
+          # has that folder from the first upload, so it is not sent again and
+          # the sync is not allowed to delete it.
           rm -rf deploy/node_modules
-          test -f deploy/preload.cjs || { echo "ERROR: IIS preload script is missing."; exit 1; }
-          test -f deploy/start-node.cmd || { echo "ERROR: IIS Node launcher is missing."; exit 1; }
-          test -f deploy/web.config || { echo "ERROR: IIS web.config is missing."; exit 1; }
-          test -f deploy/.env || { echo "ERROR: server environment file was not written."; exit 1; }
+          node scripts/prepare-windows-deploy.mjs deploy deploy-recycle "$DEPLOY_ID"
           echo "Build verification successful."
-          find deploy -maxdepth 2 -type f ! -name '.env' | head -50
+          find deploy deploy-recycle -maxdepth 2 -type f ! -name '.env' | head -50
 
       - name: Deploy application files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -107,16 +104,33 @@ jobs:
           local-dir: deploy/
           server-dir: /yorubadayapp/
           dangerous-clean-slate: false
-          # Do not upload or delete node_modules. The folder is maintained on the server.
+          # node_modules stays as it is on the server. web.config is uploaded
+          # by the next step, after these files, so IIS does not restart early.
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
-            **/.ftp-deploy-sync-state-modules.json
+            **/logs/**
+            **/web.config
+            **/.ftp-deploy-sync-state*.json
+
+      - name: Restart IIS with the new files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          local-dir: deploy-recycle/
+          server-dir: /yorubadayapp/
+          dangerous-clean-slate: false
+          state-name: .ftp-deploy-sync-state-recycle.json
+          exclude: |
+            **/.ftp-deploy-sync-state*.json
 
       - name: Deployment completed
         run: |
           echo "YorubaDay Platform deployment completed successfully."
-          echo "IIS serves /yorubadayapp with HttpPlatformHandler and Node.js on PATH."
+          echo "Application files were uploaded first. web.config was uploaded last so IIS restarts Node against the new pages."
+          echo "node_modules on the server was left in place."
           echo "The app applies sql/mssql/001_create_and_migrate.sql and creates the Super Admin on startup."
-          echo "node_modules is not part of this deploy."
