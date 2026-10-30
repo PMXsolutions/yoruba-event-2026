@@ -131,13 +131,62 @@ test('unreachable database is not reported as a generic save failure', () => {
   assert.equal(constraint.errorCode, 'CONSTRAINT');
 });
 test('quoted SQL Server connection string is usable', () => {
-  const { parseMssqlConnectionString } = load('lib/db/connection.ts');
+  const { parseMssqlConnectionString, getMssqlConnectionSettings, getDatabaseEnvPresence } = load('lib/db/connection.ts');
   const parsed = parseMssqlConnectionString('Server=VMI3197632\\SQLEXPRESS;Database=YorubaDayCanberra;User Id=yorubaday_admin;Password="secret";Encrypt=true;TrustServerCertificate=true;');
   assert.equal(parsed.server, 'VMI3197632');
   assert.equal(parsed.instanceName, 'SQLEXPRESS');
   assert.equal(parsed.database, 'YorubaDayCanberra');
   assert.equal(parsed.user, 'yorubaday_admin');
   assert.equal(parsed.password, '"secret"');
+  const doubled = parseMssqlConnectionString('Server=VMI3197632\\\\SQLEXPRESS;Database=YorubaDayCanberra;User Id=yorubaday_admin;Password=secret;Encrypt=true;TrustServerCertificate=true;');
+  assert.equal(doubled.server, 'VMI3197632');
+  assert.equal(doubled.instanceName, 'SQLEXPRESS');
+  const prev = { ...process.env };
+  try {
+    delete process.env.MSSQL_CONNECTION_STRING;
+    delete process.env.MSSQL_INSTANCE;
+    process.env.MSSQL_SERVER = 'VMI3197632\\SQLEXPRESS';
+    process.env.MSSQL_DATABASE = 'YorubaDayCanberra';
+    process.env.MSSQL_USER = 'yorubaday_admin';
+    process.env.MSSQL_PASSWORD = 'secret';
+    const settings = getMssqlConnectionSettings();
+    assert.equal(settings.server, 'VMI3197632');
+    assert.equal(settings.instanceName, 'SQLEXPRESS');
+    assert.equal(getDatabaseEnvPresence().server, 'VMI3197632\\SQLEXPRESS');
+  } finally {
+    process.env = prev;
+  }
+});
+test('deploy env writes the SQL Server name with one backslash', () => {
+  const { spawnSync } = require('node:child_process');
+  const os = require('node:os');
+  const target = path.join(os.tmpdir(), `yoruba-deploy-env-${process.pid}.env`);
+  const prev = { ...process.env };
+  delete process.env.MSSQL_CONNECTION_STRING;
+  delete process.env.MSSQL_SERVER;
+  delete process.env.MSSQL_INSTANCE;
+  process.env.MSSQL_PASSWORD = 'secret';
+  try {
+    const result = spawnSync(process.execPath, ['scripts/write-deploy-env.mjs', target], { encoding: 'utf8', env: process.env });
+    assert.equal(result.status, 0, result.stderr);
+    const text = fs.readFileSync(target, 'utf8');
+    const line = text.split(/\n/).find((entry) => entry.startsWith('MSSQL_SERVER='));
+    const value = line.slice('MSSQL_SERVER='.length).replace(/^"|"$/g, '');
+    assert.equal(value, 'VMI3197632\\SQLEXPRESS');
+    assert.equal(value.includes('\\\\'), false);
+    const doubled = spawnSync(process.execPath, ['scripts/write-deploy-env.mjs', target], {
+      encoding: 'utf8',
+      env: { ...process.env, MSSQL_CONNECTION_STRING: 'Server=VMI3197632\\\\SQLEXPRESS;Database=YorubaDayCanberra;User Id=yorubaday_admin;Password=secret;' },
+    });
+    assert.equal(doubled.status, 0, doubled.stderr);
+    const rewritten = fs.readFileSync(target, 'utf8');
+    const connection = rewritten.split(/\n/).find((entry) => entry.startsWith('MSSQL_CONNECTION_STRING='));
+    assert.match(connection, /Server=VMI3197632\\SQLEXPRESS;/);
+    assert.equal(connection.includes('VMI3197632\\\\'), false);
+  } finally {
+    process.env = prev;
+    fs.rmSync(target, { force: true });
+  }
 });
 test('vanity SMTP host verifies TLS against its CNAME target', async () => {
   const prev = { ...process.env };

@@ -57,6 +57,9 @@ jobs:
 
       - name: Assemble Windows server package
         env:
+          MSSQL_SERVER: 'VMI3197632\SQLEXPRESS'
+          MSSQL_DATABASE: YorubaDayCanberra
+          MSSQL_USER: yorubaday_admin
           MSSQL_PASSWORD: ${{ secrets.MSSQL_PASSWORD }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
@@ -76,6 +79,8 @@ jobs:
           cp sql/mssql/*.sql deploy/sql/mssql/
           cp hosting/iis/preload.cjs hosting/iis/web.config deploy/
           node scripts/write-deploy-env.mjs deploy/.env
+          grep -F 'MSSQL_SERVER="VMI3197632\SQLEXPRESS"' deploy/.env
+          if grep -F 'VMI3197632\\SQLEXPRESS' deploy/.env; then echo "ERROR: SQL Server name must use one backslash."; exit 1; fi
           test -f deploy/server.js || { echo "ERROR: standalone server.js was not produced."; exit 1; }
           test -f deploy/preload.cjs || { echo "ERROR: IIS preload script is missing."; exit 1; }
           test -f deploy/web.config || { echo "ERROR: IIS web.config is missing."; exit 1; }

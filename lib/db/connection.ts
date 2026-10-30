@@ -34,7 +34,40 @@ function flag(value: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
-/** Parse `Server=host\\INSTANCE;Database=...;User Id=...;Password=...`. */
+/**
+ * The named instance is `VMI3197632\SQLEXPRESS` — one backslash.
+ * A doubled separator is collapsed so the instance is still SQLEXPRESS.
+ */
+export function splitServerTarget(raw: string): { server: string; instanceName?: string; port?: number } {
+  let server = raw.trim().replace(/\\{2,}/g, "\\");
+  let instanceName: string | undefined;
+  let port: number | undefined;
+
+  const slash = server.indexOf("\\");
+  if (slash >= 0) {
+    const rest = server.slice(slash + 1);
+    server = server.slice(0, slash);
+    const instanceComma = rest.indexOf(",");
+    if (instanceComma >= 0) {
+      instanceName = rest.slice(0, instanceComma) || undefined;
+      const parsed = Number.parseInt(rest.slice(instanceComma + 1), 10);
+      if (Number.isFinite(parsed)) port = parsed;
+    } else {
+      instanceName = rest || undefined;
+    }
+  }
+
+  const comma = server.indexOf(",");
+  if (comma >= 0) {
+    const parsed = Number.parseInt(server.slice(comma + 1), 10);
+    server = server.slice(0, comma);
+    if (Number.isFinite(parsed)) port = parsed;
+  }
+
+  return { server, instanceName, port };
+}
+
+/** Parse `Server=VMI3197632\SQLEXPRESS;Database=...;User Id=...;Password=...`. */
 export function parseMssqlConnectionString(raw: string): MssqlConnectionSettings | null {
   const map = new Map<string, string>();
   for (const part of raw.split(";")) {
@@ -51,25 +84,11 @@ export function parseMssqlConnectionString(raw: string): MssqlConnectionSettings
   const password = map.get("password") || map.get("pwd") || "";
   if (!serverRaw || !database || !user || !password) return null;
 
-  let server = serverRaw;
-  let instanceName: string | undefined;
-  let port: number | undefined;
-  if (server.includes("\\")) {
-    const [host, instance] = server.split("\\");
-    server = host;
-    instanceName = instance || undefined;
-  }
-  if (server.includes(",")) {
-    const [host, portText] = server.split(",");
-    server = host;
-    const parsed = Number.parseInt(portText, 10);
-    if (Number.isFinite(parsed)) port = parsed;
-  }
-
+  const target = splitServerTarget(serverRaw);
   return {
-    server,
-    instanceName,
-    port,
+    server: target.server,
+    instanceName: target.instanceName,
+    port: target.port,
     database,
     user,
     password,
@@ -88,14 +107,14 @@ export function getMssqlConnectionSettings(): MssqlConnectionSettings | null {
   const password = clean(process.env.MSSQL_PASSWORD);
   if (!server || !database || !user || !password) return null;
 
-  const instanceName = clean(process.env.MSSQL_INSTANCE) || undefined;
+  const target = splitServerTarget(server);
   const portText = clean(process.env.MSSQL_PORT);
-  const port = portText ? Number.parseInt(portText, 10) : undefined;
+  const portFromEnv = portText ? Number.parseInt(portText, 10) : undefined;
 
   return {
-    server,
-    instanceName,
-    port: Number.isFinite(port) ? port : undefined,
+    server: target.server,
+    instanceName: target.instanceName || clean(process.env.MSSQL_INSTANCE) || undefined,
+    port: target.port ?? (Number.isFinite(portFromEnv) ? portFromEnv : undefined),
     database,
     user,
     password,
@@ -115,10 +134,15 @@ export type DatabaseEnvPresence = {
 export function getDatabaseEnvPresence(): DatabaseEnvPresence {
   const settings = getMssqlConnectionSettings();
   const sessionSecret = clean(process.env.SESSION_SECRET);
+  const server = settings
+    ? settings.instanceName
+      ? `${settings.server}\\${settings.instanceName}`
+      : settings.server
+    : null;
   return {
     ready: settings !== null,
     authReady: sessionSecret.length >= 32,
-    server: settings?.server ?? null,
+    server,
     database: settings?.database ?? null,
   };
 }

@@ -12,16 +12,46 @@ if (!target) {
 }
 
 function quote(value) {
-  return `"${String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+  // Quote only. A backslash must stay a single backslash so the server name
+  // written on disk is VMI3197632\SQLEXPRESS. Doubling it produced
+  // VMI3197632\\SQLEXPRESS and the driver skipped the SQLEXPRESS instance.
+  return `"${String(value).replaceAll('"', '\\"')}"`;
+}
+
+function collapseServerBackslashes(value) {
+  return String(value).replace(/\\{2,}/g, "\\");
+}
+
+function serverName() {
+  const configured = process.env.MSSQL_SERVER;
+  const instance = process.env.MSSQL_INSTANCE;
+  let server = configured ? collapseServerBackslashes(configured) : "VMI3197632\\SQLEXPRESS";
+  if (instance && !server.includes("\\")) server = `${server}\\${instance}`;
+  return server;
+}
+
+function normalizeConnectionString(raw) {
+  return String(raw).replace(
+    /((?:^|;)\s*(?:server|data source)\s*=\s*)([^;]*)/gi,
+    (_match, prefix, value) => `${prefix}${collapseServerBackslashes(value)}`,
+  );
 }
 
 const password = process.env.MSSQL_PASSWORD ?? "";
-const connection =
-  process.env.MSSQL_CONNECTION_STRING ||
-  `Server=VMI3197632\\SQLEXPRESS;Database=YorubaDayCanberra;User Id=yorubaday_admin;Password=${password};Encrypt=true;TrustServerCertificate=true;`;
-
 const lines = [
-  `MSSQL_CONNECTION_STRING=${quote(connection)}`,
+  `MSSQL_SERVER=${quote(serverName())}`,
+  `MSSQL_DATABASE=${quote(process.env.MSSQL_DATABASE || "YorubaDayCanberra")}`,
+  `MSSQL_USER=${quote(process.env.MSSQL_USER || "yorubaday_admin")}`,
+  `MSSQL_PASSWORD=${quote(password)}`,
+  `MSSQL_ENCRYPT=${quote(process.env.MSSQL_ENCRYPT || "true")}`,
+  `MSSQL_TRUST_SERVER_CERTIFICATE=${quote(process.env.MSSQL_TRUST_SERVER_CERTIFICATE || "true")}`,
+];
+
+if (process.env.MSSQL_CONNECTION_STRING) {
+  lines.unshift(`MSSQL_CONNECTION_STRING=${quote(normalizeConnectionString(process.env.MSSQL_CONNECTION_STRING))}`);
+}
+
+lines.push(
   `SESSION_SECRET=${quote(process.env.SESSION_SECRET ?? "")}`,
   `ADMIN_EMAIL=${quote(process.env.ADMIN_EMAIL || "admin@promaxevent.com")}`,
   `ADMIN_FULL_NAME=${quote(process.env.ADMIN_FULL_NAME || "Platform Administrator")}`,
@@ -38,7 +68,7 @@ const lines = [
   `DASHBOARD_AUTH_REQUIRED=${quote(process.env.DASHBOARD_AUTH_REQUIRED || "true")}`,
   `EVENT_SLUG=${quote(process.env.EVENT_SLUG || "yoruba-day-canberra-2026")}`,
   `NODE_ENV="production"`,
-];
+);
 
 fs.writeFileSync(target, `${lines.join("\n")}\n`, { mode: 0o600 });
 console.info("Wrote server environment to", target);
