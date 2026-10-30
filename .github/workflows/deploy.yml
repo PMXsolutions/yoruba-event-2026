@@ -32,6 +32,10 @@ jobs:
       # The platform is a Node server (committee login, RSVP, SQL Server).
       # A static `out/` export cannot open the database, so this job builds
       # the Next.js standalone server and uploads that folder over FTPS.
+      # SQL Server is reached only by the app after it is running on the
+      # Windows server. This job does not open a database connection.
+      # Webpack is required: Turbopack fails in GitHub Actions while
+      # compiling next/font/google ("queries have exactly one entry").
       - name: Build Next.js application
         run: npm run build
         env:
@@ -47,13 +51,15 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: |
-          test -n "$FTP_SERVER" || { echo "Missing FTP_SERVER secret"; exit 1; }
-          test -n "$FTP_USERNAME" || { echo "Missing FTP_USERNAME secret"; exit 1; }
-          test -n "$FTP_PASSWORD" || { echo "Missing FTP_PASSWORD secret"; exit 1; }
-          test -n "$MSSQL_PASSWORD" || { echo "Missing MSSQL_PASSWORD secret"; exit 1; }
-          test "${#SESSION_SECRET}" -ge 32 || { echo "SESSION_SECRET must be at least 32 characters"; exit 1; }
-          test "${#ADMIN_PASSWORD}" -ge 12 || { echo "ADMIN_PASSWORD must be at least 12 characters"; exit 1; }
-          test -n "$SMTP_PASSWORD" || { echo "Missing SMTP_PASSWORD secret"; exit 1; }
+          missing=0
+          test -n "$FTP_SERVER" || { echo "Missing FTP_SERVER secret"; missing=1; }
+          test -n "$FTP_USERNAME" || { echo "Missing FTP_USERNAME secret"; missing=1; }
+          test -n "$FTP_PASSWORD" || { echo "Missing FTP_PASSWORD secret"; missing=1; }
+          test -n "$MSSQL_PASSWORD" || { echo "Missing MSSQL_PASSWORD secret"; missing=1; }
+          test "${#SESSION_SECRET}" -ge 32 || { echo "SESSION_SECRET must be at least 32 characters"; missing=1; }
+          test "${#ADMIN_PASSWORD}" -ge 12 || { echo "ADMIN_PASSWORD must be at least 12 characters"; missing=1; }
+          test -n "$SMTP_PASSWORD" || { echo "Missing SMTP_PASSWORD secret"; missing=1; }
+          test "$missing" -eq 0
 
       - name: Assemble Windows server package
         env:
