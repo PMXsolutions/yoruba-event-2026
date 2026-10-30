@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { EventJsonLd } from "@/components/seo/EventJsonLd";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
-const heading = Cormorant_Garamond({
+// Files in app/fonts. next/font/google crashes the production build when
+// Google Fonts returns a URL with no file extension.
+const heading = localFont({
+  src: "./fonts/cormorant-garamond-latin.woff2",
   variable: "--font-heading",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: "300 700",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const body = Plus_Jakarta_Sans({
+const body = localFont({
+  src: "./fonts/plus-jakarta-sans-latin.woff2",
   variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "200 800",
   display: "swap",
 });
 
