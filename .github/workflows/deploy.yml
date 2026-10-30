@@ -83,7 +83,7 @@ jobs:
           cp -a .next/static deploy/.next/static
           if [ -d public ]; then cp -a public deploy/public; fi
           cp sql/mssql/*.sql deploy/sql/mssql/
-          cp hosting/iis/preload.cjs hosting/iis/start-node.cmd hosting/iis/web.config deploy/
+          cp hosting/iis/preload.cjs hosting/iis/start-node.cmd hosting/iis/web.config hosting/iis/grant-iis-access.ps1 deploy/
           node scripts/write-deploy-env.mjs deploy/.env
           grep -F 'MSSQL_SERVER="VMI3197632\SQLEXPRESS"' deploy/.env
           if grep -F 'VMI3197632\\SQLEXPRESS' deploy/.env; then echo "ERROR: SQL Server name must use one backslash."; exit 1; fi
