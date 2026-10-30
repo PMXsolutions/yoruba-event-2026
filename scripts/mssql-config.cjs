@@ -94,9 +94,16 @@ function getSettings() {
   };
 }
 
+const LOCAL_SQL_HOSTS = new Set(["vmi3197632", "localhost", "127.0.0.1", ".", "(local)"]);
+
+function dialHost(server, instanceName) {
+  if (instanceName && LOCAL_SQL_HOSTS.has(String(server).trim().toLowerCase())) return "127.0.0.1";
+  return server;
+}
+
 function toDriverConfig(settings) {
   return {
-    server: settings.server,
+    server: dialHost(settings.server, settings.instanceName),
     port: settings.instanceName ? undefined : settings.port,
     database: settings.database,
     user: settings.user,

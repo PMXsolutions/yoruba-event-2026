@@ -18,7 +18,7 @@ if (fs.existsSync(envPath)) {
       (value.startsWith("'") && value.endsWith("'"))
     ) {
       value = value.slice(1, -1).replaceAll('\\"', '"').replaceAll("\\\\", "\\");
-      // One backslash is the named instance separator (VMI3197632\SQLEXPRESS).
+      // One backslash is the named instance separator (127.0.0.1\SQLEXPRESS).
       // A pair is collapsed so an older doubled value still selects SQLEXPRESS.
     }
     if (process.env[key] === undefined) process.env[key] = value;
