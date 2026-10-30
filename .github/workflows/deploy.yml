@@ -88,29 +88,13 @@ jobs:
           grep -F 'MSSQL_SERVER="VMI3197632\SQLEXPRESS"' deploy/.env
           if grep -F 'VMI3197632\\SQLEXPRESS' deploy/.env; then echo "ERROR: SQL Server name must use one backslash."; exit 1; fi
           test -f deploy/server.js || { echo "ERROR: standalone server.js was not produced."; exit 1; }
-          test -d deploy/node_modules || { echo "ERROR: standalone node_modules was not produced."; exit 1; }
+          rm -rf deploy/node_modules
           test -f deploy/preload.cjs || { echo "ERROR: IIS preload script is missing."; exit 1; }
           test -f deploy/start-node.cmd || { echo "ERROR: IIS Node launcher is missing."; exit 1; }
           test -f deploy/web.config || { echo "ERROR: IIS web.config is missing."; exit 1; }
           test -f deploy/.env || { echo "ERROR: server environment file was not written."; exit 1; }
           echo "Build verification successful."
           find deploy -maxdepth 2 -type f ! -name '.env' | head -50
-
-      - name: Check whether node_modules changed
-        id: modules
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: python3 scripts/node-modules-sync.py decide deploy/node_modules
-
-      - name: Remember the node_modules already on the server
-        if: steps.modules.outputs.baseline == 'true'
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: python3 scripts/node-modules-sync.py record
 
       - name: Deploy application files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -124,41 +108,16 @@ jobs:
           local-dir: deploy/
           server-dir: /yorubadayapp/
           dangerous-clean-slate: false
-          # node_modules stays on the server, but is excluded from this sync
-          # so an ordinary commit does not upload or delete it.
+          # Do not upload or delete node_modules. The folder is maintained on the server.
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
-
-      - name: Deploy changed node_modules
-        if: steps.modules.outputs.upload == 'true'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
-          local-dir: deploy/node_modules/
-          server-dir: /yorubadayapp/node_modules/
-          state-name: .ftp-deploy-sync-state-modules.json
-          dangerous-clean-slate: false
-          timeout: 120000
-          exclude: |
-            **/.git*
-            **/.git*/**
-
-      - name: Remember the node_modules that were just published
-        if: steps.modules.outputs.upload == 'true'
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: python3 scripts/node-modules-sync.py record
+            **/.ftp-deploy-sync-state-modules.json
 
       - name: Deployment completed
         run: |
           echo "YorubaDay Platform deployment completed successfully."
           echo "IIS serves /yorubadayapp with HttpPlatformHandler and Node.js on PATH."
           echo "The app applies sql/mssql/001_create_and_migrate.sql and creates the Super Admin on startup."
-          echo "node_modules is uploaded only when that folder's contents change."
+          echo "node_modules is not part of this deploy."
