@@ -18,6 +18,32 @@ function flag(value, fallback) {
   return fallback;
 }
 
+function splitServerTarget(raw) {
+  let server = String(raw).trim().replace(/\\{2,}/g, "\\");
+  let instanceName;
+  let port;
+  const slash = server.indexOf("\\");
+  if (slash >= 0) {
+    const rest = server.slice(slash + 1);
+    server = server.slice(0, slash);
+    const instanceComma = rest.indexOf(",");
+    if (instanceComma >= 0) {
+      instanceName = rest.slice(0, instanceComma) || undefined;
+      const parsed = Number.parseInt(rest.slice(instanceComma + 1), 10);
+      if (Number.isFinite(parsed)) port = parsed;
+    } else {
+      instanceName = rest || undefined;
+    }
+  }
+  const comma = server.indexOf(",");
+  if (comma >= 0) {
+    const parsed = Number.parseInt(server.slice(comma + 1), 10);
+    server = server.slice(0, comma);
+    if (Number.isFinite(parsed)) port = parsed;
+  }
+  return { server, instanceName, port };
+}
+
 function parseConnectionString(raw) {
   const map = new Map();
   for (const part of raw.split(";")) {
@@ -32,24 +58,11 @@ function parseConnectionString(raw) {
   const user = map.get("user id") || map.get("uid") || map.get("user") || "";
   const password = map.get("password") || map.get("pwd") || "";
   if (!serverRaw || !database || !user || !password) return null;
-  let server = serverRaw;
-  let instanceName;
-  let port;
-  if (server.includes("\\")) {
-    const [host, instance] = server.split("\\");
-    server = host;
-    instanceName = instance || undefined;
-  }
-  if (server.includes(",")) {
-    const [host, portText] = server.split(",");
-    server = host;
-    const parsed = Number.parseInt(portText, 10);
-    if (Number.isFinite(parsed)) port = parsed;
-  }
+  const target = splitServerTarget(serverRaw);
   return {
-    server,
-    instanceName,
-    port,
+    server: target.server,
+    instanceName: target.instanceName,
+    port: target.port,
     database,
     user,
     password,
@@ -66,12 +79,13 @@ function getSettings() {
   const user = clean(process.env.MSSQL_USER);
   const password = clean(process.env.MSSQL_PASSWORD);
   if (!server || !database || !user || !password) return null;
+  const target = splitServerTarget(server);
   const portText = clean(process.env.MSSQL_PORT);
-  const port = portText ? Number.parseInt(portText, 10) : undefined;
+  const portFromEnv = portText ? Number.parseInt(portText, 10) : undefined;
   return {
-    server,
-    instanceName: clean(process.env.MSSQL_INSTANCE) || undefined,
-    port: Number.isFinite(port) ? port : undefined,
+    server: target.server,
+    instanceName: target.instanceName || clean(process.env.MSSQL_INSTANCE) || undefined,
+    port: target.port ?? (Number.isFinite(portFromEnv) ? portFromEnv : undefined),
     database,
     user,
     password,

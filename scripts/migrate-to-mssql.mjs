@@ -186,7 +186,8 @@ async function main() {
       }
     }
     await ensureAdmin(pool);
-    console.info("SQL Server migration finished for database", settings.database, "on", settings.server);
+    const target = settings.instanceName ? `${settings.server}\\${settings.instanceName}` : settings.server;
+    console.info("SQL Server migration finished for database", settings.database, "on", target);
   } finally {
     await pool.close();
   }
