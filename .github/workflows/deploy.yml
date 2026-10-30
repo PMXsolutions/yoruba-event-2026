@@ -34,8 +34,7 @@ jobs:
       # the Next.js standalone server and uploads that folder over FTPS.
       # SQL Server is reached only by the app after it is running on the
       # Windows server. This job does not open a database connection.
-      # Webpack is required: Turbopack fails in GitHub Actions while
-      # compiling next/font/google ("queries have exactly one entry").
+      # Fonts live in app/fonts. The build does not call Google Fonts.
       - name: Build Next.js application
         run: npm run build
         env:
