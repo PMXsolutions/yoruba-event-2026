@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "preview": "next build && next start",
-    "build": "next build",
+    "preview": "next build --webpack && next start",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "provision-admin": "node --env-file=.env.local scripts/provision-admin.mjs",
