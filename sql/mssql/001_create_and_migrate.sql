@@ -1,6 +1,6 @@
 -- Promax Event Platform — SQL Server schema and seed
 -- Database: YorubaDayCanberra
--- Server:   VMI3197632\SQLEXPRESS
+-- Server:   VMI3197632\SQLEXPRESS in SSMS, 127.0.0.1\SQLEXPRESS from the Node app
 --
 -- Run in SSMS while connected to YorubaDayCanberra, or let the app apply it
 -- on startup (instrumentation.ts). The script is idempotent.

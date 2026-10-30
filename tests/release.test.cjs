@@ -130,6 +130,19 @@ test('unreachable database is not reported as a generic save failure', () => {
   const constraint = mapSupabaseRsvpError('new row for relation "rsvps" violates check constraint "rsvps_email_status_check"', '23514');
   assert.equal(constraint.errorCode, 'CONSTRAINT');
 });
+test('the site dials the local SQL Express instance', () => {
+  const { sqlDialHost, parseSqlInstanceId, parseSqlInstancePort } = load('lib/db/connection.ts');
+  assert.equal(sqlDialHost('VMI3197632', 'SQLEXPRESS'), '127.0.0.1');
+  assert.equal(sqlDialHost('localhost', 'SQLEXPRESS'), '127.0.0.1');
+  assert.equal(sqlDialHost('db.example.com', 'SQLEXPRESS'), 'db.example.com');
+  const names = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\Instance Names\\SQL\r\n    SQLEXPRESS    REG_SZ    MSSQL16.SQLEXPRESS\r\n';
+  assert.equal(parseSqlInstanceId(names, 'SQLEXPRESS'), 'MSSQL16.SQLEXPRESS');
+  const dynamic = '    TcpDynamicPorts    REG_SZ    49670\r\n    TcpPort    REG_SZ    \r\n';
+  assert.equal(parseSqlInstancePort(dynamic), 49670);
+  const fixed = '    TcpDynamicPorts    REG_SZ    49670\r\n    TcpPort    REG_SZ    1433\r\n';
+  assert.equal(parseSqlInstancePort(fixed), 1433);
+  assert.equal(parseSqlInstancePort('    TcpPort    REG_SZ    \r\n'), undefined);
+});
 test('quoted SQL Server connection string is usable', () => {
   const { parseMssqlConnectionString, getMssqlConnectionSettings, getDatabaseEnvPresence } = load('lib/db/connection.ts');
   const parsed = parseMssqlConnectionString('Server=VMI3197632\\SQLEXPRESS;Database=YorubaDayCanberra;User Id=yorubaday_admin;Password="secret";Encrypt=true;TrustServerCertificate=true;');
@@ -172,7 +185,7 @@ test('deploy env writes the SQL Server name with one backslash', () => {
     const text = fs.readFileSync(target, 'utf8');
     const line = text.split(/\n/).find((entry) => entry.startsWith('MSSQL_SERVER='));
     const value = line.slice('MSSQL_SERVER='.length).replace(/^"|"$/g, '');
-    assert.equal(value, 'VMI3197632\\SQLEXPRESS');
+    assert.equal(value, '127.0.0.1\\SQLEXPRESS');
     assert.equal(value.includes('\\\\'), false);
     const doubled = spawnSync(process.execPath, ['scripts/write-deploy-env.mjs', target], {
       encoding: 'utf8',

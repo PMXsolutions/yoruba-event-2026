@@ -37,7 +37,40 @@ function flag(value: string | undefined, fallback: boolean): boolean {
 /**
  * The named instance is `VMI3197632\SQLEXPRESS` — one backslash.
  * A doubled separator is collapsed so the instance is still SQLEXPRESS.
+ *
+ * The Node driver speaks TCP. SQL Server Management Studio on this PC can
+ * still open `VMI3197632\SQLEXPRESS` through shared memory, but that hostname
+ * resolves off the machine and the instance rejects remote connections.
+ * The site therefore dials `127.0.0.1` and the same `SQLEXPRESS` instance.
  */
+const LOCAL_SQL_HOSTS = new Set(["vmi3197632", "localhost", "127.0.0.1", ".", "(local)"]);
+
+export function sqlDialHost(server: string, instanceName?: string): string {
+  if (instanceName && LOCAL_SQL_HOSTS.has(server.trim().toLowerCase())) return "127.0.0.1";
+  return server;
+}
+
+/** Read `reg query` output for `Instance Names\SQL`. */
+export function parseSqlInstanceId(regOutput: string, instance: string): string | undefined {
+  const match = new RegExp(`^\\s*${instance}\\s+REG_\\w+\\s+(\\S+)\\s*$`, "im").exec(regOutput);
+  return match?.[1];
+}
+
+/**
+ * A configured TCP Port wins. Otherwise the dynamic port SQL Server is
+ * listening on is used. A blank value means TCP/IP has no port yet.
+ */
+export function parseSqlInstancePort(regOutput: string): number | undefined {
+  const fixed = /^\s*TcpPort\s+REG_\w+\s+(\d+)\s*$/im.exec(regOutput);
+  const dynamic = /^\s*TcpDynamicPorts\s+REG_\w+\s+(\d+)\s*$/im.exec(regOutput);
+  const fixedPort = fixed ? Number.parseInt(fixed[1], 10) : 0;
+  const dynamicPort = dynamic ? Number.parseInt(dynamic[1], 10) : 0;
+  if (fixedPort > 0) return fixedPort;
+  if (dynamicPort > 0) return dynamicPort;
+  return undefined;
+}
+
+/** Split `host\INSTANCE` or `host,port`. A doubled backslash is collapsed to one. */
 export function splitServerTarget(raw: string): { server: string; instanceName?: string; port?: number } {
   let server = raw.trim().replace(/\\{2,}/g, "\\");
   let instanceName: string | undefined;
@@ -67,7 +100,7 @@ export function splitServerTarget(raw: string): { server: string; instanceName?:
   return { server, instanceName, port };
 }
 
-/** Parse `Server=VMI3197632\SQLEXPRESS;Database=...;User Id=...;Password=...`. */
+/** Parse `Server=127.0.0.1\SQLEXPRESS;Database=...;User Id=...;Password=...`. */
 export function parseMssqlConnectionString(raw: string): MssqlConnectionSettings | null {
   const map = new Map<string, string>();
   for (const part of raw.split(";")) {

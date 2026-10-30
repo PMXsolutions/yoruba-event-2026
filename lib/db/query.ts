@@ -1,7 +1,14 @@
 import "server-only";
 
+import { execFileSync } from "node:child_process";
 import sql from "mssql";
-import { getMssqlConnectionSettings } from "@/lib/db/connection";
+import {
+  getMssqlConnectionSettings,
+  parseSqlInstanceId,
+  parseSqlInstancePort,
+  sqlDialHost,
+  type MssqlConnectionSettings,
+} from "@/lib/db/connection";
 import { isUuid } from "@/lib/db/values";
 
 let poolPromise: Promise<sql.ConnectionPool> | null = null;
@@ -34,15 +41,65 @@ function bind(request: sql.Request, params: Record<string, unknown>) {
   }
 }
 
+function localInstanceTcpPort(instanceName: string): number | undefined {
+  if (process.platform !== "win32") return undefined;
+  try {
+    const names = execFileSync(
+      "reg",
+      ["query", "HKLM\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\Instance Names\\SQL", "/v", instanceName],
+      { encoding: "utf8", timeout: 5_000, windowsHide: true },
+    );
+    const instanceId = parseSqlInstanceId(names, instanceName);
+    if (!instanceId) return undefined;
+    const ipAll = execFileSync(
+      "reg",
+      [
+        "query",
+        `HKLM\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\${instanceId}\\MSSQLServer\\SuperSocketNetLib\\Tcp\\IPAll`,
+      ],
+      { encoding: "utf8", timeout: 5_000, windowsHide: true },
+    );
+    return parseSqlInstancePort(ipAll);
+  } catch {
+    return undefined;
+  }
+}
+
+function connectionTarget(settings: MssqlConnectionSettings): { server: string; port?: number; instanceName?: string } {
+  const server = sqlDialHost(settings.server, settings.instanceName);
+  if (settings.port) return { server, port: settings.port };
+  if (!settings.instanceName) return { server };
+  const local = server === "127.0.0.1" ? localInstanceTcpPort(settings.instanceName) : undefined;
+  if (local) return { server, port: local };
+  return { server, instanceName: settings.instanceName };
+}
+
+function connectionFailure(error: unknown, target: string): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!/failed to connect|timed out|timeout|could not connect/i.test(message)) {
+    return error instanceof Error ? error : new Error(message);
+  }
+  return new Error(
+    `${message} In SQL Server Configuration Manager, enable TCP/IP for SQLEXPRESS, start SQL Server Browser, then restart SQL Server (SQLEXPRESS). The site connects to ${target} on this PC.`,
+  );
+}
+
 export async function getPool(): Promise<sql.ConnectionPool> {
   if (!poolPromise) {
     const settings = getMssqlConnectionSettings();
     if (!settings) {
       throw new Error("Missing MSSQL connection settings.");
     }
+    const target = connectionTarget(settings);
+    const label = target.port
+      ? `${target.server},${target.port}`
+      : target.instanceName
+        ? `${target.server}\\${target.instanceName}`
+        : target.server;
+    console.info(`[mssql] Connecting to ${label} database ${settings.database}`);
     const config: sql.config = {
-      server: settings.server,
-      port: settings.instanceName ? undefined : settings.port,
+      server: target.server,
+      port: target.port,
       database: settings.database,
       user: settings.user,
       password: settings.password,
@@ -50,7 +107,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
       requestTimeout: 30_000,
       pool: { max: 10, min: 0, idleTimeoutMillis: 30_000 },
       options: {
-        instanceName: settings.instanceName,
+        instanceName: target.instanceName,
         encrypt: settings.encrypt,
         trustServerCertificate: settings.trustServerCertificate,
         enableArithAbort: true,
@@ -59,7 +116,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     const created = new sql.ConnectionPool(config);
     poolPromise = created.connect().catch((error: unknown) => {
       poolPromise = null;
-      throw error;
+      throw connectionFailure(error, label);
     });
   }
   return poolPromise;
