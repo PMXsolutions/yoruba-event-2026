@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { readRequestSessionUserId } from "@/lib/auth/session";
+import { dbOne } from "@/lib/db/query";
 
 export const PLATFORM_ROLES = ["SUPER_ADMIN", "ADMIN", "COMMITTEE", "VOLUNTEER"] as const;
 export type PlatformRole = (typeof PLATFORM_ROLES)[number];
@@ -113,21 +113,19 @@ export function hasPermission(user: AuthUser, permission: Permission): boolean {
 
 export async function getAuthUser(): Promise<AuthUser | null> {
   try {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const userId = await readRequestSessionUserId();
+    if (!userId) return null;
 
-    if (!user?.email) return null;
+    const profile = await dbOne<{
+      id: string;
+      email: string;
+      full_name: string | null;
+      role: string;
+      is_active: boolean | number;
+    }>(`SELECT id, email, full_name, role, is_active FROM profiles WHERE id = @id`, { id: userId });
 
-    const admin = createServiceRoleClient();
-    const { data: profile, error } = await admin
-      .from("profiles")
-      .select("id, email, full_name, role, is_active")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (error || !profile || !profile.is_active) return null;
+    const active = profile?.is_active === true || profile?.is_active === 1;
+    if (!profile || !active || !profile.email) return null;
     if (!isPlatformRole(profile.role)) return null;
 
     return {

@@ -1,8 +1,10 @@
 import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbExec, dbOne, dbQuery } from "@/lib/db/query";
+import { asIso, isUuid } from "@/lib/db/values";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import {
   taskFormSchema,
@@ -22,9 +24,9 @@ type TaskRow = {
   priority: string;
   assigned_to: string | null;
   created_by: string | null;
-  due_date: string | null;
-  created_at: string;
-  updated_at: string;
+  due_date: string | Date | null;
+  created_at: string | Date;
+  updated_at: string | Date;
 };
 
 function mapRow(row: TaskRow): TaskRecord {
@@ -34,6 +36,7 @@ function mapRow(row: TaskRow): TaskRecord {
   const priority = (TASK_PRIORITIES as readonly string[]).includes(row.priority)
     ? (row.priority as TaskPriority)
     : "medium";
+  const due = asIso(row.due_date);
   return {
     id: row.id,
     title: row.title,
@@ -42,9 +45,9 @@ function mapRow(row: TaskRow): TaskRecord {
     priority,
     assignedTo: row.assigned_to,
     createdBy: row.created_by,
-    dueDate: row.due_date,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    dueDate: due ? due.slice(0, 10) : null,
+    createdAt: asIso(row.created_at) ?? "",
+    updatedAt: asIso(row.updated_at) ?? "",
   };
 }
 
@@ -54,22 +57,18 @@ export type FetchTasksResult =
 
 export async function fetchTasks(): Promise<FetchTasksResult> {
   await assertPermission("task.read");
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) return { ok: false, message: "Database is not configured." };
   const event = getActiveEventConfig();
   try {
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("event_slug", event.slug)
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("[tasks] Query failed:", error.message);
-      return { ok: false, message: "Unable to load tasks." };
-    }
-    return { ok: true, records: (data ?? []).map((r) => mapRow(r as TaskRow)) };
-  } catch {
+    const rows = await dbQuery<TaskRow>(
+      `SELECT id, title, description, status, priority, assigned_to, created_by, due_date, created_at, updated_at
+       FROM tasks WHERE event_slug = @slug ORDER BY created_at DESC`,
+      { slug: event.slug },
+    );
+    return { ok: true, records: rows.map(mapRow) };
+  } catch (error) {
+    console.error("[tasks] Query failed:", errorMessage(error));
     return { ok: false, message: "Unable to load tasks." };
   }
 }
@@ -84,27 +83,25 @@ export async function createTask(
   const event = getActiveEventConfig();
   const d = parsed.data;
   try {
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
-      .from("tasks")
-      .insert({
-        event_slug: event.slug,
+    const created = await dbOne<{ id: string }>(
+      `INSERT INTO tasks (event_slug, title, description, status, priority, due_date, assigned_to, created_by)
+       OUTPUT INSERTED.id
+       VALUES (@slug, @title, @description, @status, @priority, TRY_CONVERT(date, @dueDate), @assignedTo, @createdBy)`,
+      {
+        slug: event.slug,
         title: d.title,
         description: d.description?.trim() || null,
         status: d.status,
         priority: d.priority,
-        due_date: d.dueDate || null,
-        assigned_to: d.assignedTo || null,
-        created_by: createdBy,
-      })
-      .select("id")
-      .single();
-    if (error || !data) {
-      console.error("[tasks] Create failed:", error?.message);
-      return { ok: false, error: "Could not create task." };
-    }
-    return { ok: true, id: data.id };
-  } catch {
+        dueDate: d.dueDate || null,
+        assignedTo: isUuid(d.assignedTo) ? d.assignedTo : null,
+        createdBy: isUuid(createdBy) ? createdBy : null,
+      },
+    );
+    if (!created) return { ok: false, error: "Could not create task." };
+    return { ok: true, id: created.id };
+  } catch (error) {
+    console.error("[tasks] Create failed:", errorMessage(error));
     return { ok: false, error: "Could not create task." };
   }
 }
@@ -114,19 +111,37 @@ export async function updateTask(
   raw: Partial<TaskFormValues>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const supabase = createServiceRoleClient();
-    const payload: Record<string, unknown> = {};
-    if (raw.title !== undefined) payload.title = raw.title.trim();
-    if (raw.description !== undefined) payload.description = raw.description?.trim() || null;
-    if (raw.status !== undefined) payload.status = raw.status;
-    if (raw.priority !== undefined) payload.priority = raw.priority;
-    if (raw.dueDate !== undefined) payload.due_date = raw.dueDate || null;
-    if (raw.assignedTo !== undefined) payload.assigned_to = raw.assignedTo || null;
-
-    const { error } = await supabase.from("tasks").update(payload).eq("id", id);
-    if (error) return { ok: false, error: "Could not update task." };
+    const sets: string[] = ["updated_at = SYSDATETIMEOFFSET()"];
+    const params: Record<string, unknown> = { id };
+    if (raw.title !== undefined) {
+      sets.push("title = @title");
+      params.title = raw.title.trim();
+    }
+    if (raw.description !== undefined) {
+      sets.push("description = @description");
+      params.description = raw.description?.trim() || null;
+    }
+    if (raw.status !== undefined) {
+      sets.push("status = @status");
+      params.status = raw.status;
+    }
+    if (raw.priority !== undefined) {
+      sets.push("priority = @priority");
+      params.priority = raw.priority;
+    }
+    if (raw.dueDate !== undefined) {
+      sets.push("due_date = TRY_CONVERT(date, @dueDate)");
+      params.dueDate = raw.dueDate || null;
+    }
+    if (raw.assignedTo !== undefined) {
+      sets.push("assigned_to = @assignedTo");
+      params.assignedTo = isUuid(raw.assignedTo) ? raw.assignedTo : null;
+    }
+    const updated = await dbExec(`UPDATE tasks SET ${sets.join(", ")} WHERE id = @id`, params);
+    if (updated === 0) return { ok: false, error: "Could not update task." };
     return { ok: true };
-  } catch {
+  } catch (error) {
+    console.error("[tasks] Update failed:", errorMessage(error));
     return { ok: false, error: "Could not update task." };
   }
 }

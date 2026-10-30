@@ -106,8 +106,17 @@ export function isRsvpTag(value: string): value is RsvpTag {
 }
 
 export function normalizeTags(raw: unknown): RsvpTag[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((t): t is RsvpTag => typeof t === "string" && isRsvpTag(t));
+  let list: unknown[] = [];
+  if (Array.isArray(raw)) list = raw;
+  else if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) list = parsed;
+    } catch {
+      list = [];
+    }
+  }
+  return list.filter((t): t is RsvpTag => typeof t === "string" && isRsvpTag(t));
 }
 
 export function formatRsvpDate(iso: string): string {

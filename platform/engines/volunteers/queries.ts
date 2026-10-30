@@ -1,8 +1,10 @@
 import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbExec, dbQuery } from "@/lib/db/query";
+import { asIso, asStringArray, jsonText } from "@/lib/db/values";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import {
   volunteerFormSchema,
@@ -17,15 +19,15 @@ type VolunteerRow = {
   full_name: string;
   email: string;
   phone: string | null;
-  skills: string[] | null;
+  skills: string | string[] | null;
   availability: string | null;
   area_of_interest: string | null;
   assigned_role: string | null;
   notes: string | null;
   committee_notes: string | null;
   status: string;
-  created_at: string;
-  updated_at: string;
+  created_at: string | Date;
+  updated_at: string | Date;
 };
 
 function mapRow(row: VolunteerRow): VolunteerRecord {
@@ -37,15 +39,15 @@ function mapRow(row: VolunteerRow): VolunteerRecord {
     fullName: row.full_name,
     email: row.email,
     phone: row.phone,
-    skills: row.skills ?? [],
+    skills: asStringArray(row.skills),
     availability: row.availability,
     areaOfInterest: row.area_of_interest,
     assignedRole: row.assigned_role,
     notes: row.notes,
     committeeNotes: row.committee_notes,
     status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: asIso(row.created_at) ?? "",
+    updatedAt: asIso(row.updated_at) ?? "",
   };
 }
 
@@ -53,9 +55,7 @@ export type SubmitVolunteerResult =
   | { ok: true }
   | { ok: false; error: string; fieldErrors?: Partial<Record<keyof VolunteerFormValues, string>> };
 
-export async function submitVolunteerRegistration(
-  raw: unknown,
-): Promise<SubmitVolunteerResult> {
+export async function submitVolunteerRegistration(raw: unknown): Promise<SubmitVolunteerResult> {
   const parsed = volunteerFormSchema.safeParse(raw);
   if (!parsed.success) {
     const fieldErrors: Partial<Record<keyof VolunteerFormValues, string>> = {};
@@ -68,8 +68,8 @@ export async function submitVolunteerRegistration(
     return { ok: false, error: "Please correct the highlighted fields.", fieldErrors };
   }
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return { ok: false, error: "Registration is temporarily unavailable. Please try again later." };
   }
 
@@ -80,25 +80,26 @@ export async function submitVolunteerRegistration(
     : [];
 
   try {
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase.from("volunteers").insert({
-      event_slug: event.slug,
-      full_name: d.fullName,
-      email: d.email.toLowerCase(),
-      phone: d.phone ?? null,
-      skills,
-      availability: d.availability ?? null,
-      area_of_interest: d.areaOfInterest ?? null,
-      notes: d.notes ?? null,
-      status: "new",
-    });
-    if (error) {
-      console.error("[volunteers] Insert failed:", error.message);
-      return { ok: false, error: "Something went wrong while submitting. Please try again." };
-    }
+    await dbExec(
+      `INSERT INTO volunteers (
+         event_slug, full_name, email, phone, skills, availability, area_of_interest, notes, status
+       ) VALUES (
+         @slug, @fullName, @email, @phone, @skills, @availability, @areaOfInterest, @notes, N'new'
+       )`,
+      {
+        slug: event.slug,
+        fullName: d.fullName,
+        email: d.email.toLowerCase(),
+        phone: d.phone ?? null,
+        skills: jsonText(skills),
+        availability: d.availability ?? null,
+        areaOfInterest: d.areaOfInterest ?? null,
+        notes: d.notes ?? null,
+      },
+    );
     return { ok: true };
-  } catch (e) {
-    console.error("[volunteers] Unexpected:", e);
+  } catch (error) {
+    console.error("[volunteers] Insert failed:", errorMessage(error));
     return { ok: false, error: "Something went wrong while submitting. Please try again." };
   }
 }
@@ -109,22 +110,18 @@ export type FetchVolunteersResult =
 
 export async function fetchVolunteers(): Promise<FetchVolunteersResult> {
   await assertPermission("volunteer.read");
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) return { ok: false, message: "Database is not configured." };
   const event = getActiveEventConfig();
   try {
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
-      .from("volunteers")
-      .select("*")
-      .eq("event_slug", event.slug)
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("[volunteers] Query failed:", error.message);
-      return { ok: false, message: "Unable to load volunteers." };
-    }
-    return { ok: true, records: (data ?? []).map((r) => mapRow(r as VolunteerRow)) };
-  } catch {
+    const rows = await dbQuery<VolunteerRow>(
+      `SELECT id, full_name, email, phone, skills, availability, area_of_interest, assigned_role, notes, committee_notes, status, created_at, updated_at
+       FROM volunteers WHERE event_slug = @slug ORDER BY created_at DESC`,
+      { slug: event.slug },
+    );
+    return { ok: true, records: rows.map(mapRow) };
+  } catch (error) {
+    console.error("[volunteers] Query failed:", errorMessage(error));
     return { ok: false, message: "Unable to load volunteers." };
   }
 }
@@ -134,9 +131,11 @@ export async function updateVolunteerStatus(
   status: VolunteerStatus,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase.from("volunteers").update({ status }).eq("id", id);
-    if (error) return { ok: false, error: "Could not update status." };
+    const updated = await dbExec(
+      `UPDATE volunteers SET status = @status, updated_at = SYSDATETIMEOFFSET() WHERE id = @id`,
+      { id, status },
+    );
+    if (updated === 0) return { ok: false, error: "Could not update status." };
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not update status." };
@@ -149,15 +148,17 @@ export async function updateVolunteerAssignment(
   committeeNotes: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase
-      .from("volunteers")
-      .update({
-        assigned_role: assignedRole.trim() || null,
-        committee_notes: committeeNotes.trim() || null,
-      })
-      .eq("id", id);
-    if (error) return { ok: false, error: "Could not save volunteer profile." };
+    const updated = await dbExec(
+      `UPDATE volunteers
+       SET assigned_role = @assignedRole, committee_notes = @committeeNotes, updated_at = SYSDATETIMEOFFSET()
+       WHERE id = @id`,
+      {
+        id,
+        assignedRole: assignedRole.trim() || null,
+        committeeNotes: committeeNotes.trim() || null,
+      },
+    );
+    if (updated === 0) return { ok: false, error: "Could not save volunteer profile." };
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not save volunteer profile." };

@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { supabaseErrorText } from "@/lib/supabase/connectivity";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbQuery } from "@/lib/db/query";
 import { isMissingRsvpCommsColumn } from "@/platform/engines/rsvp/columns";
 import type {
   EmailDeliveryStatus,
@@ -17,20 +17,39 @@ export async function updateRsvpEmailDelivery(params: {
   status: EmailDeliveryStatus;
   providerId?: string | null;
 }): Promise<void> {
-  const supabase = createServiceRoleClient();
-  const { data, error } = await supabase.from("rsvps").update({
-    email_status: params.status,
-    email_sent_at: params.status === "sent" ? new Date().toISOString() : null,
-    email_provider_id: params.status === "sent" ? params.providerId ?? null : null,
-  }).eq("id", params.rsvpId).select("id").single();
-  if (error || !data) {
+  try {
+    const rows = await dbQuery<{ id: string }>(
+      `UPDATE rsvps
+       SET email_status = @status,
+           email_sent_at = @sentAt,
+           email_provider_id = @providerId,
+           updated_at = SYSDATETIMEOFFSET()
+       OUTPUT INSERTED.id
+       WHERE id = @id`,
+      {
+        id: params.rsvpId,
+        status: params.status,
+        sentAt: params.status === "sent" ? new Date() : null,
+        providerId: params.status === "sent" ? params.providerId ?? null : null,
+      },
+    );
+    if (rows.length === 0) {
+      throw new Error("Email delivery status could not be persisted");
+    }
+  } catch (error) {
+    const message = errorMessage(error);
     console.error("[notification-engine] email_status persistence failed", {
-      rsvpId: params.rsvpId, status: params.status, code: error?.code ?? "NO_ROW",
+      rsvpId: params.rsvpId,
+      status: params.status,
+      message,
     });
-    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
+    if (isMissingRsvpCommsColumn(message)) {
       const missing = new Error("Email delivery columns are not in this database");
       missing.name = "DeliveryColumnMissingError";
       throw missing;
+    }
+    if (error instanceof Error && error.message === "Email delivery status could not be persisted") {
+      throw error;
     }
     throw new Error("Email delivery status could not be persisted");
   }
@@ -42,19 +61,20 @@ export async function updateRsvpSmsDelivery(params: {
   providerId?: string | null;
 }): Promise<void> {
   try {
-    const supabase = createServiceRoleClient();
-    const payload: Record<string, unknown> = {
-      sms_status: params.status,
-    };
-    if (params.status === "sent") {
-      payload.sms_sent_at = new Date().toISOString();
-      if (params.providerId) payload.sms_provider_id = params.providerId;
-    }
-    const { error } = await supabase.from("rsvps").update(payload).eq("id", params.rsvpId);
-    if (error) {
-      console.warn("[notification-engine] sms_status update failed:", error.message);
-    }
-  } catch (e) {
-    console.warn("[notification-engine] sms_status update error:", e);
+    await dbQuery(
+      `UPDATE rsvps
+       SET sms_status = @status,
+           sms_sent_at = CASE WHEN @status = N'sent' THEN SYSDATETIMEOFFSET() ELSE sms_sent_at END,
+           sms_provider_id = CASE WHEN @status = N'sent' THEN @providerId ELSE sms_provider_id END,
+           updated_at = SYSDATETIMEOFFSET()
+       WHERE id = @id`,
+      {
+        id: params.rsvpId,
+        status: params.status,
+        providerId: params.providerId ?? null,
+      },
+    );
+  } catch (error) {
+    console.warn("[notification-engine] sms_status update error:", errorMessage(error));
   }
 }

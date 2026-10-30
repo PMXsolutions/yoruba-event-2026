@@ -1,17 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import {
-  getSupabaseEnvPresence,
-  missingSupabaseEnvVarNames,
-} from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence, missingDatabaseEnvVarNames } from "@/lib/db/connection";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbExec, dbOne } from "@/lib/db/query";
 import { TICKET_TYPES } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 function insertTestAllowed(): boolean {
-  return (
-    process.env.NODE_ENV !== "production"
-  );
+  return process.env.NODE_ENV !== "production";
 }
 
 type OkBody = {
@@ -34,106 +31,55 @@ type ErrorBody = {
 export async function POST(): Promise<NextResponse<OkBody | ErrorBody>> {
   if (!insertTestAllowed()) {
     console.warn("[api/health/rsvp-insert-test] Blocked: not enabled in this environment.");
-    return NextResponse.json(
-      { status: "error", code: "INSERT_TEST_DISABLED" },
-      { status: 404 },
-    );
+    return NextResponse.json({ status: "error", code: "INSERT_TEST_DISABLED" }, { status: 404 });
   }
 
-  const presence = getSupabaseEnvPresence();
-  if (!presence.serviceRoleReady) {
-    const missing = missingSupabaseEnvVarNames(presence);
-    console.error(
-      "[api/health/rsvp-insert-test] Missing env (names only):",
-      missing.join(", "),
-    );
+  const presence = getDatabaseEnvPresence();
+  if (!presence.ready) {
+    const missing = missingDatabaseEnvVarNames();
+    console.error("[api/health/rsvp-insert-test] Missing env (names only):", missing.join(", "));
     return NextResponse.json(
-      {
-        status: "error",
-        code: "MISSING_ENV_VARS",
-        missingEnvVars: missing,
-      },
+      { status: "error", code: "MISSING_ENV_VARS", missingEnvVars: missing },
       { status: 503 },
     );
   }
 
-  let supabase;
-  try {
-    supabase = createServiceRoleClient();
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error("[api/health/rsvp-insert-test] Client init failed:", message);
-    return NextResponse.json(
-      { status: "error", code: "SUPABASE_CLIENT_FAILED" },
-      { status: 503 },
-    );
-  }
-
-  const email = `health-check+${Date.now()}@invalid.example`;
   const { getActiveEventConfig } = await import("@/platform/core/config/active-event");
   const event = getActiveEventConfig();
-  const row = {
-    full_name: "Connectivity test (auto-deleted)",
-    email,
-    phone: null as string | null,
-    number_of_attendees: 1,
-    ticket_type: TICKET_TYPES[0],
-    notes: "Temporary RSVP backend insert test",
-    event_slug: event.slug,
-    registration_reference: `TEST-${Date.now().toString(36).toUpperCase()}`,
-    status: "new",
-  };
+  const id = randomUUID();
+  const email = `health-check+${Date.now()}@invalid.example`;
 
-  const { data: inserted, error: insertError } = await supabase
-    .from("rsvps")
-    .insert(row)
-    .select("id")
-    .single();
-
-  if (insertError) {
-    console.error(
-      "[api/health/rsvp-insert-test] Insert failed:",
-      insertError.message,
-      insertError.code,
-      insertError.details ?? "",
+  try {
+    const inserted = await dbOne<{ id: string }>(
+      `INSERT INTO rsvps (
+         id, full_name, email, phone, number_of_attendees, ticket_type, notes,
+         event_slug, registration_reference, status
+       )
+       OUTPUT INSERTED.id
+       VALUES (
+         @id, @fullName, @email, NULL, 1, @ticketType, @notes,
+         @slug, @reference, N'new'
+       )`,
+      {
+        id,
+        fullName: "Connectivity test (auto-deleted)",
+        email,
+        ticketType: TICKET_TYPES[0],
+        notes: "Temporary RSVP backend insert test",
+        slug: event.slug,
+        reference: `TEST-${Date.now().toString(36).toUpperCase()}`,
+      },
     );
-    const code =
-      insertError.code === "42P01" || /relation|does not exist/i.test(insertError.message)
-        ? "RSVPS_TABLE_MISSING"
-        : "INSERT_FAILED";
-    return NextResponse.json(
-      { status: "error", code, insert: false },
-      { status: 503 },
-    );
+    if (!inserted?.id) {
+      return NextResponse.json({ status: "error", code: "INSERT_NO_ID", insert: false }, { status: 503 });
+    }
+    await dbExec(`DELETE FROM rsvps WHERE id = @id`, { id: inserted.id });
+    console.info("[api/health/rsvp-insert-test] Insert and delete succeeded for id:", inserted.id);
+    return NextResponse.json({ status: "ok", insert: true, testRowRemoved: true });
+  } catch (error) {
+    const message = errorMessage(error);
+    console.error("[api/health/rsvp-insert-test] Failed:", message);
+    const code = /invalid object name/i.test(message) ? "RSVPS_TABLE_MISSING" : "INSERT_FAILED";
+    return NextResponse.json({ status: "error", code, insert: false }, { status: 503 });
   }
-
-  if (!inserted?.id) {
-    console.error("[api/health/rsvp-insert-test] Insert returned no id.");
-    return NextResponse.json(
-      { status: "error", code: "INSERT_NO_ID", insert: false },
-      { status: 503 },
-    );
-  }
-
-  const { error: deleteError } = await supabase.from("rsvps").delete().eq("id", inserted.id);
-
-  if (deleteError) {
-    console.error(
-      "[api/health/rsvp-insert-test] Test row inserted but delete failed; remove row manually. id:",
-      inserted.id,
-      "error:",
-      deleteError.message,
-    );
-    return NextResponse.json(
-      { status: "error", code: "TEST_ROW_DELETE_FAILED", insert: true },
-      { status: 503 },
-    );
-  }
-
-  console.info("[api/health/rsvp-insert-test] Insert and delete succeeded for id:", inserted.id);
-  return NextResponse.json({
-    status: "ok",
-    insert: true,
-    testRowRemoved: true,
-  });
 }

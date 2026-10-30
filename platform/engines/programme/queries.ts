@@ -1,8 +1,10 @@
 import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbExec, dbOne, dbQuery } from "@/lib/db/query";
+import { asIso } from "@/lib/db/values";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import {
   programmeItemSchema,
@@ -14,15 +16,15 @@ type ProgrammeRow = {
   id: string;
   title: string;
   description: string | null;
-  start_time: string | null;
-  end_time: string | null;
+  start_time: string | Date | null;
+  end_time: string | Date | null;
   location: string | null;
   speaker: string | null;
   category: string | null;
   display_order: number;
-  published: boolean;
-  created_at: string;
-  updated_at: string;
+  published: boolean | number;
+  created_at: string | Date;
+  updated_at: string | Date;
 };
 
 function mapRow(row: ProgrammeRow): ProgrammeItemRecord {
@@ -30,15 +32,15 @@ function mapRow(row: ProgrammeRow): ProgrammeItemRecord {
     id: row.id,
     title: row.title,
     description: row.description,
-    startTime: row.start_time,
-    endTime: row.end_time,
+    startTime: asIso(row.start_time),
+    endTime: asIso(row.end_time),
     location: row.location,
     speaker: row.speaker,
     category: row.category,
     displayOrder: row.display_order,
-    published: row.published,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    published: row.published === true || row.published === 1,
+    createdAt: asIso(row.created_at) ?? "",
+    updatedAt: asIso(row.updated_at) ?? "",
   };
 }
 
@@ -50,24 +52,20 @@ export async function fetchProgrammeItems(opts?: {
   publishedOnly?: boolean;
 }): Promise<FetchProgrammeResult> {
   if (!opts?.publishedOnly) await assertPermission("programme.read");
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) return { ok: false, message: "Database is not configured." };
   const event = getActiveEventConfig();
   try {
-    const supabase = createServiceRoleClient();
-    let query = supabase
-      .from("programme_items")
-      .select("*")
-      .eq("event_slug", event.slug)
-      .order("display_order", { ascending: true });
-    if (opts?.publishedOnly) query = query.eq("published", true);
-    const { data, error } = await query;
-    if (error) {
-      console.error("[programme] Query failed:", error.message);
-      return { ok: false, message: "Unable to load programme." };
-    }
-    return { ok: true, records: (data ?? []).map((r) => mapRow(r as ProgrammeRow)) };
-  } catch {
+    const rows = await dbQuery<ProgrammeRow>(
+      `SELECT id, title, description, start_time, end_time, location, speaker, category, display_order, published, created_at, updated_at
+       FROM programme_items
+       WHERE event_slug = @slug AND (@publishedOnly = 0 OR published = 1)
+       ORDER BY display_order ASC`,
+      { slug: event.slug, publishedOnly: Boolean(opts?.publishedOnly) },
+    );
+    return { ok: true, records: rows.map(mapRow) };
+  } catch (error) {
+    console.error("[programme] Query failed:", errorMessage(error));
     return { ok: false, message: "Unable to load programme." };
   }
 }
@@ -80,33 +78,48 @@ export async function upsertProgrammeItem(
   if (!parsed.success) return { ok: false, error: "Please check programme details." };
   const event = getActiveEventConfig();
   const d = parsed.data as ProgrammeItemFormValues;
-  const payload = {
-    event_slug: event.slug,
+  const params = {
+    slug: event.slug,
     title: d.title,
     description: d.description?.trim() || null,
-    start_time: d.startTime || null,
-    end_time: d.endTime || null,
+    startTime: d.startTime || null,
+    endTime: d.endTime || null,
     location: d.location?.trim() || null,
     speaker: d.speaker?.trim() || null,
     category: d.category?.trim() || null,
-    display_order: d.displayOrder ?? 0,
+    displayOrder: d.displayOrder ?? 0,
     published: d.published ?? false,
   };
   try {
-    const supabase = createServiceRoleClient();
     if (id) {
-      const { error } = await supabase.from("programme_items").update(payload).eq("id", id);
-      if (error) return { ok: false, error: "Could not update programme item." };
+      const updated = await dbExec(
+        `UPDATE programme_items
+         SET title = @title, description = @description,
+             start_time = TRY_CONVERT(datetimeoffset, @startTime),
+             end_time = TRY_CONVERT(datetimeoffset, @endTime),
+             location = @location, speaker = @speaker, category = @category,
+             display_order = @displayOrder, published = @published, updated_at = SYSDATETIMEOFFSET()
+         WHERE id = @id`,
+        { ...params, id },
+      );
+      if (updated === 0) return { ok: false, error: "Could not update programme item." };
       return { ok: true, id };
     }
-    const { data, error } = await supabase
-      .from("programme_items")
-      .insert(payload)
-      .select("id")
-      .single();
-    if (error || !data) return { ok: false, error: "Could not create programme item." };
-    return { ok: true, id: data.id };
-  } catch {
+    const created = await dbOne<{ id: string }>(
+      `INSERT INTO programme_items (
+         event_slug, title, description, start_time, end_time, location, speaker, category, display_order, published
+       )
+       OUTPUT INSERTED.id
+       VALUES (
+         @slug, @title, @description, TRY_CONVERT(datetimeoffset, @startTime), TRY_CONVERT(datetimeoffset, @endTime),
+         @location, @speaker, @category, @displayOrder, @published
+       )`,
+      params,
+    );
+    if (!created) return { ok: false, error: "Could not create programme item." };
+    return { ok: true, id: created.id };
+  } catch (error) {
+    console.error("[programme] Save failed:", errorMessage(error));
     return { ok: false, error: "Could not save programme item." };
   }
 }
@@ -115,9 +128,8 @@ export async function deleteProgrammeItem(
   id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase.from("programme_items").delete().eq("id", id);
-    if (error) return { ok: false, error: "Could not delete programme item." };
+    const removed = await dbExec(`DELETE FROM programme_items WHERE id = @id`, { id });
+    if (removed === 0) return { ok: false, error: "Could not delete programme item." };
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not delete programme item." };

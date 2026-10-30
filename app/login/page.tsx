@@ -3,7 +3,7 @@
 import { useState, type FormEvent, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createBrowserSupabaseClient, AuthConfigError } from "@/lib/supabase/client";
+import { requestPasswordReset, signIn } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { SITE } from "@/lib/site";
 
@@ -27,38 +27,26 @@ function LoginForm() {
     const trimmedEmail = email.trim().toLowerCase();
 
     try {
-      const supabase = createBrowserSupabaseClient();
-
       if (mode === "forgot") {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-          redirectTo: `${window.location.origin}/account/setup`,
-        });
-        if (resetError) {
-          setError("Unable to send reset email. Please try again or contact your administrator.");
+        const reset = await requestPasswordReset(trimmedEmail);
+        if (!reset.ok) {
+          setError(reset.error);
           return;
         }
-        setInfo("If an account exists for that email, a reset link has been sent.");
+        setInfo(reset.message);
         return;
       }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
-      });
-
-      if (authError) {
-        setError("Invalid email or password. Committee access only.");
+      const authResult = await signIn(trimmedEmail, password);
+      if (!authResult.ok) {
+        setError(authResult.error);
         return;
       }
 
       router.push(redirect.startsWith("/dashboard") && !redirect.includes("\\") ? redirect : "/dashboard");
       router.refresh();
-    } catch (err) {
-      if (err instanceof AuthConfigError) {
-        setError(err.message);
-      } else {
-        setError("Unable to sign in. Please try again.");
-      }
+    } catch {
+      setError("Unable to sign in. Please try again.");
     } finally {
       setIsPending(false);
     }

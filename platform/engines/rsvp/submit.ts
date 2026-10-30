@@ -1,8 +1,10 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
+import { errorMessage, isDatabaseConnectivityFailure } from "@/lib/db/connectivity";
+import { dbExec, dbOne } from "@/lib/db/query";
+import { jsonText } from "@/lib/db/values";
 import {
   createRsvpFormSchema,
   fieldErrorsFromZod,
@@ -10,7 +12,6 @@ import {
   type RsvpFormValues,
   type RsvpRecord,
 } from "@/platform/engines/rsvp/schema";
-import { isSupabaseConnectivityFailure, supabaseErrorText } from "@/lib/supabase/connectivity";
 import {
   isMissingRsvpCommsColumn,
   withoutRsvpCommsColumns,
@@ -27,6 +28,26 @@ export type SubmitRsvpResult =
       errorCode: string;
       fieldErrors?: Partial<Record<keyof RsvpFormValues, string>>;
     };
+
+const INSERT_WITH_COMMS = `
+  INSERT INTO rsvps (
+    id, full_name, email, phone, number_of_attendees, ticket_type, notes,
+    event_slug, registration_reference, status, email_consent, sms_consent,
+    marketing_consent, email_status, tags
+  ) VALUES (
+    @id, @full_name, @email, @phone, @number_of_attendees, @ticket_type, @notes,
+    @event_slug, @registration_reference, @status, @email_consent, @sms_consent,
+    @marketing_consent, @email_status, @tags
+  )`;
+
+const INSERT_WITHOUT_COMMS = `
+  INSERT INTO rsvps (
+    id, full_name, email, phone, number_of_attendees, ticket_type, notes,
+    event_slug, registration_reference, status, tags
+  ) VALUES (
+    @id, @full_name, @email, @phone, @number_of_attendees, @ticket_type, @notes,
+    @event_slug, @registration_reference, @status, @tags
+  )`;
 
 /**
  * Promax RSVP Engine — validates and persists interest registrations.
@@ -58,12 +79,11 @@ export async function submitRsvpToDatabase(
     };
   }
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return {
       ok: false,
-      error: mapConfigError("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
-        .userMessage,
+      error: mapConfigError("Missing MSSQL connection settings").userMessage,
       errorCode: "MISSING_CONFIG",
     };
   }
@@ -71,52 +91,30 @@ export async function submitRsvpToDatabase(
   const record = { ...toRsvpRecord(parsed.data, event.slug), id: randomUUID() };
 
   try {
-    const supabase = createServiceRoleClient();
-
-    // Soft duplicate prevention: same email + event within last 24h
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     let existing: { id: string; registration_reference?: string | null } | null = null;
-
-    const withSlug = await supabase
-      .from("rsvps")
-      .select("id, registration_reference")
-      .eq("event_slug", event.slug)
-      .eq("email", record.email)
-      .gte("created_at", since)
-      .limit(1)
-      .maybeSingle();
-
-    if (withSlug.error && isSupabaseConnectivityFailure(supabaseErrorText(withSlug.error))) {
-      console.error(
-        "[rsvp-engine] Supabase lookup failed:",
-        withSlug.error.message,
-        withSlug.error.code ?? "",
+    try {
+      existing = await dbOne(
+        `SELECT TOP 1 id, registration_reference
+         FROM rsvps
+         WHERE event_slug = @slug AND email = @email AND created_at >= @since`,
+        { slug: event.slug, email: record.email, since },
       );
-      const mapped = mapSupabaseRsvpError(
-        supabaseErrorText(withSlug.error),
-        withSlug.error.code ?? undefined,
-      );
-      return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
-    }
-
-    if (withSlug.error && /event_slug/i.test(withSlug.error.message)) {
-      const fallback = await supabase
-        .from("rsvps")
-        .select("id, registration_reference")
-        .eq("email", record.email)
-        .gte("created_at", since)
-        .limit(1)
-        .maybeSingle();
-      if (fallback.error && isSupabaseConnectivityFailure(supabaseErrorText(fallback.error))) {
-        const mapped = mapSupabaseRsvpError(
-          supabaseErrorText(fallback.error),
-          fallback.error.code ?? undefined,
-        );
+    } catch (lookupError) {
+      const message = errorMessage(lookupError);
+      if (isDatabaseConnectivityFailure(message)) {
+        const mapped = mapSupabaseRsvpError(message);
         return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
       }
-      existing = fallback.data;
-    } else if (!withSlug.error) {
-      existing = withSlug.data;
+      if (/event_slug/i.test(message) && isMissingRsvpCommsColumn(message) === false && /Invalid column name 'event_slug'/i.test(message)) {
+        existing = await dbOne(
+          `SELECT TOP 1 id, registration_reference FROM rsvps WHERE email = @email AND created_at >= @since`,
+          { email: record.email, since },
+        );
+      } else if (!/Invalid column name 'event_slug'/i.test(message)) {
+        const mapped = mapSupabaseRsvpError(message);
+        return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
+      }
     }
 
     if (existing) {
@@ -128,31 +126,29 @@ export async function submitRsvpToDatabase(
       };
     }
 
-    // Prefer storing consent and pending delivery together. Databases created before
-    // the communication migration reject those columns; save the registration anyway.
-    const payload: Record<string, unknown> = { ...record, email_status: "pending" };
-    let { error } = await supabase.from("rsvps").insert(payload);
-    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
-      console.warn(
-        "[rsvp-engine] Communication columns are missing; saving registration without them.",
-      );
-      ({ error } = await supabase.from("rsvps").insert(withoutRsvpCommsColumns(payload)));
-    }
-
-    if (error) {
-      console.error("[rsvp-engine] Supabase insert error:", error.message, error.code ?? "");
-      const mapped = mapSupabaseRsvpError(supabaseErrorText(error), error.code ?? undefined);
-      return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
-    }
-
-    return {
-      ok: true,
-      record,
+    const payload: Record<string, unknown> = {
+      ...record,
+      email_status: "pending",
+      tags: jsonText([]),
     };
+    try {
+      await dbExec(INSERT_WITH_COMMS, payload);
+    } catch (insertError) {
+      const message = errorMessage(insertError);
+      if (!isMissingRsvpCommsColumn(message)) {
+        console.error("[rsvp-engine] SQL Server insert error:", message);
+        const mapped = mapSupabaseRsvpError(message);
+        return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
+      }
+      console.warn("[rsvp-engine] Communication columns are missing; saving registration without them.");
+      await dbExec(INSERT_WITHOUT_COMMS, withoutRsvpCommsColumns(payload));
+    }
+
+    return { ok: true, record };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorMessage(e);
     console.error("[rsvp-engine] Unexpected error:", msg);
-    const mapped = mapConfigError(msg);
+    const mapped = isDatabaseConnectivityFailure(msg) ? mapSupabaseRsvpError(msg) : mapConfigError(msg);
     return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
   }
 }

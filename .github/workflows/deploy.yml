@@ -1,0 +1,101 @@
+name: Build and Deploy YorubaDay Platform
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: promax-event-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The platform is a Node server (committee login, RSVP, SQL Server).
+      # A static `out/` export cannot open the database, so this job builds
+      # the Next.js standalone server and uploads that folder over FTPS.
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Validate deployment secrets
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          MSSQL_PASSWORD: ${{ secrets.MSSQL_PASSWORD }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          test -n "$FTP_SERVER" || { echo "Missing FTP_SERVER secret"; exit 1; }
+          test -n "$FTP_USERNAME" || { echo "Missing FTP_USERNAME secret"; exit 1; }
+          test -n "$FTP_PASSWORD" || { echo "Missing FTP_PASSWORD secret"; exit 1; }
+          test -n "$MSSQL_PASSWORD" || { echo "Missing MSSQL_PASSWORD secret"; exit 1; }
+          test "${#SESSION_SECRET}" -ge 32 || { echo "SESSION_SECRET must be at least 32 characters"; exit 1; }
+          test "${#ADMIN_PASSWORD}" -ge 12 || { echo "ADMIN_PASSWORD must be at least 12 characters"; exit 1; }
+          test -n "$SMTP_PASSWORD" || { echo "Missing SMTP_PASSWORD secret"; exit 1; }
+
+      - name: Assemble Windows server package
+        env:
+          MSSQL_PASSWORD: ${{ secrets.MSSQL_PASSWORD }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ADMIN_EMAIL: admin@promaxevent.com
+          ADMIN_FULL_NAME: Platform Administrator
+          MAIL_FROM: Promax Event <support@promaxcare.com.au>
+          SMTP_HOST: mail.promaxcare.com.au
+          SMTP_PORT: "587"
+          SMTP_USER: support@promaxcare.com.au
+        run: |
+          rm -rf deploy
+          mkdir -p deploy/.next deploy/sql/mssql deploy/logs
+          cp -a .next/standalone/. deploy/
+          cp -a .next/static deploy/.next/static
+          if [ -d public ]; then cp -a public deploy/public; fi
+          cp sql/mssql/*.sql deploy/sql/mssql/
+          cp hosting/iis/preload.cjs hosting/iis/web.config deploy/
+          node scripts/write-deploy-env.mjs deploy/.env
+          test -f deploy/server.js || { echo "ERROR: standalone server.js was not produced."; exit 1; }
+          test -f deploy/preload.cjs || { echo "ERROR: IIS preload script is missing."; exit 1; }
+          test -f deploy/web.config || { echo "ERROR: IIS web.config is missing."; exit 1; }
+          test -f deploy/.env || { echo "ERROR: server environment file was not written."; exit 1; }
+          echo "Build verification successful."
+          find deploy -maxdepth 2 -type f ! -name '.env' | head -50
+
+      - name: Deploy to production server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: deploy/
+          server-dir: /yorubadayapp/
+          dangerous-clean-slate: false
+
+      - name: Deployment completed
+        run: |
+          echo "YorubaDay Platform deployment completed successfully."
+          echo "IIS serves /yorubadayapp with HttpPlatformHandler and Node.js on PATH."
+          echo "The app applies sql/mssql/001_create_and_migrate.sql and creates the Super Admin on startup."

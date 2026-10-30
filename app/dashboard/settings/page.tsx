@@ -5,7 +5,7 @@ import {
 } from "@/components/dashboard/dashboard-ui";
 import { getAuthUser } from "@/lib/auth/rbac";
 import { SITE } from "@/lib/site";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import { getFeatureFlags } from "@/platform/core/flags";
 import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardSettingsPage() {
   const event = getActiveEventConfig();
-  const supabase = getSupabaseEnvPresence();
+  const database = getDatabaseEnvPresence();
   const email = getEmailEnvPresence();
   const sms = getSmsEnvPresence();
   const flags = getFeatureFlags();
@@ -82,20 +82,20 @@ export default async function DashboardSettingsPage() {
           <IntegrationStatus
             items={[
               {
-                name: "Supabase (database)",
-                status: supabase.serviceRoleReady ? "Configured" : "Not configured",
-                ok: supabase.serviceRoleReady,
-                detail: supabase.serviceRoleReady
-                  ? "Service-role database access ready"
-                  : "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+                name: "SQL Server",
+                status: database.ready ? "Configured" : "Not configured",
+                ok: database.ready,
+                detail: database.ready
+                  ? `${database.database ?? "Database"} on ${database.server ?? "SQL Server"}`
+                  : "Missing MSSQL_SERVER, MSSQL_DATABASE, MSSQL_USER, or MSSQL_PASSWORD",
               },
               {
-                name: "Supabase Auth",
-                status: supabase.authReady ? "Configured" : "Not configured",
-                ok: supabase.authReady,
-                detail: supabase.authReady
-                  ? "Browser auth (anon key) ready"
-                  : "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+                name: "Committee sign-in",
+                status: database.authReady ? "Configured" : "Not configured",
+                ok: database.authReady,
+                detail: database.authReady
+                  ? "Session secret is set"
+                  : "Set SESSION_SECRET to at least 32 characters",
               },
               {
                 name: "Email (SMTP / Resend)",

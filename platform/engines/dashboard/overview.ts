@@ -1,8 +1,10 @@
 import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbQuery } from "@/lib/db/query";
+import { asIso } from "@/lib/db/values";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import type { StatMetric, ActivityItem, MilestoneItem } from "@/platform/engines/dashboard/nav";
 
@@ -50,41 +52,42 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData>
     openTasks: [],
   };
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return { ...empty, error: "Database is not configured." };
   }
 
   try {
-    const supabase = createServiceRoleClient();
     const slug = event.slug;
+    const load = <T extends object>(text: string) =>
+      dbQuery<T>(text, { slug }).then(
+        (data) => ({ data, error: null as { message: string } | null }),
+        (error: unknown) => ({ data: [] as T[], error: { message: errorMessage(error) } }),
+      );
 
     const [rsvpsRes, sponsorsRes, volunteersRes, tasksRes, programmeRes, announcementsRes, activityRes] =
       await Promise.all([
-        supabase.from("rsvps").select("id, status, number_of_attendees, created_at, full_name").eq("event_slug", slug),
-        supabase.from("sponsors").select("id, status, company_name, created_at").eq("event_slug", slug),
-        supabase.from("volunteers").select("id, status, full_name, created_at").eq("event_slug", slug),
-        supabase.from("tasks").select("id, title, status, priority, due_date, assigned_to").eq("event_slug", slug),
-        supabase
-          .from("programme_items")
-          .select("id, title, start_time, published")
-          .eq("event_slug", slug)
-          .eq("published", true)
-          .order("display_order", { ascending: true })
-          .limit(5),
-        supabase
-          .from("announcements")
-          .select("id, title, is_published, created_at")
-          .eq("event_slug", slug)
-          .is("archived_at", null)
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("activity_logs")
-          .select("id, action, entity_type, created_at, metadata")
-          .eq("event_slug", slug)
-          .order("created_at", { ascending: false })
-          .limit(8),
+        load<{ id: string; status: string; number_of_attendees: number; created_at: string | Date; full_name: string }>(
+          `SELECT id, status, number_of_attendees, created_at, full_name FROM rsvps WHERE event_slug = @slug`,
+        ),
+        load<{ id: string; status: string; company_name: string; created_at: string | Date }>(
+          `SELECT id, status, company_name, created_at FROM sponsors WHERE event_slug = @slug`,
+        ),
+        load<{ id: string; status: string; full_name: string; created_at: string | Date }>(
+          `SELECT id, status, full_name, created_at FROM volunteers WHERE event_slug = @slug`,
+        ),
+        load<{ id: string; title: string; status: string; priority: string; due_date: string | Date | null; assigned_to: string | null }>(
+          `SELECT id, title, status, priority, due_date, assigned_to FROM tasks WHERE event_slug = @slug`,
+        ),
+        load<{ id: string; title: string; start_time: string | Date | null; published: boolean | number }>(
+          `SELECT TOP 5 id, title, start_time, published FROM programme_items WHERE event_slug = @slug AND published = 1 ORDER BY display_order ASC`,
+        ),
+        load<{ id: string; title: string; is_published: boolean | number; created_at: string | Date }>(
+          `SELECT TOP 5 id, title, is_published, created_at FROM announcements WHERE event_slug = @slug AND archived_at IS NULL ORDER BY created_at DESC`,
+        ),
+        load<{ id: string; action: string; entity_type: string | null; created_at: string | Date; metadata: string | null }>(
+          `SELECT TOP 8 id, action, entity_type, created_at, metadata FROM activity_logs WHERE event_slug = @slug ORDER BY created_at DESC`,
+        ),
       ]);
 
     const rsvps = rsvpsRes.error ? [] : (rsvpsRes.data ?? []);
@@ -126,7 +129,7 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData>
       trendMap.set(key, 0);
     }
     for (const r of rsvps) {
-      const key = String(r.created_at).slice(0, 10);
+      const key = (asIso(r.created_at) ?? "").slice(0, 10);
       if (trendMap.has(key)) trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
     }
     const trend = Array.from(trendMap.entries()).map(([label, value]) => ({
@@ -138,7 +141,7 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData>
       id: a.id,
       title: String(a.action),
       detail: a.entity_type ? String(a.entity_type) : "System",
-      time: formatRelative(a.created_at),
+      time: formatRelative(asIso(a.created_at) ?? ""),
       type: mapActivityType(String(a.action)),
     }));
 
@@ -153,11 +156,11 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardData>
     }));
 
     const recentAnnouncements: MilestoneItem[] = (announcementsRes.data ?? [])
-      .filter((a) => a.is_published)
+      .filter((a) => a.is_published === true || a.is_published === 1)
       .slice(0, 3)
       .map((a) => ({
         title: a.title as string,
-        date: formatRelative(a.created_at as string),
+        date: formatRelative(asIso(a.created_at) ?? ""),
         status: "done" as const,
       }));
 
@@ -266,19 +269,24 @@ export async function fetchAnalytics(): Promise<AnalyticsData> {
     empty: true,
   };
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) return { ...empty, error: "Database is not configured." };
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) return { ...empty, error: "Database is not configured." };
 
   const event = getActiveEventConfig();
   try {
-    const supabase = createServiceRoleClient();
     const [rsvpsRes, sponsorsRes, volunteersRes] = await Promise.all([
-      supabase
-        .from("rsvps")
-        .select("status, ticket_type, number_of_attendees, created_at")
-        .eq("event_slug", event.slug),
-      supabase.from("sponsors").select("package, status").eq("event_slug", event.slug),
-      supabase.from("volunteers").select("id").eq("event_slug", event.slug),
+      dbQuery<{ status: string; ticket_type: string | null; number_of_attendees: number; created_at: string | Date }>(
+        `SELECT status, ticket_type, number_of_attendees, created_at FROM rsvps WHERE event_slug = @slug`,
+        { slug: event.slug },
+      ).then((data) => ({ data })),
+      dbQuery<{ package: string; status: string }>(
+        `SELECT package, status FROM sponsors WHERE event_slug = @slug`,
+        { slug: event.slug },
+      ).then((data) => ({ data })),
+      dbQuery<{ id: string }>(
+        `SELECT id FROM volunteers WHERE event_slug = @slug`,
+        { slug: event.slug },
+      ).then((data) => ({ data })),
     ]);
 
     const rsvps = rsvpsRes.data ?? [];
@@ -297,7 +305,7 @@ export async function fetchAnalytics(): Promise<AnalyticsData> {
       trendMap.set(d.toISOString().slice(0, 10), 0);
     }
     for (const r of rsvps) {
-      const key = String(r.created_at).slice(0, 10);
+      const key = (asIso(r.created_at) ?? "").slice(0, 10);
       if (trendMap.has(key)) trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
     }
 

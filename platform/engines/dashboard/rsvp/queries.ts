@@ -1,8 +1,10 @@
 import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbExec, dbOne, dbQuery } from "@/lib/db/query";
+import { asIso, jsonText } from "@/lib/db/values";
 import {
   type DashboardRsvpRecord,
   type FetchDashboardRsvpsResult,
@@ -14,7 +16,6 @@ import {
 } from "@/platform/engines/dashboard/rsvp/types";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import { isMissingRsvpCommsColumn } from "@/platform/engines/rsvp/columns";
-import { supabaseErrorText } from "@/lib/supabase/connectivity";
 
 import {
   isEmailDeliveryStatus,
@@ -69,20 +70,37 @@ function mapRow(row: RsvpRow): DashboardRsvpRecord {
     numberOfAttendees: row.number_of_attendees,
     ticketType: row.ticket_type,
     notes: row.notes,
-    createdAt: row.created_at,
+    createdAt: asIso(row.created_at) ?? "",
     status,
     committeeNotes: row.committee_notes ?? row.internal_notes ?? null,
-    contactedAt: row.contacted_at,
+    contactedAt: asIso(row.contacted_at),
     tags: normalizeTags(row.tags),
     registrationReference: row.registration_reference ?? null,
     emailConsent: row.email_consent ?? true,
     smsConsent: row.sms_consent ?? false,
     marketingConsent: row.marketing_consent ?? false,
     emailStatus,
-    emailSentAt: row.email_sent_at ?? null,
+    emailSentAt: asIso(row.email_sent_at),
     smsStatus,
-    smsSentAt: row.sms_sent_at ?? null,
+    smsSentAt: asIso(row.sms_sent_at),
   };
+}
+
+async function selectRsvpRows(where: string, params: Record<string, unknown>) {
+  const order = `SELECT %COLUMNS% FROM rsvps WHERE ${where} ORDER BY created_at DESC`;
+  try {
+    const rows = await dbQuery<RsvpRow>(order.replace("%COLUMNS%", RSVP_SELECT), params);
+    return { rows, error: null as string | null };
+  } catch (error) {
+    const message = errorMessage(error);
+    if (!isMissingRsvpCommsColumn(message)) return { rows: [] as RsvpRow[], error: message };
+    try {
+      const rows = await dbQuery<RsvpRow>(order.replace("%COLUMNS%", RSVP_SELECT_WITHOUT_COMMS), params);
+      return { rows, error: null as string | null };
+    } catch (legacyError) {
+      return { rows: [] as RsvpRow[], error: errorMessage(legacyError) };
+    }
+  }
 }
 
 function classifyQueryError(message: string, code?: string): FetchDashboardRsvpsResult {
@@ -94,12 +112,14 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
     };
   }
   const tableMissing =
-    code === "42P01" || /relation\s+["']?\w+["']?\s+does not exist|schema cache|PGRST205/i.test(message);
+    code === "42P01" ||
+    code === "208" ||
+    /relation\s+["']?\w+["']?\s+does not exist|schema cache|PGRST205|Invalid object name/i.test(message);
   if (tableMissing) {
     return {
       ok: false,
       reason: "table_missing",
-      message: "RSVP table is not available. Run Supabase migrations.",
+      message: "RSVP table is not available. Apply sql/mssql/001_create_and_migrate.sql.",
     };
   }
 
@@ -126,8 +146,8 @@ function classifyQueryError(message: string, code?: string): FetchDashboardRsvps
 /** Fetch all RSVPs for the active event via service role (server-only). */
 export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> {
   await assertPermission("rsvp.read");
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return {
       ok: false,
       reason: "missing_env",
@@ -138,25 +158,9 @@ export async function fetchDashboardRsvps(): Promise<FetchDashboardRsvpsResult> 
   const event = getActiveEventConfig();
 
   try {
-    const supabase = createServiceRoleClient();
-    const primary = await supabase
-      .from("rsvps")
-      .select(RSVP_SELECT)
-      .eq("event_slug", event.slug)
-      .order("created_at", { ascending: false });
-
-    let rows = primary.data as RsvpRow[] | null;
-    let error = primary.error;
-    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
-      const legacy = await supabase
-        .from("rsvps")
-        .select(RSVP_SELECT_WITHOUT_COMMS)
-        .eq("event_slug", event.slug)
-        .order("created_at", { ascending: false });
-      rows = legacy.data as RsvpRow[] | null;
-      error = legacy.error;
-    }
-    if (error) return classifyQueryError(error.message, error.code);
+    const loaded = await selectRsvpRows(`event_slug = @slug`, { slug: event.slug });
+    if (loaded.error) return classifyQueryError(loaded.error);
+    const rows = loaded.rows;
 
     return {
       ok: true,
@@ -175,32 +179,15 @@ export async function fetchDashboardRsvpById(
   await assertPermission("rsvp.read");
   if (!id) return { ok: false, error: "Record not found." };
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return { ok: false, error: "Database not connected." };
   }
 
   try {
-    const supabase = createServiceRoleClient();
-    const primary = await supabase
-      .from("rsvps")
-      .select(RSVP_SELECT)
-      .eq("id", id)
-      .maybeSingle();
-
-    let row = primary.data as RsvpRow | null;
-    let error = primary.error;
-    if (error && isMissingRsvpCommsColumn(supabaseErrorText(error))) {
-      const legacy = await supabase
-        .from("rsvps")
-        .select(RSVP_SELECT_WITHOUT_COMMS)
-        .eq("id", id)
-        .maybeSingle();
-      row = legacy.data as RsvpRow | null;
-      error = legacy.error;
-    }
-
-    if (error || !row) {
+    const loaded = await selectRsvpRows(`id = @id`, { id });
+    const row = loaded.rows[0];
+    if (loaded.error || !row) {
       return { ok: false, error: "Record not found." };
     }
 
@@ -222,38 +209,24 @@ export async function updateDashboardRsvpStatus(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!id) return { ok: false, error: "Record not found." };
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return { ok: false, error: "Database not connected." };
   }
 
   try {
-    const supabase = createServiceRoleClient();
-
-    const { data: existing, error: fetchError } = await supabase
-      .from("rsvps")
-      .select("contacted_at")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (fetchError || !existing) {
-      return { ok: false, error: "Record not found." };
-    }
-
-    const contacted_at = contactedAtForStatus(
-      status,
-      (existing as { contacted_at: string | null }).contacted_at,
+    const existing = await dbOne<{ contacted_at: string | Date | null }>(
+      `SELECT contacted_at FROM rsvps WHERE id = @id`,
+      { id },
     );
+    if (!existing) return { ok: false, error: "Record not found." };
 
-    const { error } = await supabase
-      .from("rsvps")
-      .update({ status, contacted_at })
-      .eq("id", id);
-
-    if (error) {
-      console.error("[dashboard-rsvp] Status update error:", error.message);
-      return { ok: false, error: "Could not update status." };
-    }
+    const contactedAt = contactedAtForStatus(status, asIso(existing.contacted_at));
+    const updated = await dbExec(
+      `UPDATE rsvps SET status = @status, contacted_at = @contactedAt, updated_at = SYSDATETIMEOFFSET() WHERE id = @id`,
+      { id, status, contactedAt: contactedAt ? new Date(contactedAt) : null },
+    );
+    if (updated === 0) return { ok: false, error: "Could not update status." };
 
     return { ok: true };
   } catch (e) {
@@ -273,27 +246,26 @@ export async function updateDashboardRsvpCommitteeNote(
     return { ok: false, error: "Committee note is too long (maximum 4,000 characters)." };
   }
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return { ok: false, error: "Database not connected." };
   }
 
   try {
-    const supabase = createServiceRoleClient();
-    const payload = { committee_notes: trimmed.length > 0 ? trimmed : null };
-
-    let { error } = await supabase.from("rsvps").update(payload).eq("id", id);
-
-    if (error && /committee_notes/i.test(error.message)) {
-      ({ error } = await supabase
-        .from("rsvps")
-        .update({ internal_notes: payload.committee_notes })
-        .eq("id", id));
-    }
-
-    if (error) {
-      console.error("[dashboard-rsvp] Note update error:", error.message);
-      return { ok: false, error: "Could not save committee note." };
+    const notes = trimmed.length > 0 ? trimmed : null;
+    try {
+      const updated = await dbExec(
+        `UPDATE rsvps SET committee_notes = @notes, updated_at = SYSDATETIMEOFFSET() WHERE id = @id`,
+        { id, notes },
+      );
+      if (updated === 0) return { ok: false, error: "Could not save committee note." };
+    } catch (noteError) {
+      if (!/committee_notes/i.test(errorMessage(noteError))) throw noteError;
+      const updated = await dbExec(
+        `UPDATE rsvps SET internal_notes = @notes, updated_at = SYSDATETIMEOFFSET() WHERE id = @id`,
+        { id, notes },
+      );
+      if (updated === 0) return { ok: false, error: "Could not save committee note." };
     }
 
     return { ok: true };
@@ -311,34 +283,25 @@ export async function toggleDashboardRsvpTag(
     return { ok: false, error: "Invalid tag." };
   }
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return { ok: false, error: "Database not connected." };
   }
 
   try {
-    const supabase = createServiceRoleClient();
-    const { data: existing, error: fetchError } = await supabase
-      .from("rsvps")
-      .select("tags")
-      .eq("id", id)
-      .maybeSingle();
+    const existing = await dbOne<{ tags: string | string[] | null }>(
+      `SELECT tags FROM rsvps WHERE id = @id`,
+      { id },
+    );
+    if (!existing) return { ok: false, error: "Record not found." };
 
-    if (fetchError || !existing) {
-      return { ok: false, error: "Record not found." };
-    }
-
-    const current = normalizeTags((existing as { tags: string[] | null }).tags);
-    const next = current.includes(tag)
-      ? current.filter((t) => t !== tag)
-      : [...current, tag];
-
-    const { error } = await supabase.from("rsvps").update({ tags: next }).eq("id", id);
-
-    if (error) {
-      console.error("[dashboard-rsvp] Tag update error:", error.message);
-      return { ok: false, error: "Could not update tags." };
-    }
+    const current = normalizeTags(existing.tags);
+    const next = current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag];
+    const updated = await dbExec(
+      `UPDATE rsvps SET tags = @tags, updated_at = SYSDATETIMEOFFSET() WHERE id = @id`,
+      { id, tags: jsonText(next) },
+    );
+    if (updated === 0) return { ok: false, error: "Could not update tags." };
 
     return { ok: true, tags: next };
   } catch (e) {
