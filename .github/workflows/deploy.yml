@@ -88,6 +88,7 @@ jobs:
           grep -F 'MSSQL_SERVER="VMI3197632\SQLEXPRESS"' deploy/.env
           if grep -F 'VMI3197632\\SQLEXPRESS' deploy/.env; then echo "ERROR: SQL Server name must use one backslash."; exit 1; fi
           test -f deploy/server.js || { echo "ERROR: standalone server.js was not produced."; exit 1; }
+          test -d deploy/node_modules || { echo "ERROR: standalone node_modules was not produced."; exit 1; }
           test -f deploy/preload.cjs || { echo "ERROR: IIS preload script is missing."; exit 1; }
           test -f deploy/web.config || { echo "ERROR: IIS web.config is missing."; exit 1; }
           test -f deploy/.env || { echo "ERROR: server environment file was not written."; exit 1; }
@@ -106,6 +107,11 @@ jobs:
           local-dir: deploy/
           server-dir: /yorubadayapp/
           dangerous-clean-slate: false
+          # The action skips node_modules unless exclude is set. The Next.js
+          # server cannot start without the standalone node_modules folder.
+          exclude: |
+            **/.git*
+            **/.git*/**
 
       - name: Deployment completed
         run: |
