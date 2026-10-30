@@ -58,7 +58,7 @@ async function main() {
       console.error("Email not configured — set MAIL_FROM + SMTP_* (or Resend) on Vercel.");
     }
     if (d.authConfigured === false) {
-      console.error("Auth not fully configured — set NEXT_PUBLIC_SUPABASE_ANON_KEY and redeploy.");
+      console.error("Auth not fully configured — set SESSION_SECRET (32+ characters) and redeploy.");
     }
   }
 

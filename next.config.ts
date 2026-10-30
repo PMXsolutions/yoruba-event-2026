@@ -5,6 +5,10 @@ import type { NextConfig } from "next";
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  outputFileTracingIncludes: {
+    "/api/health": ["./sql/mssql/**/*"],
+  },
   turbopack: {
     root: projectRoot,
   },

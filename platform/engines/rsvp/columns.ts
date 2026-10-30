@@ -17,6 +17,8 @@ export type RsvpCommsColumn = (typeof RSVP_COMMS_COLUMNS)[number];
 export function missingRsvpColumn(message: string): string | null {
   const quoted = message.match(/Could not find the '([^']+)' column/i);
   if (quoted?.[1]) return quoted[1];
+  const invalid = message.match(/Invalid column name '([^']+)'/i);
+  if (invalid?.[1]) return invalid[1];
   const sql = message.match(/column\s+(?:[\w"]+\.)?"?(\w+)"?\s+does not exist/i);
   if (sql?.[1]) return sql[1];
   if (!/schema cache|PGRST204/i.test(message)) return null;

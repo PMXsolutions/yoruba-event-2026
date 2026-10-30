@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { dbExec } from "@/lib/db/query";
+import { isUuid, jsonText } from "@/lib/db/values";
 
 export type ActivityLogInput = {
   eventSlug: string;
@@ -14,18 +15,18 @@ export type ActivityLogInput = {
 /** Best-effort activity log — never throws to callers. */
 export async function logActivity(input: ActivityLogInput): Promise<void> {
   try {
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase.from("activity_logs").insert({
-      event_slug: input.eventSlug,
-      action: input.action,
-      entity_type: input.entityType ?? null,
-      entity_id: input.entityId ?? null,
-      actor_id: input.actorId ?? null,
-      metadata: input.metadata ?? {},
-    });
-    if (error) {
-      console.warn("[activity-log] Insert failed:", error.message);
-    }
+    await dbExec(
+      `INSERT INTO activity_logs (event_slug, action, entity_type, entity_id, actor_id, metadata)
+       VALUES (@eventSlug, @action, @entityType, @entityId, @actorId, @metadata)`,
+      {
+        eventSlug: input.eventSlug,
+        action: input.action,
+        entityType: input.entityType ?? null,
+        entityId: isUuid(input.entityId) ? input.entityId : null,
+        actorId: isUuid(input.actorId) ? input.actorId : null,
+        metadata: jsonText(input.metadata ?? {}),
+      },
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.warn("[activity-log] Unexpected error:", msg);

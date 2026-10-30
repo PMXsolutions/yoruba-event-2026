@@ -1,7 +1,7 @@
 {
   "name": "promax-event-platform",
   "version": "1.0.0",
-  "description": "Promax Event Platform v1 \u2014 first deployment: Yoruba Day Canberra 2026",
+  "description": "Promax Event Platform v1 — first deployment: Yoruba Day Canberra 2026",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,13 +10,13 @@
     "start": "next start",
     "lint": "eslint",
     "provision-admin": "node --env-file=.env.local scripts/provision-admin.mjs",
+    "db:migrate": "node --env-file=.env.local scripts/migrate-to-mssql.mjs",
     "verify:deployment": "node scripts/verify-deployment.mjs",
     "test": "node --test tests/*.test.cjs"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.105.4",
     "framer-motion": "^12.38.0",
+    "mssql": "^11.0.2",
     "next": "^16.3.4",
     "nodemailer": "^10.0.3",
     "react": "19.2.4",
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/mssql": "^12.3.0",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.24",
     "@types/react": "^19",

@@ -1,8 +1,10 @@
 import { assertPermission } from "@/lib/auth/rbac";
 import "server-only";
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSupabaseEnvPresence } from "@/lib/supabase/env-status";
+import { getDatabaseEnvPresence } from "@/lib/db/connection";
+import { errorMessage } from "@/lib/db/connectivity";
+import { dbExec, dbQuery } from "@/lib/db/query";
+import { asIso } from "@/lib/db/values";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import {
   createSponsorFormSchema,
@@ -24,8 +26,8 @@ type SponsorRow = {
   logo_url: string | null;
   status: string;
   committee_notes: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: string | Date;
+  updated_at: string | Date;
 };
 
 function mapRow(row: SponsorRow): SponsorRecord {
@@ -44,8 +46,8 @@ function mapRow(row: SponsorRow): SponsorRecord {
     logoUrl: row.logo_url,
     status,
     committeeNotes: row.committee_notes,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: asIso(row.created_at) ?? "",
+    updatedAt: asIso(row.updated_at) ?? "",
   };
 }
 
@@ -53,9 +55,7 @@ export type SubmitSponsorResult =
   | { ok: true }
   | { ok: false; error: string; fieldErrors?: Partial<Record<keyof SponsorFormValues, string>> };
 
-export async function submitSponsorEnquiry(
-  raw: unknown,
-): Promise<SubmitSponsorResult> {
+export async function submitSponsorEnquiry(raw: unknown): Promise<SubmitSponsorResult> {
   const event = getActiveEventConfig();
   const packages = event.sponsorTiers.map((t) => t.name);
   const parsed = createSponsorFormSchema(packages).safeParse(raw);
@@ -70,33 +70,34 @@ export async function submitSponsorEnquiry(
     return { ok: false, error: "Please correct the highlighted fields.", fieldErrors };
   }
 
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) {
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) {
     return { ok: false, error: "Registration is temporarily unavailable. Please try again later." };
   }
 
   try {
-    const supabase = createServiceRoleClient();
     const d = parsed.data;
-    const { error } = await supabase.from("sponsors").insert({
-      event_slug: event.slug,
-      company_name: d.companyName,
-      contact_person: d.contactPerson,
-      email: d.email.toLowerCase(),
-      phone: d.phone ?? null,
-      website: d.website ?? null,
-      package: d.package,
-      message: d.message ?? null,
-      logo_url: d.logoUrl ?? null,
-      status: "new",
-    });
-    if (error) {
-      console.error("[sponsors] Insert failed:", error.message);
-      return { ok: false, error: "Something went wrong while submitting your enquiry. Please try again." };
-    }
+    await dbExec(
+      `INSERT INTO sponsors (
+         event_slug, company_name, contact_person, email, phone, website, package, message, logo_url, status
+       ) VALUES (
+         @slug, @companyName, @contactPerson, @email, @phone, @website, @package, @message, @logoUrl, N'new'
+       )`,
+      {
+        slug: event.slug,
+        companyName: d.companyName,
+        contactPerson: d.contactPerson,
+        email: d.email.toLowerCase(),
+        phone: d.phone ?? null,
+        website: d.website ?? null,
+        package: d.package,
+        message: d.message ?? null,
+        logoUrl: d.logoUrl ?? null,
+      },
+    );
     return { ok: true };
-  } catch (e) {
-    console.error("[sponsors] Unexpected:", e);
+  } catch (error) {
+    console.error("[sponsors] Insert failed:", errorMessage(error));
     return { ok: false, error: "Something went wrong while submitting your enquiry. Please try again." };
   }
 }
@@ -107,24 +108,19 @@ export type FetchSponsorsResult =
 
 export async function fetchSponsors(): Promise<FetchSponsorsResult> {
   await assertPermission("sponsor.read");
-  const env = getSupabaseEnvPresence();
-  if (!env.serviceRoleReady) return { ok: false, message: "Database is not configured." };
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) return { ok: false, message: "Database is not configured." };
 
   const event = getActiveEventConfig();
   try {
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
-      .from("sponsors")
-      .select("*")
-      .eq("event_slug", event.slug)
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("[sponsors] Query failed:", error.message);
-      return { ok: false, message: "Unable to load sponsors." };
-    }
-    return { ok: true, records: (data ?? []).map((r) => mapRow(r as SponsorRow)) };
-  } catch (e) {
-    console.error("[sponsors] Unexpected:", e);
+    const rows = await dbQuery<SponsorRow>(
+      `SELECT id, company_name, contact_person, email, phone, website, package, message, logo_url, status, committee_notes, created_at, updated_at
+       FROM sponsors WHERE event_slug = @slug ORDER BY created_at DESC`,
+      { slug: event.slug },
+    );
+    return { ok: true, records: rows.map(mapRow) };
+  } catch (error) {
+    console.error("[sponsors] Query failed:", errorMessage(error));
     return { ok: false, message: "Unable to load sponsors." };
   }
 }
@@ -134,9 +130,11 @@ export async function updateSponsorStatus(
   status: SponsorStatus,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase.from("sponsors").update({ status }).eq("id", id);
-    if (error) return { ok: false, error: "Could not update status." };
+    const updated = await dbExec(
+      `UPDATE sponsors SET status = @status, updated_at = SYSDATETIMEOFFSET() WHERE id = @id`,
+      { id, status },
+    );
+    if (updated === 0) return { ok: false, error: "Could not update status." };
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not update status." };
@@ -149,12 +147,11 @@ export async function updateSponsorNotes(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const trimmed = notes.trim().slice(0, 4000);
   try {
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase
-      .from("sponsors")
-      .update({ committee_notes: trimmed || null })
-      .eq("id", id);
-    if (error) return { ok: false, error: "Could not save notes." };
+    const updated = await dbExec(
+      `UPDATE sponsors SET committee_notes = @notes, updated_at = SYSDATETIMEOFFSET() WHERE id = @id`,
+      { id, notes: trimmed || null },
+    );
+    if (updated === 0) return { ok: false, error: "Could not save notes." };
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not save notes." };

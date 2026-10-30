@@ -1,4 +1,4 @@
-import { isSupabaseConnectivityFailure } from "@/lib/supabase/connectivity";
+import { isDatabaseConnectivityFailure } from "@/lib/db/connectivity";
 
 /** Maps Supabase / Postgres errors to warm, user-facing RSVP messages. */
 
@@ -15,15 +15,16 @@ export function mapSupabaseRsvpError(message: string, code?: string): {
   userMessage: string;
   errorCode: RsvpErrorCode;
 } {
-  if (isSupabaseConnectivityFailure(message)) {
+  if (isDatabaseConnectivityFailure(message)) {
     return {
       userMessage: "We could not reach our servers. Check your connection and try again.",
       errorCode: "NETWORK",
     };
   }
   if (
-    /column\s+\S+\s+does not exist|Could not find the '.+' column/i.test(message) ||
+    /column\s+\S+\s+does not exist|Could not find the '.+' column|Invalid column name|Invalid object name/i.test(message) ||
     code === "42P01" ||
+    code === "208" ||
     /relation\s+["']?\w+["']?\s+does not exist|schema cache|PGRST205/i.test(message)
   ) {
     return {
@@ -57,7 +58,11 @@ export function mapConfigError(message: string): {
   userMessage: string;
   errorCode: RsvpErrorCode;
 } {
-  if (message.includes("Missing NEXT_PUBLIC_SUPABASE") || message.includes("SUPABASE_SERVICE_ROLE")) {
+  if (
+    message.includes("Missing NEXT_PUBLIC_SUPABASE") ||
+    message.includes("SUPABASE_SERVICE_ROLE") ||
+    message.includes("Missing MSSQL")
+  ) {
     return {
       userMessage:
         "Registration is not configured on this deployment yet. Please try again later or contact the organisers by email.",

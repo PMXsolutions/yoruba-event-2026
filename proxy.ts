@@ -1,67 +1,33 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { getFeatureFlags } from "@/platform/core/flags";
-import { normalizeSupabaseProjectUrl } from "@/lib/supabase/normalize-url";
+import { SESSION_COOKIE, readSessionUserId } from "@/lib/auth/session-token";
 
 /**
- * Next.js 16 Proxy — protects committee routes and refreshes Supabase auth cookies.
- * (Replaces deprecated middleware.ts convention.)
+ * Next.js 16 Proxy — protects committee routes with the signed session cookie.
  */
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const pathname = request.nextUrl.pathname;
   const isDashboard = pathname.startsWith("/dashboard");
   const isLogin = pathname === "/login" || pathname.startsWith("/login/");
   const { dashboardAuthRequired } = getFeatureFlags();
 
   if (!dashboardAuthRequired) {
-    return supabaseResponse;
+    return NextResponse.next();
   }
 
-  if (!rawUrl || !anonKey) {
-    if (isDashboard) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-    return supabaseResponse;
-  }
+  const userId = await readSessionUserId(request.cookies.get(SESSION_COOKIE)?.value);
 
-  const url = normalizeSupabaseProjectUrl(rawUrl);
-
-  const supabase = createServerClient(url, anonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => {
-          supabaseResponse.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (isDashboard && !user) {
+  if (isDashboard && !userId) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLogin && user && request.nextUrl.searchParams.get("access") !== "denied") {
+  if (isLogin && userId && request.nextUrl.searchParams.get("access") !== "denied") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {

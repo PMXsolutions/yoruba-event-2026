@@ -41,7 +41,7 @@ test('tracking failure prevents untracked email',async()=>{const h=dispatchHarne
 test('missing delivery columns still send the confirmation',async()=>{const h=dispatchHarness({missingColumn:true});const result=await h.run();assert.equal(result.emailSent,true);assert.equal(result.emailStatus,'sent');assert.equal(h.sends,1);});
 test('missing id fails explicitly',async()=>{const h=dispatchHarness();await assert.rejects(h.run(null));assert.equal(h.sends,0);});
 test('status write detects no matching row',async()=>{
- const {updateRsvpEmailDelivery}=load('platform/engines/notifications/delivery.ts',{'@/lib/supabase/admin':{createServiceRoleClient:()=>({from:()=>({update:()=>({eq:()=>({select:()=>({single:async()=>({data:null,error:null})})})})})})}});
+ const {updateRsvpEmailDelivery}=load('platform/engines/notifications/delivery.ts',{'@/lib/db/query':{dbQuery:async()=>[]}});
  await assert.rejects(updateRsvpEmailDelivery({rsvpId:'missing',status:'sent'}));
 });
 test('production auth cannot be disabled by flag',()=>{const before={...process.env};try{process.env.NODE_ENV='production';process.env.DASHBOARD_AUTH_REQUIRED='false';assert.equal(load('platform/core/flags.ts').getFeatureFlags().dashboardAuthRequired,true);}finally{process.env=before;}});
@@ -54,30 +54,38 @@ test('consent validation rejects unknown strings and SMS without phone',()=>{
 });
 test('insert writes a stable UUID and pending atomically, without returned id',async()=>{
  let inserted;
- const client={from:()=>({select:()=>({eq(){return this},gte(){return this},limit(){return this},maybeSingle:async()=>({data:null,error:null})}),insert:async row=>{inserted=row;return {error:null};}})};
  const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{
-  '@/lib/supabase/admin':{createServiceRoleClient:()=>client},
-  '@/lib/supabase/env-status':{getSupabaseEnvPresence:()=>({serviceRoleReady:true})},
+  '@/lib/db/query':{dbOne:async()=>null, dbExec:async(_sql, params)=>{inserted=params; return 1;}},
+  '@/lib/db/connection':{getDatabaseEnvPresence:()=>({ready:true})},
   '@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})},
  });
  const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General'},{slug:'test',ticketTypes:['General']});
  assert.equal(result.ok,true);assert.equal(result.record.id,inserted.id);assert.match(inserted.id,/^[0-9a-f-]{36}$/);assert.equal(inserted.email_status,'pending');
 });
 test('inactive profile and missing permission fail closed',async()=>{
- const rbac=load('lib/auth/rbac.ts',{'@/lib/supabase/server':{createServerSupabaseClient:async()=>({auth:{getUser:async()=>({data:{user:{id:'test',email:'test@example.invalid'}}})}})},'@/lib/supabase/admin':{createServiceRoleClient:()=>({from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{is_active:false},error:null})})})})})}});
+ const rbac=load('lib/auth/rbac.ts',{
+  '@/lib/auth/session':{readRequestSessionUserId:async()=>'test'},
+  '@/lib/db/query':{dbOne:async()=>({is_active:false})},
+ });
  assert.equal(await rbac.getAuthUser(),null);await assert.rejects(rbac.assertPermission('rsvp.read'));
 });
 test('missing communication columns save the registration without those fields',async()=>{
  const rows=[];
- const client={from:()=>({select:()=>({eq(){return this},gte(){return this},limit(){return this},maybeSingle:async()=>({data:null,error:null})}),insert:async row=>{rows.push(row);if('email_consent' in row||'email_status' in row)return {error:{message:"Could not find the 'email_consent' column of 'rsvps' in the schema cache",code:'PGRST204'}};return {error:null};}})};
- const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{'@/lib/supabase/admin':{createServiceRoleClient:()=>client},'@/lib/supabase/env-status':{getSupabaseEnvPresence:()=>({serviceRoleReady:true})},'@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})}});
+ const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{
+  '@/lib/db/query':{dbOne:async()=>null, dbExec:async(_sql, params)=>{rows.push(params); if('email_consent' in params||'email_status' in params) throw new Error("Invalid column name 'email_consent'."); return 1;}},
+  '@/lib/db/connection':{getDatabaseEnvPresence:()=>({ready:true})},
+  '@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})},
+ });
  const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General',emailConsent:true},{slug:'test',ticketTypes:['General']});
  assert.equal(result.ok,true);assert.equal(rows.length,2);assert.equal('email_consent' in rows[1],false);assert.equal('email_status' in rows[1],false);assert.equal(result.record.email_consent,true);
 });
 test('missing rsvps table does not retry as a legacy insert',async()=>{
  let inserts=0;
- const client={from:()=>({select:()=>({eq(){return this},gte(){return this},limit(){return this},maybeSingle:async()=>({data:null,error:null})}),insert:async()=>{inserts++;return {error:{message:'relation "public.rsvps" does not exist',code:'42P01'}};}})};
- const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{'@/lib/supabase/admin':{createServiceRoleClient:()=>client},'@/lib/supabase/env-status':{getSupabaseEnvPresence:()=>({serviceRoleReady:true})},'@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})}});
+ const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{
+  '@/lib/db/query':{dbOne:async()=>null, dbExec:async()=>{inserts++; throw new Error('Invalid object name \'dbo.rsvps\'.');}},
+  '@/lib/db/connection':{getDatabaseEnvPresence:()=>({ready:true})},
+  '@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})},
+ });
  const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General'},{slug:'test',ticketTypes:['General']});assert.equal(result.ok,false);assert.equal(inserts,1);
 });
 test('public action preserves saved RSVP after notification persistence failure',async()=>{
@@ -95,22 +103,22 @@ test('public action preserves saved RSVP after notification persistence failure'
 test('member actions deny unauthorised callers before service access', async()=>{
  const actions=load('app/actions/members.ts',{
   'next/cache':{revalidatePath(){}}, '@/lib/auth/rbac':{requireAuth:async()=>({ok:false,message:'Forbidden'})},
-  '@/lib/supabase/admin':{createServiceRoleClient(){throw Error('must not access database');}},
+  '@/lib/db/query':{dbOne(){throw Error('must not access database');}, dbTransaction(){throw Error('must not access database');}},
  });
  assert.equal((await actions.inviteMember({name:'Test',email:'test@example.org'})).ok,false);
  assert.equal((await actions.changeMemberAccess({})).ok,false);
 });
-test('member access rejects self changes and invalid roles before RPC',async()=>{
+test('member access rejects self changes and invalid roles before the database',async()=>{
  const id='11111111-1111-4111-8111-111111111111';
- const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id}})},'@/lib/supabase/server':{createServerSupabaseClient(){throw Error('must not call RPC');}}});
+ const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id}})},'@/lib/db/query':{dbTransaction(){throw Error('must not query');}}});
  assert.equal((await actions.changeMemberAccess({id,role:'COMMITTEE',active:false})).ok,false);
  assert.equal((await actions.changeMemberAccess({id:'22222222-2222-4222-8222-222222222222',role:'OWNER',active:true})).ok,false);
 });
-test('member access uses authenticated RPC and reports database failures',async()=>{
- let args;
- const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id:'actor'}})},'@/lib/supabase/server':{createServerSupabaseClient:async()=>({rpc:async(name,input)=>{args={name,input};return {error:{message:'rejected'}};}})}});
+test('member access reports database failures',async()=>{
+ let called=false;
+ const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id:'11111111-1111-4111-8111-111111111111'}})},'@/lib/db/query':{dbTransaction:async()=>{called=true; throw new Error('rejected');}}});
  assert.equal((await actions.changeMemberAccess({id:'22222222-2222-4222-8222-222222222222',role:'COMMITTEE',active:false})).ok,false);
- assert.equal(args.name,'manage_member_access');assert.equal(args.input.active,false);
+ assert.equal(called,true);
 });
 test('unreachable database is not reported as a generic save failure', () => {
   const { mapSupabaseRsvpError } = load('platform/engines/rsvp/errors.ts');
@@ -122,10 +130,14 @@ test('unreachable database is not reported as a generic save failure', () => {
   const constraint = mapSupabaseRsvpError('new row for relation "rsvps" violates check constraint "rsvps_email_status_check"', '23514');
   assert.equal(constraint.errorCode, 'CONSTRAINT');
 });
-test('quoted Supabase URL and key are usable', () => {
-  const { cleanEnvValue, normalizeSupabaseProjectUrl } = load('lib/supabase/normalize-url.ts');
-  assert.equal(cleanEnvValue('"service-role-key"'), 'service-role-key');
-  assert.equal(normalizeSupabaseProjectUrl(' "https://example.supabase.co/rest/v1/" '), 'https://example.supabase.co');
+test('quoted SQL Server connection string is usable', () => {
+  const { parseMssqlConnectionString } = load('lib/db/connection.ts');
+  const parsed = parseMssqlConnectionString('Server=VMI3197632\\SQLEXPRESS;Database=YorubaDayCanberra;User Id=yorubaday_admin;Password="secret";Encrypt=true;TrustServerCertificate=true;');
+  assert.equal(parsed.server, 'VMI3197632');
+  assert.equal(parsed.instanceName, 'SQLEXPRESS');
+  assert.equal(parsed.database, 'YorubaDayCanberra');
+  assert.equal(parsed.user, 'yorubaday_admin');
+  assert.equal(parsed.password, '"secret"');
 });
 test('vanity SMTP host verifies TLS against its CNAME target', async () => {
   const prev = { ...process.env };
@@ -158,6 +170,11 @@ test('vanity SMTP host verifies TLS against its CNAME target', async () => {
   }
 });
 test('resending invitation cannot reactivate an inactive member',async()=>{
- const actions=load('app/actions/members.ts',{'next/cache':{revalidatePath(){}},'@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id:'actor'}})},'@/lib/supabase/admin':{createServiceRoleClient:()=>({from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{id:'target',is_active:false},error:null})})})}),auth:{admin:{generateLink(){throw Error('must not create link');}}}})}});
+ const actions=load('app/actions/members.ts',{
+  'next/cache':{revalidatePath(){}},
+  '@/lib/auth/rbac':{requireAuth:async()=>({ok:true,user:{id:'actor'}})},
+  '@/lib/db/query':{dbOne:async()=>({id:'target',is_active:false})},
+  '@/lib/auth/account-email':{issueAccountEmail(){throw Error('must not send');}},
+ });
  assert.equal((await actions.inviteMember({name:'Member',email:'member@example.org'})).ok,false);
 });

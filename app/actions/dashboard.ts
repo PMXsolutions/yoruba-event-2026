@@ -214,7 +214,6 @@ export async function publishAnnouncementAction(id: string, published: boolean) 
 }
 
 export async function signOutAction() {
-  const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const supabase = await createServerSupabaseClient();
-  await supabase.auth.signOut();
+  const { signOut } = await import("@/app/actions/auth");
+  await signOut();
 }
