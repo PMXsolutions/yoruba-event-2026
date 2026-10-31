@@ -24,7 +24,9 @@ function LoginForm() {
     setInfo(null);
     setIsPending(true);
 
-    const trimmedEmail = email.trim().toLowerCase();
+    const submitted = new FormData(e.currentTarget);
+    const trimmedEmail = String(submitted.get("email") ?? email).trim().toLowerCase();
+    const submittedPassword = String(submitted.get("password") ?? password);
 
     try {
       if (mode === "forgot") {
@@ -37,7 +39,7 @@ function LoginForm() {
         return;
       }
 
-      const authResult = await signIn(trimmedEmail, password);
+      const authResult = await signIn(trimmedEmail, submittedPassword);
       if (!authResult.ok) {
         setError(authResult.error);
         return;
@@ -92,9 +94,10 @@ function LoginForm() {
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             required
-            autoComplete="email"
+            autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-espresso/80 px-4 py-3 font-sans text-sm text-cream outline-none transition focus:border-gold-bright/50 focus:ring-2 focus:ring-gold/20"
@@ -111,6 +114,7 @@ function LoginForm() {
             </label>
             <input
               id="password"
+              name="password"
               type="password"
               required
               autoComplete="current-password"

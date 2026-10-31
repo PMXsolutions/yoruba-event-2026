@@ -10,4 +10,14 @@ async function hashPassword(password) {
   return `scrypt$${salt}$${hash.toString("hex")}`;
 }
 
-module.exports = { hashPassword };
+async function verifyPassword(password, stored) {
+  if (!stored) return false;
+  const [algorithm, salt, hex] = String(stored).split("$");
+  if (algorithm !== "scrypt" || !salt || !hex) return false;
+  const actual = await scryptAsync(password, salt, 64);
+  const expected = Buffer.from(hex, "hex");
+  if (expected.length !== actual.length) return false;
+  return actual.equals(expected);
+}
+
+module.exports = { hashPassword, verifyPassword };

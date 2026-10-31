@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const sql = require("mssql");
 const { getSettings, toDriverConfig } = require("./mssql-config.cjs");
-const { hashPassword } = require("./password.cjs");
+const { hashPassword, verifyPassword } = require("./password.cjs");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const schemaFile = path.join(root, "sql", "mssql", "001_create_and_migrate.sql");
@@ -129,11 +129,17 @@ async function ensureAdmin(pool) {
     return;
   }
   const existing = await pool.request().input("email", sql.NVarChar(320), email).query(
-    `SELECT id, password_hash FROM profiles WHERE email = @email`,
+    `SELECT id, password_hash, role, is_active FROM profiles WHERE email = @email`,
   );
   const row = existing.recordset[0];
-  if (row?.password_hash) {
-    console.info("Super Admin already has a password:", email);
+  const active = row?.is_active === true || row?.is_active === 1;
+  if (
+    row?.password_hash &&
+    active &&
+    row.role === "SUPER_ADMIN" &&
+    (await verifyPassword(password, row.password_hash))
+  ) {
+    console.info("Super Admin password already matches ADMIN_PASSWORD:", email);
     return;
   }
   const passwordHash = await hashPassword(password);
