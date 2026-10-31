@@ -6,7 +6,7 @@
  *
  * Required: MSSQL connection settings and ADMIN_PASSWORD (min 12 characters).
  * Optional: ADMIN_EMAIL (default admin@promaxevent.com), ADMIN_FULL_NAME.
- * An existing password is left unchanged.
+ * A stored password that does not match ADMIN_PASSWORD is replaced.
  */
 
 import { createRequire } from "node:module";
@@ -14,7 +14,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const sql = require("mssql");
 const { getSettings, toDriverConfig } = require("./mssql-config.cjs");
-const { hashPassword } = require("./password.cjs");
+const { hashPassword, verifyPassword } = require("./password.cjs");
 
 async function main() {
   const settings = getSettings();
@@ -34,12 +34,18 @@ async function main() {
   const pool = await sql.connect(toDriverConfig(settings));
   try {
     const existing = await pool.request().input("email", sql.NVarChar(320), email).query(
-      `SELECT id, password_hash FROM profiles WHERE email = @email`,
+      `SELECT id, password_hash, role, is_active FROM profiles WHERE email = @email`,
     );
     const row = existing.recordset[0];
-    if (row?.password_hash) {
-      console.info("SUPER_ADMIN already has a password:", email);
-      console.info("Sign in at /login. The stored password was not changed.");
+    const active = row?.is_active === true || row?.is_active === 1;
+    if (
+      row?.password_hash &&
+      active &&
+      row.role === "SUPER_ADMIN" &&
+      (await verifyPassword(password, row.password_hash))
+    ) {
+      console.info("SUPER_ADMIN password already matches ADMIN_PASSWORD:", email);
+      console.info("Sign in at /login.");
       return;
     }
     const passwordHash = await hashPassword(password);

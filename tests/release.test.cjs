@@ -280,3 +280,63 @@ test('resending invitation cannot reactivate an inactive member',async()=>{
  });
  assert.equal((await actions.inviteMember({name:'Member',email:'member@example.org'})).ok,false);
 });
+test('startup sign-in password is the deployed ADMIN_PASSWORD', async () => {
+  const { hashPassword, verifyPassword } = load('lib/auth/password.ts');
+  const before = { ...process.env };
+  function harness({ ready = true, row = null } = {}) {
+    const calls = [];
+    const loaded = load('lib/auth/ensure-admin.ts', {
+      '@/lib/db/connection': { getDatabaseEnvPresence: () => ({ ready }) },
+      '@/lib/db/query': {
+        dbOne: async (sql, params) => {
+          calls.push({ sql, params });
+          if (sql.includes('SELECT')) return row;
+          return { id: row?.id ?? 'created-id' };
+        },
+      },
+    }, new Map());
+    return { calls, ensureCommitteeAdmin: loaded.ensureCommitteeAdmin };
+  }
+  try {
+    process.env.ADMIN_EMAIL = 'Admin@PromaxEvent.com';
+    process.env.ADMIN_FULL_NAME = 'Platform Administrator';
+    process.env.ADMIN_PASSWORD = 'short';
+    const skipped = harness();
+    assert.equal(await skipped.ensureCommitteeAdmin(), 'skipped');
+    assert.equal(skipped.calls.length, 0);
+
+    delete process.env.ADMIN_PASSWORD;
+    assert.equal(await harness({ ready: false }).ensureCommitteeAdmin(), 'skipped');
+
+    process.env.ADMIN_PASSWORD = 'committee-secret-12';
+    const created = harness();
+    assert.equal(await created.ensureCommitteeAdmin(), 'created');
+    const insert = created.calls.find((call) => call.sql.includes('INSERT'));
+    assert.equal(insert.params.email, 'admin@promaxevent.com');
+    assert.match(insert.sql, /SUPER_ADMIN/);
+    assert.equal(await verifyPassword('committee-secret-12', insert.params.passwordHash), true);
+
+    const matchingHash = await hashPassword('committee-secret-12');
+    const scriptPasswords = require('../scripts/password.cjs');
+    assert.equal(await scriptPasswords.verifyPassword('committee-secret-12', matchingHash), true);
+    assert.equal(await scriptPasswords.verifyPassword('previous-password-99', matchingHash), false);
+    const ready = harness({ row: { id: 'admin-id', password_hash: matchingHash, role: 'SUPER_ADMIN', is_active: true } });
+    assert.equal(await ready.ensureCommitteeAdmin(), 'exists');
+    assert.equal(ready.calls.some((call) => call.sql.includes('UPDATE') || call.sql.includes('INSERT')), false);
+
+    const staleHash = await hashPassword('previous-password-99');
+    const reset = harness({ row: { id: 'admin-id', password_hash: staleHash, role: 'SUPER_ADMIN', is_active: 1 } });
+    assert.equal(await reset.ensureCommitteeAdmin(), 'password-set');
+    const update = reset.calls.find((call) => call.sql.includes('UPDATE'));
+    assert.equal(update.params.id, 'admin-id');
+    assert.match(update.sql, /is_active = 1/);
+    assert.equal(await verifyPassword('committee-secret-12', update.params.passwordHash), true);
+    assert.equal(await verifyPassword('previous-password-99', update.params.passwordHash), false);
+
+    const inactive = harness({ row: { id: 'admin-id', password_hash: matchingHash, role: 'COMMITTEE', is_active: false } });
+    assert.equal(await inactive.ensureCommitteeAdmin(), 'password-set');
+    assert.equal(inactive.calls.some((call) => call.sql.includes('UPDATE')), true);
+  } finally {
+    process.env = before;
+  }
+});
