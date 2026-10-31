@@ -7,6 +7,7 @@ import {
   parseSqlInstanceId,
   parseSqlInstancePort,
   sqlDialHost,
+  sqlTlsServerName,
   type MssqlConnectionSettings,
 } from "@/lib/db/connection";
 import { isUuid } from "@/lib/db/values";
@@ -65,18 +66,24 @@ function localInstanceTcpPort(instanceName: string): number | undefined {
   }
 }
 
-function connectionTarget(settings: MssqlConnectionSettings): { server: string; port?: number; instanceName?: string } {
+function connectionTarget(settings: MssqlConnectionSettings): {
+  server: string;
+  port?: number;
+  instanceName?: string;
+  tlsServerName?: string;
+} {
   const server = sqlDialHost(settings.server, settings.instanceName);
-  if (settings.port) return { server, port: settings.port };
-  if (!settings.instanceName) return { server };
+  const tlsServerName = server === "127.0.0.1" ? sqlTlsServerName(settings.server) : undefined;
+  if (settings.port) return { server, port: settings.port, tlsServerName };
+  if (!settings.instanceName) return { server, tlsServerName };
   const local = server === "127.0.0.1" ? localInstanceTcpPort(settings.instanceName) : undefined;
-  if (local) return { server, port: local };
-  return { server, instanceName: settings.instanceName };
+  if (local) return { server, port: local, tlsServerName };
+  return { server, instanceName: settings.instanceName, tlsServerName };
 }
 
 function connectionFailure(error: unknown, target: string): Error {
   const message = error instanceof Error ? error.message : String(error);
-  if (!/failed to connect|timed out|timeout|could not connect/i.test(message)) {
+  if (/servername|tls/i.test(message) || !/failed to connect|timed out|timeout|could not connect/i.test(message)) {
     return error instanceof Error ? error : new Error(message);
   }
   return new Error(
@@ -91,12 +98,13 @@ export async function getPool(): Promise<sql.ConnectionPool> {
       throw new Error("Missing MSSQL connection settings.");
     }
     const target = connectionTarget(settings);
-    const label = target.port
-      ? `${target.server},${target.port}`
+    const instanceLabel = settings.instanceName ? `${settings.server}\\${settings.instanceName}` : settings.server;
+    const socketLabel = target.port
+      ? `${target.server}:${target.port}`
       : target.instanceName
         ? `${target.server}\\${target.instanceName}`
         : target.server;
-    console.info(`[mssql] Connecting to ${label} database ${settings.database}`);
+    console.info(`[mssql] Connecting to ${instanceLabel} via ${socketLabel} database ${settings.database}`);
     const config: sql.config = {
       server: target.server,
       port: target.port,
@@ -108,6 +116,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
       pool: { max: 10, min: 0, idleTimeoutMillis: 30_000 },
       options: {
         instanceName: target.instanceName,
+        serverName: target.tlsServerName,
         encrypt: settings.encrypt,
         trustServerCertificate: settings.trustServerCertificate,
         enableArithAbort: true,
@@ -116,7 +125,7 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     const created = new sql.ConnectionPool(config);
     poolPromise = created.connect().catch((error: unknown) => {
       poolPromise = null;
-      throw connectionFailure(error, label);
+      throw connectionFailure(error, instanceLabel);
     });
   }
   return poolPromise;

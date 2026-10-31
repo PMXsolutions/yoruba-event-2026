@@ -13,7 +13,7 @@ if (!target) {
 
 function quote(value) {
   // Quote only. A backslash must stay a single backslash so the instance
-  // separator is `127.0.0.1\SQLEXPRESS`. Doubling it makes the driver skip
+  // separator is `VMI3197632\SQLEXPRESS`. Doubling it makes the driver skip
   // the SQLEXPRESS instance.
   return `"${String(value).replaceAll('"', '\\"')}"`;
 }
@@ -25,7 +25,7 @@ function collapseServerBackslashes(value) {
 function serverName() {
   const configured = process.env.MSSQL_SERVER;
   const instance = process.env.MSSQL_INSTANCE;
-  let server = configured ? collapseServerBackslashes(configured) : "127.0.0.1\\SQLEXPRESS";
+  let server = configured ? collapseServerBackslashes(configured) : "VMI3197632\\SQLEXPRESS";
   if (instance && !server.includes("\\")) server = `${server}\\${instance}`;
   return server;
 }

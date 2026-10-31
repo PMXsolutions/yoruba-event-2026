@@ -38,16 +38,28 @@ function flag(value: string | undefined, fallback: boolean): boolean {
  * The named instance is `VMI3197632\SQLEXPRESS` — one backslash.
  * A doubled separator is collapsed so the instance is still SQLEXPRESS.
  *
- * The Node driver speaks TCP. SQL Server Management Studio on this PC can
- * still open `VMI3197632\SQLEXPRESS` through shared memory, but that hostname
- * resolves off the machine and the instance rejects remote connections.
- * The site therefore dials `127.0.0.1` and the same `SQLEXPRESS` instance.
+ * SQL Server Management Studio opens that name through shared memory.
+ * The Node driver only speaks TCP, and from this PC the computer name
+ * resolves off the machine, which SQL Express rejects. The socket therefore
+ * stays on 127.0.0.1. TLS still has to use the computer name: Node rejects
+ * an IP address as a TLS server name.
  */
 const LOCAL_SQL_HOSTS = new Set(["vmi3197632", "localhost", "127.0.0.1", ".", "(local)"]);
 
+/** TCP destination. Local instance names are opened on this PC, not via the computer name. */
 export function sqlDialHost(server: string, instanceName?: string): string {
   if (instanceName && LOCAL_SQL_HOSTS.has(server.trim().toLowerCase())) return "127.0.0.1";
   return server;
+}
+
+/** Hostname sent during TLS. An IP address is not a legal TLS server name. */
+export function sqlTlsServerName(server: string): string {
+  const host = server.trim();
+  const lower = host.toLowerCase();
+  if (lower === "localhost" || lower === "." || lower === "(local)" || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) {
+    return "localhost";
+  }
+  return host;
 }
 
 /** Read `reg query` output for `Instance Names\SQL`. */

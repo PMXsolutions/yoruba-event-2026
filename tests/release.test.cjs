@@ -131,10 +131,13 @@ test('unreachable database is not reported as a generic save failure', () => {
   assert.equal(constraint.errorCode, 'CONSTRAINT');
 });
 test('the site dials the local SQL Express instance', () => {
-  const { sqlDialHost, parseSqlInstanceId, parseSqlInstancePort } = load('lib/db/connection.ts');
+  const { sqlDialHost, sqlTlsServerName, parseSqlInstanceId, parseSqlInstancePort } = load('lib/db/connection.ts');
   assert.equal(sqlDialHost('VMI3197632', 'SQLEXPRESS'), '127.0.0.1');
   assert.equal(sqlDialHost('localhost', 'SQLEXPRESS'), '127.0.0.1');
   assert.equal(sqlDialHost('db.example.com', 'SQLEXPRESS'), 'db.example.com');
+  assert.equal(sqlTlsServerName('VMI3197632'), 'VMI3197632');
+  assert.equal(sqlTlsServerName('127.0.0.1'), 'localhost');
+  assert.equal(sqlTlsServerName('localhost'), 'localhost');
   const names = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\Instance Names\\SQL\r\n    SQLEXPRESS    REG_SZ    MSSQL16.SQLEXPRESS\r\n';
   assert.equal(parseSqlInstanceId(names, 'SQLEXPRESS'), 'MSSQL16.SQLEXPRESS');
   const dynamic = '    TcpDynamicPorts    REG_SZ    49670\r\n    TcpPort    REG_SZ    \r\n';
@@ -185,7 +188,7 @@ test('deploy env writes the SQL Server name with one backslash', () => {
     const text = fs.readFileSync(target, 'utf8');
     const line = text.split(/\n/).find((entry) => entry.startsWith('MSSQL_SERVER='));
     const value = line.slice('MSSQL_SERVER='.length).replace(/^"|"$/g, '');
-    assert.equal(value, '127.0.0.1\\SQLEXPRESS');
+    assert.equal(value, 'VMI3197632\\SQLEXPRESS');
     assert.equal(value.includes('\\\\'), false);
     const doubled = spawnSync(process.execPath, ['scripts/write-deploy-env.mjs', target], {
       encoding: 'utf8',

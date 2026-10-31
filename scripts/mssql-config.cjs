@@ -101,9 +101,19 @@ function dialHost(server, instanceName) {
   return server;
 }
 
+function tlsServerName(server) {
+  const host = String(server).trim();
+  const lower = host.toLowerCase();
+  if (lower === "localhost" || lower === "." || lower === "(local)" || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) {
+    return "localhost";
+  }
+  return host;
+}
+
 function toDriverConfig(settings) {
+  const server = dialHost(settings.server, settings.instanceName);
   return {
-    server: dialHost(settings.server, settings.instanceName),
+    server,
     port: settings.instanceName ? undefined : settings.port,
     database: settings.database,
     user: settings.user,
@@ -112,6 +122,7 @@ function toDriverConfig(settings) {
     requestTimeout: 60000,
     options: {
       instanceName: settings.instanceName,
+      serverName: server === "127.0.0.1" ? tlsServerName(settings.server) : undefined,
       encrypt: settings.encrypt,
       trustServerCertificate: settings.trustServerCertificate,
       enableArithAbort: true,

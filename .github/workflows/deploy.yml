@@ -61,7 +61,7 @@ jobs:
 
       - name: Assemble Windows server package
         env:
-          MSSQL_SERVER: '127.0.0.1\SQLEXPRESS'
+          MSSQL_SERVER: 'VMI3197632\SQLEXPRESS'
           MSSQL_DATABASE: YorubaDayCanberra
           MSSQL_USER: yorubaday_admin
           MSSQL_PASSWORD: ${{ secrets.MSSQL_PASSWORD }}
