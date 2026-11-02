@@ -29,7 +29,7 @@ export const yorubaDayCanberra2026: EventConfig = {
   platformBrand: "Promax Event",
   description:
     "Yoruba Day Canberra 2026 celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity — presented by Yoruba Association Canberra.",
-  website: null,
+  website: "https://yorubaassociationact.org",
   branding: {
     espresso: "#1a0f0a",
     cream: "#faf6ef",
@@ -53,8 +53,8 @@ export const yorubaDayCanberra2026: EventConfig = {
     { label: "About", href: "#about" },
     { label: "Experience", href: "#experience" },
     { label: "Sponsors", href: "#sponsors" },
-    { label: "Volunteer", href: "#volunteer" },
     { label: "Register", href: "#rsvp" },
+    { label: "Volunteer", href: "#volunteer" },
     { label: "Contact", href: "#contact" },
   ],
   experienceItems: [

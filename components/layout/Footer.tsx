@@ -1,5 +1,6 @@
 import { SITE } from "@/lib/site";
 import { CommitteePortalLink } from "@/components/layout/CommitteePortalLink";
+import { AssociationLogo } from "@/components/brand/AssociationLogo";
 
 const social = [
   { label: "Instagram" },
@@ -19,6 +20,7 @@ export function Footer() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-bright/25 to-transparent" />
 
       <div className="relative mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10">
+        <AssociationLogo className="mb-8 h-14 w-auto sm:h-16" />
         <p className="mb-10 max-w-2xl border-l-2 border-gold-bright/50 pl-5 font-sans text-[0.72rem] font-semibold uppercase leading-relaxed tracking-[0.28em] text-gold-bright sm:mb-12 sm:text-xs sm:tracking-[0.32em]">
           Presented by {SITE.presenter}
         </p>

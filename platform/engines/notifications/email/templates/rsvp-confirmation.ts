@@ -1,6 +1,7 @@
 import type { EventConfig } from "@/platform/core/types/event";
 import type { RsvpRecord } from "@/platform/engines/rsvp/schema";
 import {
+  emailLogoHtml,
   escapeHtml,
   eventWebsiteUrl,
   firstNameFromFullName,
@@ -80,6 +81,7 @@ export function buildRsvpConfirmationEmail({
           <!-- HEADER -->
           <tr>
             <td style="padding:28px 32px;text-align:center;${patternBg}">
+              ${emailLogoHtml(event)}
               <h1 style="margin:0;font-size:26px;line-height:1.25;color:${palette.cream};font-weight:600;">${escapeHtml(event.name)}</h1>
               <p style="margin:10px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:${palette.gold};">
                 Presented by ${escapeHtml(event.presenter)}

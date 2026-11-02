@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { SaveTheDateMenu } from "@/components/features/SaveTheDateMenu";
 import { SITE, LAUNCH_COPY } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
+import { AssociationLogo } from "@/components/brand/AssociationLogo";
 
 const container = {
   hidden: { opacity: 0 },
@@ -84,6 +85,9 @@ export function Hero() {
           animate="visible"
           className="max-w-4xl"
         >
+          <motion.div variants={item} className="mb-6 sm:mb-7">
+            <AssociationLogo className="h-14 w-auto sm:h-16" />
+          </motion.div>
           <motion.div
             variants={item}
             className="mb-6 flex flex-col gap-2 font-sans text-[0.68rem] font-semibold uppercase tracking-[0.38em] text-gold-bright sm:mb-7 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1 sm:text-xs sm:tracking-[0.42em]"

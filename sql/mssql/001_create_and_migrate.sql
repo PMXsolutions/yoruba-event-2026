@@ -275,6 +275,14 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_activity_event' AND o
   CREATE INDEX IX_activity_event ON dbo.activity_logs(event_slug, created_at DESC);
 GO
 
+-- One registration per email for an event. Skipped when older rows already repeat an email.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UX_rsvps_event_email' AND object_id = OBJECT_ID(N'dbo.rsvps'))
+   AND NOT EXISTS (SELECT 1 FROM dbo.rsvps GROUP BY event_slug, email HAVING COUNT(*) > 1)
+BEGIN
+  CREATE UNIQUE INDEX UX_rsvps_event_email ON dbo.rsvps(event_slug, email);
+END
+GO
+
 -- ── Seed the Yoruba Day event row (the platform record that must exist) ─
 MERGE dbo.events AS target
 USING (SELECT N'yoruba-day-canberra-2026' AS slug) AS source

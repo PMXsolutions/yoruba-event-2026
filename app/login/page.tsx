@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { requestPasswordReset, signIn } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { SITE } from "@/lib/site";
+import { AssociationLogo } from "@/components/brand/AssociationLogo";
 
 function LoginForm() {
   const router = useRouter();
@@ -163,7 +164,8 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(201,162,39,0.18),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 bg-motif-geo opacity-30" />
 
-      <div className="relative z-10 mb-8 text-center">
+      <div className="relative z-10 mb-8 flex flex-col items-center text-center">
+        <AssociationLogo className="mb-4 h-16 w-auto" />
         <p className="font-display text-2xl font-semibold text-cream">{SITE.name}</p>
         <p className="mt-1 font-sans text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-gold-muted">
           {SITE.platformBrand} · Committee portal

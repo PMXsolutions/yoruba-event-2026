@@ -6,7 +6,7 @@ import { submitRsvp } from "@/app/actions/rsvp";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { LAUNCH_COPY, SITE, TICKET_TYPES } from "@/lib/site";
+import { LAUNCH_COPY, TICKET_TYPES } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 import {
   fieldErrorsFromZod,
@@ -137,33 +137,14 @@ export function RSVP() {
       <div className="pointer-events-none absolute inset-0 bg-motif-textile opacity-35 mix-blend-soft-light" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-bright/25 to-transparent" />
 
-      <div className="relative mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.08fr] lg:items-start lg:gap-16 xl:gap-20">
-          <div className="lg:pt-4">
-            <SectionHeading
-              align="left"
-              eyebrow="Register your interest"
-              title="Join us for an evening draped in gold and grace"
-              subtitle={RSVP_SUBTITLE}
-            />
-            <ul className="mt-8 space-y-5 font-sans text-sm leading-relaxed text-cream/75 sm:mt-10 sm:text-[0.95rem]">
-              {[
-                "Share your details once—our planning committee will follow up as the programme firms.",
-                "Let us know your party size and preferred ticket type so we can plan seating fairly.",
-                "Corporate tables and sponsorship conversations can begin in parallel—no obligation at this stage.",
-              ].map((line) => (
-                <li key={line} className="flex gap-4">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-br from-gold-bright to-gold-deep shadow-[0_0_12px_rgba(201,162,39,0.5)]" />
-                  {line}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-8 rounded-2xl border border-gold/20 bg-mahogany/40 px-5 py-4 font-sans text-xs leading-relaxed text-cream/70 shadow-inner backdrop-blur-sm sm:mt-10 sm:text-sm">
-              {LAUNCH_COPY.comingSoonNote}
-            </p>
-          </div>
+      <div className="relative mx-auto max-w-3xl px-5 sm:px-8 lg:px-10">
+        <SectionHeading
+          eyebrow="Register your interest"
+          title="Join us for an evening draped in gold and grace"
+          subtitle={RSVP_SUBTITLE}
+        />
 
-          <motion.div
+        <motion.div
             initial={{ opacity: 0, y: 28 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-10%" }}
@@ -267,12 +248,13 @@ export function RSVP() {
                     </div>
                     <div className={fieldWrap}>
                       <label htmlFor="phone" className={labelClass}>
-                        Phone <span className="font-normal text-cream/45">(optional)</span>
+                        Phone
                       </label>
                       <input
                         id="phone"
                         name="phone"
                         type="tel"
+                        required
                         autoComplete="tel"
                         className={inputClass(fieldErrors.phone)}
                         placeholder="+61 …"
@@ -362,10 +344,6 @@ export function RSVP() {
                       <p className={errText}>{fieldErrors.notes}</p>
                     ) : null}
                   </div>
-                  <div className="rounded-2xl border border-gold/15 bg-espresso/40 px-4 py-3 font-sans text-xs leading-relaxed text-cream/60 sm:text-[0.8rem]">
-                    {LAUNCH_COPY.comingSoonNote}
-                  </div>
-
                   <fieldset className="space-y-3 rounded-2xl border border-white/[0.08] bg-espresso/30 px-4 py-4">
                     <legend className="px-1 font-sans text-[0.62rem] font-bold uppercase tracking-[0.24em] text-gold-muted">
                       Communication preferences
@@ -403,32 +381,6 @@ export function RSVP() {
                     {fieldErrors.smsConsent ? (
                       <p className={errText}>{fieldErrors.smsConsent}</p>
                     ) : null}
-                    <label className="flex items-start gap-3 font-sans text-sm text-cream/80">
-                      <input
-                        type="checkbox"
-                        className="mt-1 h-4 w-4 rounded border-gold/30 bg-mahogany accent-gold"
-                        checked={form.marketingConsent}
-                        onChange={(e) => {
-                          clearMessages();
-                          setForm((f) => ({ ...f, marketingConsent: e.target.checked }));
-                        }}
-                      />
-                      <span>
-                        I am happy to receive occasional community updates from the organisers
-                        beyond this event (optional).
-                      </span>
-                    </label>
-                    <p className="font-sans text-[0.7rem] leading-relaxed text-cream/45">
-                      Privacy: we use your details only to manage this event interest list and
-                      related communications you opt into. You can ask to be removed at any time via{" "}
-                      <a
-                        href={`mailto:${SITE.contactEmail}`}
-                        className="text-gold-light underline-offset-2 hover:underline"
-                      >
-                        email
-                      </a>
-                      .
-                    </p>
                   </fieldset>
 
                   <div className="border-t border-white/10 pt-6 pb-2 sm:pt-7">
@@ -439,16 +391,14 @@ export function RSVP() {
                     >
                       {isPending ? "Sending…" : LAUNCH_COPY.registerInterest}
                     </Button>
-                    <p className="mt-4 max-w-lg font-sans text-xs leading-relaxed text-cream/45 sm:mt-5 sm:text-[0.8rem]">
-                      This form registers interest only — it is not a paid ticket or confirmed
-                      reservation. Ticketing will open separately once announced.
+                    <p className="mt-4 font-sans text-xs leading-relaxed text-cream/45">
+                      Interest only — not a ticket.
                     </p>
                   </div>
                 </form>
               )}
             </div>
-          </motion.div>
-        </div>
+        </motion.div>
       </div>
     </AnimatedSection>
   );

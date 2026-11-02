@@ -6,6 +6,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { signOutAction } from "@/app/actions/dashboard";
 import { DASHBOARD_NAV } from "@/platform/engines/dashboard/nav";
 import { SITE } from "@/lib/site";
+import { AssociationLogo } from "@/components/brand/AssociationLogo";
 import { getDashboardPageMeta } from "@/components/dashboard/page-config";
 
 function ChevronIcon({ className = "" }: { className?: string }) {
@@ -129,16 +130,9 @@ export function DashboardLayout({
             }`}
           >
             {!sidebarCollapsed ? (
-              <div className="min-w-0">
-                <p className="truncate font-display text-base font-semibold text-cream">Yoruba Day</p>
-                <p className="truncate font-sans text-[0.58rem] font-bold uppercase tracking-[0.28em] text-gold-muted">
-                  Committee Portal
-                </p>
-              </div>
+              <AssociationLogo className="h-9 w-auto max-w-[9.5rem]" alt="Yoruba Association in the ACT" />
             ) : (
-              <span className="font-display text-lg font-semibold text-gold-bright" aria-hidden>
-                Y
-              </span>
+              <AssociationLogo variant="crest" className="h-8 w-8" />
             )}
             <button
               type="button"
