@@ -38,14 +38,16 @@ export async function issueAccountEmail(input: {
       expires,
     },
   );
-  const link = new URL("/account/setup", await siteOrigin());
+  const origin = await siteOrigin();
+  const link = new URL("/account/setup", origin);
   link.hash = new URLSearchParams({ token }).toString();
   const href = link.toString();
+  const logo = `${origin}/brand/yoruba-association-act.png`;
   const result = await sendViaSmtp({
     to: input.email,
     subject: input.subject,
     text: `${input.intro}\n\nSet your password using this one-time link:\n${href}\n\nIf the link has expired, ask your administrator to resend it. If you did not expect this email, ignore it.`,
-    html: `<p>${input.intro}</p><p><a href="${href.replaceAll("&", "&amp;")}">Set your password</a></p><p>This link can be used once and expires in 48 hours. If you did not expect this email, ignore it.</p>`,
+    html: `<div style="background:#1a0f0a;padding:24px;text-align:center;"><img src="${logo}" alt="Yoruba Association in the ACT" width="220" style="display:block;margin:0 auto;height:auto;max-width:220px;border:0;"></div><p>${input.intro}</p><p><a href="${href.replaceAll("&", "&amp;")}">Set your password</a></p><p>This link can be used once and expires in 48 hours. If you did not expect this email, ignore it.</p>`,
   });
   return { ok: result.ok };
 }

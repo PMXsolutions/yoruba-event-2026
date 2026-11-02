@@ -45,21 +45,22 @@ test('status write detects no matching row',async()=>{
  await assert.rejects(updateRsvpEmailDelivery({rsvpId:'missing',status:'sent'}));
 });
 test('production auth cannot be disabled by flag',()=>{const before={...process.env};try{process.env.NODE_ENV='production';process.env.DASHBOARD_AUTH_REQUIRED='false';assert.equal(load('platform/core/flags.ts').getFeatureFlags().dashboardAuthRequired,true);}finally{process.env=before;}});
-test('consent validation rejects unknown strings and SMS without phone',()=>{
+test('consent validation rejects unknown strings and a missing phone',()=>{
  const {createRsvpFormSchema}=load('platform/engines/rsvp/schema.ts');const schema=createRsvpFormSchema(['General']);
- const form={fullName:'Test Person',email:'test@example.invalid',attendees:1,ticketType:'General'};
+ const form={fullName:'Test Person',email:'test@example.invalid',phone:'0412345678',attendees:1,ticketType:'General'};
  assert.equal(schema.safeParse({...form,smsConsent:'garbage'}).success,false);
- assert.equal(schema.safeParse({...form,smsConsent:true}).success,false);
+ assert.equal(schema.safeParse({...form,phone:''}).success,false);
+ assert.equal(schema.safeParse({...form,phone:'12'}).success,false);
  assert.equal(schema.parse({...form,emailConsent:false}).emailConsent,false);
 });
 test('insert writes a stable UUID and pending atomically, without returned id',async()=>{
  let inserted;
  const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{
-  '@/lib/db/query':{dbOne:async()=>null, dbExec:async(_sql, params)=>{inserted=params; return 1;}},
+  '@/lib/db/query':{dbQuery:async()=>[], dbExec:async(_sql, params)=>{inserted=params; return 1;}},
   '@/lib/db/connection':{getDatabaseEnvPresence:()=>({ready:true})},
   '@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})},
  });
- const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General'},{slug:'test',ticketTypes:['General']});
+ const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',phone:'0412345678',attendees:1,ticketType:'General'},{slug:'test',ticketTypes:['General']});
  assert.equal(result.ok,true);assert.equal(result.record.id,inserted.id);assert.match(inserted.id,/^[0-9a-f-]{36}$/);assert.equal(inserted.email_status,'pending');
 });
 test('inactive profile and missing permission fail closed',async()=>{
@@ -72,21 +73,42 @@ test('inactive profile and missing permission fail closed',async()=>{
 test('missing communication columns save the registration without those fields',async()=>{
  const rows=[];
  const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{
-  '@/lib/db/query':{dbOne:async()=>null, dbExec:async(_sql, params)=>{rows.push(params); if('email_consent' in params||'email_status' in params) throw new Error("Invalid column name 'email_consent'."); return 1;}},
+  '@/lib/db/query':{dbQuery:async()=>[], dbExec:async(_sql, params)=>{rows.push(params); if('email_consent' in params||'email_status' in params) throw new Error("Invalid column name 'email_consent'."); return 1;}},
   '@/lib/db/connection':{getDatabaseEnvPresence:()=>({ready:true})},
   '@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})},
  });
- const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General',emailConsent:true},{slug:'test',ticketTypes:['General']});
+ const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',phone:'0412345678',attendees:1,ticketType:'General',emailConsent:true},{slug:'test',ticketTypes:['General']});
  assert.equal(result.ok,true);assert.equal(rows.length,2);assert.equal('email_consent' in rows[1],false);assert.equal('email_status' in rows[1],false);assert.equal(result.record.email_consent,true);
 });
 test('missing rsvps table does not retry as a legacy insert',async()=>{
  let inserts=0;
  const {submitRsvpToDatabase}=load('platform/engines/rsvp/submit.ts',{
-  '@/lib/db/query':{dbOne:async()=>null, dbExec:async()=>{inserts++; throw new Error('Invalid object name \'dbo.rsvps\'.');}},
+  '@/lib/db/query':{dbQuery:async()=>[], dbExec:async()=>{inserts++; throw new Error('Invalid object name \'dbo.rsvps\'.');}},
   '@/lib/db/connection':{getDatabaseEnvPresence:()=>({ready:true})},
   '@/platform/core/flags':{getFeatureFlags:()=>({publicRegistrationOpen:true})},
  });
- const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',attendees:1,ticketType:'General'},{slug:'test',ticketTypes:['General']});assert.equal(result.ok,false);assert.equal(inserts,1);
+ const result=await submitRsvpToDatabase({fullName:'Test',email:'test@example.invalid',phone:'0412345678',attendees:1,ticketType:'General'},{slug:'test',ticketTypes:['General']});assert.equal(result.ok,false);assert.equal(inserts,1);
+});
+test('the same email or phone cannot register twice', async () => {
+  const payload = { fullName: 'Guest', email: 'guest@example.invalid', phone: '0412 345 678', attendees: 1, ticketType: 'General' };
+  const event = { slug: 'yoruba-day-canberra-2026', ticketTypes: ['General'] };
+  function submit(rows) {
+    const { submitRsvpToDatabase } = load('platform/engines/rsvp/submit.ts', {
+      '@/lib/db/query': { dbQuery: async () => rows, dbExec: async () => 1 },
+      '@/lib/db/connection': { getDatabaseEnvPresence: () => ({ ready: true }) },
+      '@/platform/core/flags': { getFeatureFlags: () => ({ publicRegistrationOpen: true }) },
+    }, new Map());
+    return submitRsvpToDatabase(payload, event);
+  }
+  const sameEmail = await submit([{ email: 'Guest@example.invalid', phone: '0499000111' }]);
+  assert.equal(sameEmail.ok, false);
+  assert.equal(sameEmail.errorCode, 'DUPLICATE_REGISTRATION');
+  assert.equal(sameEmail.fieldErrors.email, 'This email is already registered.');
+  const samePhone = await submit([{ email: 'other@example.invalid', phone: '+61 412 345 678' }]);
+  assert.equal(samePhone.ok, false);
+  assert.equal(samePhone.fieldErrors.phone, 'This phone number is already registered.');
+  const clear = await submit([{ email: 'other@example.invalid', phone: '0400 000 000' }]);
+  assert.equal(clear.ok, true);
 });
 test('public action preserves saved RSVP after notification persistence failure',async()=>{
  const {submitRsvp}=load('app/actions/rsvp.ts',{

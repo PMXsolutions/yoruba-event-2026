@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { getDatabaseEnvPresence } from "@/lib/db/connection";
 import { errorMessage, isDatabaseConnectivityFailure } from "@/lib/db/connectivity";
-import { dbExec, dbOne } from "@/lib/db/query";
+import { dbExec, dbQuery } from "@/lib/db/query";
 import { jsonText } from "@/lib/db/values";
 import {
   createRsvpFormSchema,
@@ -19,6 +19,7 @@ import {
 import { mapConfigError, mapSupabaseRsvpError } from "@/platform/engines/rsvp/errors";
 import type { EventConfig } from "@/platform/core/types/event";
 import { getFeatureFlags } from "@/platform/core/flags";
+import { phoneKey } from "@/platform/engines/rsvp/phone";
 
 export type SubmitRsvpResult =
   | { ok: true; record: RsvpRecord }
@@ -48,6 +49,60 @@ const INSERT_WITHOUT_COMMS = `
     @id, @full_name, @email, @phone, @number_of_attendees, @ticket_type, @notes,
     @event_slug, @registration_reference, @status, @tags
   )`;
+
+type DuplicateResult = Extract<SubmitRsvpResult, { ok: false }>;
+
+async function registrationsForEvent(slug: string): Promise<{ email: string; phone: string | null }[]> {
+  try {
+    return await dbQuery(
+      `SELECT email, phone FROM rsvps WHERE event_slug = @slug`,
+      { slug },
+    );
+  } catch (lookupError) {
+    const message = errorMessage(lookupError);
+    if (isDatabaseConnectivityFailure(message)) throw lookupError;
+    if (/Invalid column name 'event_slug'/i.test(message)) {
+      return dbQuery(`SELECT email, phone FROM rsvps`);
+    }
+    throw lookupError;
+  }
+}
+
+async function findDuplicateRegistration(
+  slug: string,
+  email: string,
+  phone: string | null,
+): Promise<DuplicateResult | null> {
+  let rows: { email: string; phone: string | null }[];
+  try {
+    rows = await registrationsForEvent(slug);
+  } catch (lookupError) {
+    const message = errorMessage(lookupError);
+    const mapped = mapSupabaseRsvpError(message);
+    return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
+  }
+
+  const emailTaken = rows.some((row) => row.email?.trim().toLowerCase() === email);
+  if (emailTaken) {
+    return {
+      ok: false,
+      error: "This email is already registered. Contact the committee if you need to update your details.",
+      errorCode: "DUPLICATE_REGISTRATION",
+      fieldErrors: { email: "This email is already registered." },
+    };
+  }
+
+  const key = phoneKey(phone);
+  if (key.length >= 8 && rows.some((row) => phoneKey(row.phone) === key)) {
+    return {
+      ok: false,
+      error: "This phone number is already registered. Contact the committee if you need to update your details.",
+      errorCode: "DUPLICATE_REGISTRATION",
+      fieldErrors: { phone: "This phone number is already registered." },
+    };
+  }
+  return null;
+}
 
 /**
  * Promax RSVP Engine — validates and persists interest registrations.
@@ -91,40 +146,8 @@ export async function submitRsvpToDatabase(
   const record = { ...toRsvpRecord(parsed.data, event.slug), id: randomUUID() };
 
   try {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    let existing: { id: string; registration_reference?: string | null } | null = null;
-    try {
-      existing = await dbOne(
-        `SELECT TOP 1 id, registration_reference
-         FROM rsvps
-         WHERE event_slug = @slug AND email = @email AND created_at >= @since`,
-        { slug: event.slug, email: record.email, since },
-      );
-    } catch (lookupError) {
-      const message = errorMessage(lookupError);
-      if (isDatabaseConnectivityFailure(message)) {
-        const mapped = mapSupabaseRsvpError(message);
-        return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
-      }
-      if (/event_slug/i.test(message) && isMissingRsvpCommsColumn(message) === false && /Invalid column name 'event_slug'/i.test(message)) {
-        existing = await dbOne(
-          `SELECT TOP 1 id, registration_reference FROM rsvps WHERE email = @email AND created_at >= @since`,
-          { email: record.email, since },
-        );
-      } else if (!/Invalid column name 'event_slug'/i.test(message)) {
-        const mapped = mapSupabaseRsvpError(message);
-        return { ok: false, error: mapped.userMessage, errorCode: mapped.errorCode };
-      }
-    }
-
-    if (existing) {
-      return {
-        ok: false,
-        error:
-          "You have already registered recently with this email. Please check your inbox or contact us if you need to update your details.",
-        errorCode: "DUPLICATE_REGISTRATION",
-      };
-    }
+    const duplicate = await findDuplicateRegistration(event.slug, record.email, record.phone);
+    if (duplicate) return duplicate;
 
     const payload: Record<string, unknown> = {
       ...record,

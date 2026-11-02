@@ -38,6 +38,16 @@ export function eventWebsiteUrl(event: EventConfig): string {
   return event.website?.trim() || event.seo.canonicalUrl;
 }
 
+export function associationLogoUrl(event: EventConfig): string {
+  return `${eventWebsiteUrl(event).replace(/\/$/, "")}/brand/yoruba-association-act.png`;
+}
+
+/** Lockup for a dark email header. The artwork is white and gold on transparency. */
+export function emailLogoHtml(event: EventConfig): string {
+  const src = escapeHtml(associationLogoUrl(event));
+  return `<img src="${src}" alt="Yoruba Association in the ACT" width="220" style="display:block;margin:0 auto 14px;height:auto;max-width:220px;border:0;">`;
+}
+
 export function formatEventDateLabel(event: EventConfig): string {
   try {
     return new Intl.DateTimeFormat("en-AU", {

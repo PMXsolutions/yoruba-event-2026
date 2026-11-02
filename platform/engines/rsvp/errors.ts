@@ -36,7 +36,7 @@ export function mapSupabaseRsvpError(message: string, code?: string): {
   if (/duplicate|unique/i.test(message)) {
     return {
       userMessage:
-        "We already have a recent registration with this email. If you need to change details, please contact us.",
+        "This email or phone number is already registered. Contact the committee if you need to update your details.",
       errorCode: "DUPLICATE",
     };
   }

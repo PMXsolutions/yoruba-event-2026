@@ -7,6 +7,7 @@
 import type { EventConfig } from "@/platform/core/types/event";
 import { buildRsvpConfirmationEmail } from "@/platform/engines/notifications/email/templates/rsvp-confirmation";
 import {
+  emailLogoHtml,
   escapeHtml,
   eventWebsiteUrl,
   resolveEmailPalette,
@@ -94,6 +95,7 @@ function stubEmail(
 <body style="margin:0;padding:24px;background:${palette.cream};font-family:Georgia,serif;color:#24150f;">
   <table role="presentation" width="100%" style="max-width:600px;margin:0 auto;background:${palette.surface};border:1px solid ${palette.border};border-radius:16px;">
     <tr><td style="background:${palette.espresso};padding:24px;text-align:center;">
+      ${emailLogoHtml(event)}
       <h1 style="margin:0;color:${palette.cream};font-size:22px;">${escapeHtml(event.name)}</h1>
     </td></tr>
     <tr><td style="padding:28px;">

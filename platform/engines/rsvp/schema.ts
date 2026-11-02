@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { phoneKey } from "@/platform/engines/rsvp/phone";
 
 function optionalBool(defaultValue: boolean) {
   return z.preprocess((v) => {
@@ -30,8 +31,9 @@ export function createRsvpFormSchema(ticketTypes: readonly string[]) {
         z
           .string()
           .trim()
+          .min(1, "Please enter your phone number.")
           .max(50, "Phone number is too long.")
-          .transform((s) => (s.length > 0 ? s : undefined)),
+          .refine((value) => phoneKey(value).length >= 8, "Please enter a valid phone number."),
       ),
       attendees: z.coerce
         .number()
@@ -58,15 +60,6 @@ export function createRsvpFormSchema(ticketTypes: readonly string[]) {
       smsConsent: optionalBool(false),
       /** Broader community / marketing updates */
       marketingConsent: optionalBool(false),
-    })
-    .superRefine((data, ctx) => {
-      if (data.smsConsent && !data.phone) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["phone"],
-          message: "Please add a phone number to receive SMS updates.",
-        });
-      }
     });
 }
 
@@ -133,7 +126,7 @@ export function toRsvpRecord(data: RsvpFormValues, eventSlug: string): RsvpRecor
   return {
     full_name: data.fullName,
     email: data.email.toLowerCase(),
-    phone: data.phone ?? null,
+    phone: data.phone,
     number_of_attendees: data.attendees,
     ticket_type: data.ticketType,
     notes: data.notes ?? null,

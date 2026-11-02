@@ -4,6 +4,7 @@ import { Hero } from "@/components/sections/Hero";
 import { About } from "@/components/sections/About";
 import { Experience } from "@/components/sections/Experience";
 import { Sponsors } from "@/components/sections/Sponsors";
+import { PreviousEdition } from "@/components/sections/PreviousEdition";
 import { Volunteer } from "@/components/sections/Volunteer";
 import { RSVP } from "@/components/sections/RSVP";
 
@@ -14,10 +15,11 @@ export default function Home() {
       <main id="main-content" className="flex-1">
         <Hero />
         <About />
+        <PreviousEdition />
         <Experience />
         <Sponsors />
-        <Volunteer />
         <RSVP />
+        <Volunteer />
       </main>
       <Footer />
     </>

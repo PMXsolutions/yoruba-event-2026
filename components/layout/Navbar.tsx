@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { NAV_ITEMS, SITE } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 import { CommitteePortalLink } from "@/components/layout/CommitteePortalLink";
+import { AssociationLogo } from "@/components/brand/AssociationLogo";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -38,15 +39,10 @@ export function Navbar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 sm:px-8 lg:px-10">
         <Link
           href="#home"
-          className="group flex flex-col leading-tight"
+          className="group flex items-center"
           onClick={() => setOpen(false)}
         >
-          <span className="font-display text-lg font-semibold tracking-tight text-cream transition-colors duration-300 group-hover:text-gold-bright sm:text-xl">
-            Yoruba Day
-          </span>
-          <span className="font-sans text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-gold-muted transition-colors group-hover:text-gold-light">
-            Canberra 2026
-          </span>
+          <AssociationLogo priority className="h-10 w-auto sm:h-12" />
         </Link>
 
         <nav className="hidden items-center gap-2 lg:flex">
