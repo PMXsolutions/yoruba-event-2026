@@ -114,7 +114,7 @@ export const yorubaDayCanberra2026: EventConfig = {
     "Corporate table",
   ],
   contact: {
-    email: "yoruba-events@promaxcare.com.au",
+    email: "events@yorubaassociationact.org",
     phone: null,
   },
   socialLinks: [],

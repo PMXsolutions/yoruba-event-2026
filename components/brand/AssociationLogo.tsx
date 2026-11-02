@@ -10,14 +10,14 @@ type AssociationLogoProps = {
 const ASSETS = {
   lockup: {
     src: "/brand/yoruba-association-act.png",
-    width: 285,
-    height: 120,
+    width: 276,
+    height: 127,
     alt: "Yoruba Association in the ACT. Awa ọmọ Oduduwa.",
   },
   crest: {
     src: "/brand/association-crest.png",
-    width: 135,
-    height: 135,
+    width: 117,
+    height: 103,
     alt: "Yoruba Association in the ACT",
   },
 } as const;

@@ -86,6 +86,18 @@ export function Footer() {
         <div className="mt-16 flex flex-col gap-5 border-t border-white/[0.07] pt-10 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-sans text-xs text-cream/45">
             © {new Date().getFullYear()} Yoruba Day Canberra · {SITE.presenter}
+            <span className="mx-2" aria-hidden>
+              ·
+            </span>
+            powered by{" "}
+            <a
+              href="https://promaxsolutions.com.au/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gold-light underline-offset-2 transition-colors hover:text-gold-bright hover:underline"
+            >
+              Promax IT Solutions
+            </a>
           </p>
           <a
             href="#home"
