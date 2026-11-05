@@ -7,6 +7,8 @@ import { requireAuth } from "@/lib/auth/rbac";
 import { checkRateLimit, clientKeyFromHeaders } from "@/lib/security/rate-limit";
 import { logActivity } from "@/lib/activity/log";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
+import { parseSponsorshipAccountInput } from "@/platform/engines/sponsors/account";
+import { saveSponsorshipAccount } from "@/platform/engines/sponsors/account-store";
 import {
   createSponsorRecord,
   submitSponsorEnquiry,
@@ -64,6 +66,32 @@ export async function createSponsorAction(raw: unknown) {
     });
     revalidatePath("/dashboard/sponsors");
     revalidatePath("/dashboard");
+  }
+  return result;
+}
+
+export async function saveSponsorshipAccountAction(raw: unknown) {
+  const auth = await requireAuth("sponsor.write");
+  if (!auth.ok) return { ok: false as const, error: auth.message };
+  const hdrs = await headers();
+  const rate = checkRateLimit(clientKeyFromHeaders(hdrs, "sponsorship-account"), 20, 60_000);
+  if (!rate.allowed) return { ok: false as const, error: "Too many updates. Wait a moment and try again." };
+
+  const parsed = parseSponsorshipAccountInput(raw);
+  if (!parsed.ok) return parsed;
+
+  const result = await saveSponsorshipAccount(parsed.value, auth.user.id);
+  if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "sponsor.account.saved",
+      entityType: "sponsorship_account",
+      actorId: auth.user.id,
+      metadata: { visible: parsed.value.visible },
+    });
+    revalidatePath("/dashboard/sponsors");
+    revalidatePath("/");
   }
   return result;
 }

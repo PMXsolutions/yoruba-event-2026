@@ -7,8 +7,13 @@ import { Sponsors } from "@/components/sections/Sponsors";
 import { PreviousEdition } from "@/components/sections/PreviousEdition";
 import { Volunteer } from "@/components/sections/Volunteer";
 import { RSVP } from "@/components/sections/RSVP";
+import { fetchPublicSponsorshipAccount } from "@/platform/engines/sponsors/account-store";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const sponsorshipAccount = await fetchPublicSponsorshipAccount();
+
   return (
     <>
       <Navbar />
@@ -17,7 +22,7 @@ export default function Home() {
         <About />
         <PreviousEdition />
         <Experience />
-        <Sponsors />
+        <Sponsors account={sponsorshipAccount} />
         <RSVP />
         <Volunteer />
       </main>

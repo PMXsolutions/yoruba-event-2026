@@ -2,7 +2,9 @@
 
 import { type FormEvent, useState } from "react";
 import { submitSponsorAction } from "@/app/actions/dashboard";
+import { SponsorshipAccountDetails } from "@/components/sections/SponsorshipAccountDetails";
 import { Button } from "@/components/ui/Button";
+import type { PublicSponsorshipAccount } from "@/platform/engines/sponsors/account";
 import { SPONSOR_TIERS, LAUNCH_COPY } from "@/lib/site";
 
 const field =
@@ -10,7 +12,7 @@ const field =
 const label =
   "mb-2 block font-sans text-[0.62rem] font-bold uppercase tracking-[0.2em] text-mahogany/55";
 
-export function SponsorEnquiryForm() {
+export function SponsorEnquiryForm({ account }: { account?: PublicSponsorshipAccount | null }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -67,7 +69,13 @@ export function SponsorEnquiryForm() {
           className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
         >
           Thank you — your sponsorship enquiry has been received.
+          {account ? " Transfer the sponsorship or donation to the account below, using your name or organisation as the reference." : ""}
         </p>
+      ) : null}
+      {done && account ? (
+        <div className="mt-4">
+          <SponsorshipAccountDetails account={account} compact />
+        </div>
       ) : null}
       {error ? (
         <p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
