@@ -7,13 +7,16 @@ import {
   updateDashboardRsvpCommitteeNote,
   updateDashboardRsvpStatus,
   fetchDashboardRsvpById,
+  fetchDashboardRsvps,
 } from "@/platform/engines/dashboard/rsvp/queries";
 import { RSVP_STATUSES, RSVP_TAGS } from "@/platform/engines/dashboard/rsvp/types";
 import { requireAuth } from "@/lib/auth/rbac";
 import { logActivity } from "@/lib/activity/log";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
-import { getFeatureFlags } from "@/platform/core/flags";
 import { dispatchRsvpNotifications } from "@/platform/engines/notifications/dispatch";
+import { resolveSmsSettings } from "@/platform/engines/notifications/sms/settings-store";
+import { sendRsvpReminderBatch, sendRsvpReminderSms } from "@/platform/engines/notifications/sms/reminders";
 
 const statusSchema = z.enum(RSVP_STATUSES);
 const tagSchema = z.enum(RSVP_TAGS);
@@ -162,9 +165,9 @@ export async function sendRsvpConfirmationSmsAction(
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) return { ok: false, error: "Invalid record." };
 
-  const flags = getFeatureFlags();
-  if (!flags.smsEnabled) {
-    return { ok: false, error: "SMS is disabled. Enable SMS_ENABLED and configure Twilio." };
+  const sms = await resolveSmsSettings();
+  if (!sms.enabled) {
+    return { ok: false, error: "SMS is turned off. Enable it in Settings." };
   }
 
   const fetched = await fetchDashboardRsvpById(parsedId.data);
@@ -211,7 +214,7 @@ export async function sendRsvpConfirmationSmsAction(
         ok: false,
         error:
           notify.smsStatus === "not_configured"
-            ? "Twilio is not configured."
+            ? "SMS is not configured. Open Settings and add DirectSMS or Twilio."
             : "SMS could not be sent. Registration is saved; check communication status.",
       };
     }
@@ -219,4 +222,74 @@ export async function sendRsvpConfirmationSmsAction(
   } catch {
     return { ok: false, error: "SMS could not be sent." };
   }
+}
+
+/**
+ * Send the event reminder to one registrant who consented to SMS.
+ */
+export async function sendRsvpReminderSmsAction(
+  id: string,
+): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const auth = await requireAuth("rsvp.write");
+  if (!auth.ok) return { ok: false, error: auth.message };
+  const limit = checkRateLimit(`sms-reminder:${auth.user.id}`, 30, 60_000);
+  if (!limit.allowed) return { ok: false, error: "Too many SMS reminders. Wait a moment and try again." };
+
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { ok: false, error: "Invalid record." };
+
+  const fetched = await fetchDashboardRsvpById(parsedId.data);
+  if (!fetched.ok) return { ok: false, error: fetched.error };
+
+  const event = getActiveEventConfig();
+  const result = await sendRsvpReminderSms({
+    event,
+    record: fetched.record,
+    actorId: auth.user.id,
+    allowRepeat: true,
+  });
+  revalidatePath("/dashboard/rsvps");
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, message: `SMS reminder sent to ${fetched.record.fullName}.` };
+}
+
+/**
+ * Send the event reminder to registrants who opted in and have not already received it.
+ * Each run sends a limited batch so a large list can be continued safely.
+ */
+export async function sendEventReminderSmsAction(): Promise<
+  { ok: true; message: string } | { ok: false; error: string }
+> {
+  const auth = await requireAuth("rsvp.write");
+  if (!auth.ok) return { ok: false, error: auth.message };
+  const limit = checkRateLimit(`sms-reminder-batch:${auth.user.id}`, 3, 60_000);
+  if (!limit.allowed) return { ok: false, error: "Reminder sending is paused for a minute. Try again shortly." };
+
+  const fetched = await fetchDashboardRsvps();
+  if (!fetched.ok) return { ok: false, error: fetched.message };
+
+  const event = getActiveEventConfig();
+  const result = await sendRsvpReminderBatch({
+    event,
+    records: fetched.records,
+    actorId: auth.user.id,
+  });
+  await logActivity({
+    eventSlug: event.slug,
+    action: "sms.reminder.batch",
+    entityType: "rsvp",
+    actorId: auth.user.id,
+    metadata: result,
+  });
+  revalidatePath("/dashboard/rsvps");
+
+  if (result.sent === 0 && result.failed === 0) {
+    return { ok: true, message: "No registrants are waiting for an SMS reminder." };
+  }
+  if (result.sent === 0) {
+    return { ok: false, error: "SMS reminders could not be sent. Check Settings and try one registration first." };
+  }
+  const waiting = result.remaining > 0 ? ` ${result.remaining} still waiting — run reminders again to continue.` : "";
+  const failed = result.failed > 0 ? ` ${result.failed} could not be sent.` : "";
+  return { ok: true, message: `Sent ${result.sent} SMS reminder${result.sent === 1 ? "" : "s"}.${failed}${waiting}` };
 }

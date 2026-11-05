@@ -3,14 +3,15 @@ import {
   IntegrationStatus,
   StatGrid,
 } from "@/components/dashboard/dashboard-ui";
-import { getAuthUser } from "@/lib/auth/rbac";
+import { getAuthUser, hasPermission } from "@/lib/auth/rbac";
 import { SITE } from "@/lib/site";
 import { getDatabaseEnvPresence } from "@/lib/db/connection";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import { getFeatureFlags } from "@/platform/core/flags";
 import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
 import { EMAIL_TEMPLATE_CATALOG } from "@/platform/engines/notifications/email/templates/catalog";
-import { getSmsEnvPresence } from "@/platform/engines/notifications/sms/twilio-stub";
+import { getPublicSmsSettings } from "@/platform/engines/notifications/sms/settings-store";
+import { SmsSettingsPanel } from "@/components/dashboard/SmsSettingsPanel";
 import packageJson from "@/package.json";
 
 export const dynamic = "force-dynamic";
@@ -19,13 +20,15 @@ export default async function DashboardSettingsPage() {
   const event = getActiveEventConfig();
   const database = getDatabaseEnvPresence();
   const email = getEmailEnvPresence();
-  const sms = getSmsEnvPresence();
+  const sms = await getPublicSmsSettings();
   const flags = getFeatureFlags();
   const admin = await getAuthUser();
+  const canWriteSms = admin ? hasPermission(admin, "settings.write") : false;
   const version = typeof packageJson.version === "string" ? packageJson.version : "1.0.0";
   const platformName =
     typeof packageJson.name === "string" ? packageJson.name : "promax-event-platform";
-  const smsActive = flags.smsEnabled && sms.ready;
+  const smsActive = sms.enabled && sms.ready;
+  const smsName = sms.provider === "twilio" ? "Twilio (SMS)" : "DirectSMS";
 
   return (
     <>
@@ -108,23 +111,33 @@ export default async function DashboardSettingsPage() {
                   : "Email transport environment variables are incomplete",
               },
               {
-                name: "Twilio (SMS)",
-                status: smsActive
-                  ? "Enabled"
-                  : sms.ready
-                    ? "Configured (flag off)"
-                    : "Not configured",
+                name: smsName,
+                status: smsActive ? "Enabled" : sms.ready ? "Configured (off)" : "Not configured",
                 ok: smsActive,
                 detail: smsActive
-                  ? "SMS confirmations active when consent is given"
-                  : flags.smsEnabled
-                    ? "SMS_ENABLED is on but Twilio credentials are incomplete"
-                    : "Set SMS_ENABLED=true and Twilio credentials to activate",
+                  ? sms.source === "dashboard"
+                    ? "Dashboard SMS settings are active. Messages send only with consent."
+                    : "Environment SMS settings are active. Messages send only with consent."
+                  : sms.provider === "twilio"
+                    ? "Turn SMS on below, or set Twilio credentials and SMS_ENABLED."
+                    : "Add the DirectSMS username and password in SMS settings.",
               },
             ]}
           />
         </DashboardCard>
       </div>
+
+      <SmsSettingsPanel
+        settings={canWriteSms ? sms : { ...sms, username: "" }}
+        canWrite={canWriteSms}
+        preview={{
+          firstName: "Ada",
+          eventName: event.name,
+          date: event.heroDateDisplay,
+          location: event.location,
+          website: event.website || "",
+        }}
+      />
 
       <DashboardCard title="Feature flags" description="Controlled public launch switches">
         <dl className="grid gap-3 font-sans text-sm sm:grid-cols-2">

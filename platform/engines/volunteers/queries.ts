@@ -74,33 +74,91 @@ export async function submitVolunteerRegistration(raw: unknown): Promise<SubmitV
   }
 
   const event = getActiveEventConfig();
-  const d = parsed.data;
-  const skills = d.skills
-    ? d.skills.split(",").map((s) => s.trim()).filter(Boolean)
+  const skills = parsed.data.skills
+    ? parsed.data.skills.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 
   try {
-    await dbExec(
-      `INSERT INTO volunteers (
-         event_slug, full_name, email, phone, skills, availability, area_of_interest, notes, status
-       ) VALUES (
-         @slug, @fullName, @email, @phone, @skills, @availability, @areaOfInterest, @notes, N'new'
-       )`,
-      {
-        slug: event.slug,
-        fullName: d.fullName,
-        email: d.email.toLowerCase(),
-        phone: d.phone ?? null,
-        skills: jsonText(skills),
-        availability: d.availability ?? null,
-        areaOfInterest: d.areaOfInterest ?? null,
-        notes: d.notes ?? null,
-      },
-    );
+    await insertVolunteer(event.slug, parsed.data, skills, "new", null, null);
     return { ok: true };
   } catch (error) {
     console.error("[volunteers] Insert failed:", errorMessage(error));
     return { ok: false, error: "Something went wrong while submitting. Please try again." };
+  }
+}
+
+async function insertVolunteer(
+  slug: string,
+  d: VolunteerFormValues,
+  skills: string[],
+  status: VolunteerStatus,
+  assignedRole: string | null,
+  committeeNotes: string | null,
+) {
+  await dbExec(
+    `INSERT INTO volunteers (
+       event_slug, full_name, email, phone, skills, availability, area_of_interest, notes, assigned_role, committee_notes, status
+     ) VALUES (
+       @slug, @fullName, @email, @phone, @skills, @availability, @areaOfInterest, @notes, @assignedRole, @committeeNotes, @status
+     )`,
+    {
+      slug,
+      fullName: d.fullName,
+      email: d.email.toLowerCase(),
+      phone: d.phone ?? null,
+      skills: jsonText(skills),
+      availability: d.availability ?? null,
+      areaOfInterest: d.areaOfInterest ?? null,
+      notes: d.notes ?? null,
+      assignedRole,
+      committeeNotes,
+      status,
+    },
+  );
+}
+
+/** Committee-created volunteer. Public sign-ups keep using submitVolunteerRegistration. */
+export async function createVolunteerRecord(raw: unknown): Promise<SubmitVolunteerResult> {
+  await assertPermission("volunteer.write");
+  const parsed = volunteerFormSchema.safeParse(raw);
+  if (!parsed.success) {
+    const fieldErrors: Partial<Record<keyof VolunteerFormValues, string>> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string" && !(key in fieldErrors)) {
+        fieldErrors[key as keyof VolunteerFormValues] = issue.message;
+      }
+    }
+    return { ok: false, error: "Please correct the highlighted fields.", fieldErrors };
+  }
+
+  const body = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const status =
+    typeof body.status === "string" && (VOLUNTEER_STATUSES as readonly string[]).includes(body.status)
+      ? (body.status as VolunteerStatus)
+      : "new";
+  const assignedRole = typeof body.assignedRole === "string" ? body.assignedRole.trim().slice(0, 200) : "";
+  const committeeNotes = typeof body.committeeNotes === "string" ? body.committeeNotes.trim().slice(0, 4000) : "";
+  const skills = parsed.data.skills
+    ? parsed.data.skills.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) return { ok: false, error: "Database is not configured." };
+
+  try {
+    await insertVolunteer(
+      getActiveEventConfig().slug,
+      parsed.data,
+      skills,
+      status,
+      assignedRole || null,
+      committeeNotes || null,
+    );
+    return { ok: true };
+  } catch (error) {
+    console.error("[volunteers] Admin insert failed:", errorMessage(error));
+    return { ok: false, error: "Could not add this volunteer." };
   }
 }
 

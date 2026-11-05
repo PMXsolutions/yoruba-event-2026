@@ -1,5 +1,6 @@
 import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
 import { SponsorManagementPanel } from "@/components/dashboard/SponsorManagementPanel";
+import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import { fetchSponsors } from "@/platform/engines/sponsors/queries";
 
 export const dynamic = "force-dynamic";
@@ -21,5 +22,6 @@ export default async function DashboardSponsorsPage() {
     );
   }
 
-  return <SponsorManagementPanel records={result.records} />;
+  const packages = getActiveEventConfig().sponsorTiers.map((tier) => tier.name);
+  return <SponsorManagementPanel records={result.records} packages={packages} />;
 }

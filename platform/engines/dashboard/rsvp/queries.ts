@@ -46,10 +46,14 @@ type RsvpRow = {
   email_sent_at?: string | null;
   sms_status?: string | null;
   sms_sent_at?: string | null;
+  sms_reminder_status?: string | null;
+  sms_reminder_sent_at?: string | null;
 };
 
 const RSVP_SELECT =
   "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference, email_consent, sms_consent, marketing_consent, email_status, email_sent_at, sms_status, sms_sent_at";
+
+const RSVP_SELECT_WITH_REMINDER = `${RSVP_SELECT}, sms_reminder_status, sms_reminder_sent_at`;
 
 const RSVP_SELECT_WITHOUT_COMMS =
   "id, full_name, email, phone, number_of_attendees, ticket_type, notes, created_at, status, committee_notes, internal_notes, contacted_at, tags, registration_reference";
@@ -83,22 +87,44 @@ function mapRow(row: RsvpRow): DashboardRsvpRecord {
     emailSentAt: asIso(row.email_sent_at),
     smsStatus,
     smsSentAt: asIso(row.sms_sent_at),
+    smsReminderStatus:
+      row.sms_reminder_status === undefined
+        ? null
+        : row.sms_reminder_status && isSmsDeliveryStatus(row.sms_reminder_status)
+          ? row.sms_reminder_status
+          : "not_attempted",
+    smsReminderSentAt: row.sms_reminder_sent_at === undefined ? null : asIso(row.sms_reminder_sent_at),
   };
 }
 
 async function selectRsvpRows(where: string, params: Record<string, unknown>) {
   const order = `SELECT %COLUMNS% FROM rsvps WHERE ${where} ORDER BY created_at DESC`;
   try {
-    const rows = await dbQuery<RsvpRow>(order.replace("%COLUMNS%", RSVP_SELECT), params);
+    const rows = await dbQuery<RsvpRow>(order.replace("%COLUMNS%", RSVP_SELECT_WITH_REMINDER), params);
     return { rows, error: null as string | null };
   } catch (error) {
     const message = errorMessage(error);
-    if (!isMissingRsvpCommsColumn(message)) return { rows: [] as RsvpRow[], error: message };
+    const reminderMissing = /sms_reminder_status|sms_reminder_sent_at/i.test(message);
+    if (!reminderMissing && !isMissingRsvpCommsColumn(message)) {
+      return { rows: [] as RsvpRow[], error: message };
+    }
     try {
-      const rows = await dbQuery<RsvpRow>(order.replace("%COLUMNS%", RSVP_SELECT_WITHOUT_COMMS), params);
+      const rows = await dbQuery<RsvpRow>(
+        order.replace("%COLUMNS%", reminderMissing ? RSVP_SELECT : RSVP_SELECT_WITHOUT_COMMS),
+        params,
+      );
       return { rows, error: null as string | null };
-    } catch (legacyError) {
-      return { rows: [] as RsvpRow[], error: errorMessage(legacyError) };
+    } catch (fallbackError) {
+      const fallbackMessage = errorMessage(fallbackError);
+      if (!isMissingRsvpCommsColumn(fallbackMessage)) {
+        return { rows: [] as RsvpRow[], error: fallbackMessage };
+      }
+      try {
+        const rows = await dbQuery<RsvpRow>(order.replace("%COLUMNS%", RSVP_SELECT_WITHOUT_COMMS), params);
+        return { rows, error: null as string | null };
+      } catch (legacyError) {
+        return { rows: [] as RsvpRow[], error: errorMessage(legacyError) };
+      }
     }
   }
 }

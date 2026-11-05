@@ -55,6 +55,30 @@ export async function updateRsvpEmailDelivery(params: {
   }
 }
 
+export async function updateRsvpSmsReminder(params: {
+  rsvpId: string;
+  status: SmsDeliveryStatus;
+  providerId?: string | null;
+}): Promise<void> {
+  try {
+    await dbQuery(
+      `UPDATE rsvps
+       SET sms_reminder_status = @status,
+           sms_reminder_sent_at = CASE WHEN @status = N'sent' THEN SYSDATETIMEOFFSET() ELSE sms_reminder_sent_at END,
+           sms_reminder_provider_id = CASE WHEN @status = N'sent' THEN @providerId ELSE sms_reminder_provider_id END,
+           updated_at = SYSDATETIMEOFFSET()
+       WHERE id = @id`,
+      {
+        id: params.rsvpId,
+        status: params.status,
+        providerId: params.providerId ?? null,
+      },
+    );
+  } catch (error) {
+    console.warn("[notification-engine] sms_reminder_status update error:", errorMessage(error));
+  }
+}
+
 export async function updateRsvpSmsDelivery(params: {
   rsvpId: string;
   status: SmsDeliveryStatus;

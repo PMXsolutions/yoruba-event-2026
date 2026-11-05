@@ -36,7 +36,7 @@ Initial administrator email: `admin@promaxevent.com` (password via `ADMIN_PASSWO
 | [docs/PRODUCTION_CHECKLIST.md](./docs/PRODUCTION_CHECKLIST.md) | Go-live env + smoke test checklist |
 | [docs/EMAIL.md](./docs/EMAIL.md) | Resend / confirmation emails |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phases & status |
-| [docs/SMS.md](./docs/SMS.md) | Twilio architecture (future) |
+| [docs/SMS.md](./docs/SMS.md) | DirectSMS and Twilio |
 | [docs/AI.md](./docs/AI.md) | AI engine architecture (future) |
 | [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Dev workflow |
 

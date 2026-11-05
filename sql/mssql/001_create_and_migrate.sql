@@ -110,6 +110,9 @@ BEGIN
     sms_status NVARCHAR(32) NOT NULL CONSTRAINT DF_rsvps_sms_status DEFAULT N'not_attempted',
     sms_sent_at DATETIMEOFFSET NULL,
     sms_provider_id NVARCHAR(200) NULL,
+    sms_reminder_status NVARCHAR(32) NOT NULL CONSTRAINT DF_rsvps_sms_reminder_status DEFAULT N'not_attempted',
+    sms_reminder_sent_at DATETIMEOFFSET NULL,
+    sms_reminder_provider_id NVARCHAR(200) NULL,
     CONSTRAINT CK_rsvps_status CHECK (status IN (N'new', N'contacted', N'confirmed', N'cancelled')),
     CONSTRAINT CK_rsvps_email_status CHECK (email_status IN (
       N'not_attempted', N'pending', N'sent', N'failed', N'disabled', N'consent_declined', N'not_configured', N'skipped'
@@ -315,3 +318,39 @@ GO
 --   announcements, activity_logs
 -- Profiles copied from Supabase have no password until an administrator sends
 -- a setup email or the bootstrap admin password is applied.
+
+-- SMS reminder history for databases created before this column set.
+IF COL_LENGTH(N'dbo.rsvps', N'sms_reminder_status') IS NULL
+  ALTER TABLE dbo.rsvps ADD sms_reminder_status NVARCHAR(32) NOT NULL
+    CONSTRAINT DF_rsvps_sms_reminder_status DEFAULT N'not_attempted';
+GO
+IF COL_LENGTH(N'dbo.rsvps', N'sms_reminder_sent_at') IS NULL
+  ALTER TABLE dbo.rsvps ADD sms_reminder_sent_at DATETIMEOFFSET NULL;
+GO
+IF COL_LENGTH(N'dbo.rsvps', N'sms_reminder_provider_id') IS NULL
+  ALTER TABLE dbo.rsvps ADD sms_reminder_provider_id NVARCHAR(200) NULL;
+GO
+
+-- Gateway credentials for the committee SMS settings screen.
+-- The password column stores an encrypted value, never a source-code constant.
+IF OBJECT_ID(N'dbo.sms_settings', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.sms_settings (
+    event_slug NVARCHAR(120) NOT NULL CONSTRAINT PK_sms_settings PRIMARY KEY,
+    provider NVARCHAR(20) NOT NULL CONSTRAINT DF_sms_settings_provider DEFAULT N'directsms',
+    enabled BIT NOT NULL CONSTRAINT DF_sms_settings_enabled DEFAULT 0,
+    reminders_enabled BIT NOT NULL CONSTRAINT DF_sms_settings_reminders DEFAULT 0,
+    username NVARCHAR(200) NULL,
+    password NVARCHAR(1000) NULL,
+    sender_id NVARCHAR(11) NOT NULL CONSTRAINT DF_sms_settings_sender DEFAULT N'YCD',
+    api_url NVARCHAR(500) NOT NULL CONSTRAINT DF_sms_settings_url DEFAULT N'https://api.directsms.com.au/s3/http/send_message',
+    message_type NVARCHAR(20) NOT NULL CONSTRAINT DF_sms_settings_type DEFAULT N'1-way',
+    default_country_code NVARCHAR(4) NOT NULL CONSTRAINT DF_sms_settings_cc DEFAULT N'61',
+    reminder_template NVARCHAR(320) NULL,
+    updated_at DATETIMEOFFSET NOT NULL CONSTRAINT DF_sms_settings_updated DEFAULT SYSDATETIMEOFFSET(),
+    updated_by UNIQUEIDENTIFIER NULL,
+    CONSTRAINT CK_sms_settings_provider CHECK (provider IN (N'directsms', N'twilio')),
+    CONSTRAINT CK_sms_settings_type CHECK (message_type IN (N'1-way', N'2-way'))
+  );
+END
+GO
