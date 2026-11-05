@@ -21,7 +21,7 @@ export const DASHBOARD_PAGE_META: Record<string, DashboardPageMeta> = {
   },
   "/dashboard/sponsors": {
     title: "Sponsor CRM",
-    description: "Track sponsor tiers, enquiries, and partnership pipeline.",
+    description: "Track sponsor enquiries and the account that receives sponsorship payments and donations.",
     breadcrumbs: [{ label: "Executive", href: "/dashboard" }, { label: "Sponsors" }],
   },
   "/dashboard/volunteers": {

@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SponsorEnquiryForm } from "@/components/features/SponsorEnquiryForm";
+import { SponsorshipAccountDetails } from "@/components/sections/SponsorshipAccountDetails";
+import type { PublicSponsorshipAccount } from "@/platform/engines/sponsors/account";
 import { SPONSOR_TIERS, LAUNCH_COPY } from "@/lib/site";
 import { EASE_LUX } from "@/lib/motion";
 
@@ -21,7 +23,7 @@ const tierBadge = {
   community: "Community",
 } as const;
 
-export function Sponsors() {
+export function Sponsors({ account }: { account?: PublicSponsorshipAccount | null }) {
   return (
     <AnimatedSection
       id="sponsors"
@@ -92,7 +94,8 @@ export function Sponsors() {
             </motion.article>
           ))}
         </div>
-        <SponsorEnquiryForm />
+        {account ? <SponsorshipAccountDetails account={account} /> : null}
+        <SponsorEnquiryForm account={account} />
       </div>
     </AnimatedSection>
   );

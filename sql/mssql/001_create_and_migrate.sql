@@ -354,3 +354,37 @@ BEGIN
   );
 END
 GO
+
+-- Account that receives sponsorship payments and donations.
+-- Shown on the public sponsorship page when visible = 1.
+-- Re-running this script does not overwrite an account the committee has edited.
+IF OBJECT_ID(N'dbo.sponsorship_accounts', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.sponsorship_accounts (
+    event_slug NVARCHAR(120) NOT NULL CONSTRAINT PK_sponsorship_accounts PRIMARY KEY,
+    account_name NVARCHAR(200) NOT NULL,
+    bsb NVARCHAR(6) NOT NULL,
+    account_number NVARCHAR(16) NOT NULL,
+    bank_name NVARCHAR(120) NULL,
+    instructions NVARCHAR(500) NULL,
+    visible BIT NOT NULL CONSTRAINT DF_sponsorship_accounts_visible DEFAULT 1,
+    updated_at DATETIMEOFFSET NOT NULL CONSTRAINT DF_sponsorship_accounts_updated DEFAULT SYSDATETIMEOFFSET(),
+    updated_by UNIQUEIDENTIFIER NULL
+  );
+END
+GO
+
+MERGE dbo.sponsorship_accounts AS target
+USING (SELECT N'yoruba-day-canberra-2026' AS event_slug) AS source
+ON target.event_slug = source.event_slug
+WHEN NOT MATCHED THEN
+  INSERT (event_slug, account_name, bsb, account_number, instructions, visible)
+  VALUES (
+    N'yoruba-day-canberra-2026',
+    N'Yoruba Association in ACT',
+    N'062904',
+    N'10585388',
+    N'Transfer sponsorship payments and donations to this account. Use your name or organisation as the payment reference.',
+    1
+  );
+GO

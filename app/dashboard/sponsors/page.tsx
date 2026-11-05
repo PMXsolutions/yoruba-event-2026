@@ -1,6 +1,8 @@
 import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
 import { SponsorManagementPanel } from "@/components/dashboard/SponsorManagementPanel";
+import { SponsorshipAccountForm } from "@/components/dashboard/SponsorshipAccountForm";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
+import { fetchSponsorshipAccount } from "@/platform/engines/sponsors/account-store";
 import { fetchSponsors } from "@/platform/engines/sponsors/queries";
 
 export const dynamic = "force-dynamic";
@@ -23,5 +25,15 @@ export default async function DashboardSponsorsPage() {
   }
 
   const packages = getActiveEventConfig().sponsorTiers.map((tier) => tier.name);
-  return <SponsorManagementPanel records={result.records} packages={packages} />;
+  const account = await fetchSponsorshipAccount();
+
+  return (
+    <div className="space-y-6">
+      <SponsorshipAccountForm
+        account={account.ok ? account.account : null}
+        unavailable={account.ok ? null : account.message}
+      />
+      <SponsorManagementPanel records={result.records} packages={packages} />
+    </div>
+  );
 }
