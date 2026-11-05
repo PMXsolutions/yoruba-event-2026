@@ -25,7 +25,7 @@ export type PlatformFeatureFlags = {
   publicRegistrationOpen: boolean;
   /** Send confirmation emails when a transport is configured */
   emailConfirmationsEnabled: boolean;
-  /** Attempt SMS when Twilio + consent are present */
+  /** Attempt SMS when a provider is configured and this flag is on. A saved dashboard setting overrides it. */
   smsEnabled: boolean;
   /** Require authenticated committee access for /dashboard */
   dashboardAuthRequired: boolean;

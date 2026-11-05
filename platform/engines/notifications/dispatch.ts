@@ -11,10 +11,7 @@ import {
 import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-status";
 import { sendRsvpConfirmationEmail } from "@/platform/engines/notifications/email/resend-client";
 import { buildRsvpConfirmationSms } from "@/platform/engines/notifications/email/templates/rsvp-confirmation";
-import {
-  getSmsEnvPresence,
-  sendSmsMessage,
-} from "@/platform/engines/notifications/sms/twilio-client";
+import { sendSmsMessage } from "@/platform/engines/notifications/sms/twilio-client";
 import type { RsvpRecord } from "@/platform/engines/rsvp/schema";
 
 export type DispatchRsvpResult = {
@@ -88,7 +85,9 @@ export async function dispatchRsvpNotifications(
 
   // ── SMS ────────────────────────────────────────────────────────────
   if (doSms) {
-  if (!flags.smsEnabled) {
+  const { resolveSmsSettings } = await import("@/platform/engines/notifications/sms/settings-store");
+  const smsSettings = await resolveSmsSettings();
+  if (!smsSettings.enabled) {
     smsStatus = "disabled";
     if (rsvpId) await updateRsvpSmsDelivery({ rsvpId, status: "disabled" });
     await logActivity({
@@ -119,8 +118,7 @@ export async function dispatchRsvpNotifications(
       metadata: { reason: "missing_phone" },
     });
   } else {
-    const smsEnv = getSmsEnvPresence();
-    if (!smsEnv.ready) {
+    if (!smsSettings.ready) {
       smsStatus = "not_configured";
       if (rsvpId) await updateRsvpSmsDelivery({ rsvpId, status: "not_configured" });
       await logActivity({

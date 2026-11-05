@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   resendRsvpConfirmationEmailAction,
+  sendEventReminderSmsAction,
   sendRsvpConfirmationSmsAction,
+  sendRsvpReminderSmsAction,
   toggleRsvpTagAction,
   updateRsvpCommitteeNoteAction,
   updateRsvpStatusAction,
@@ -102,6 +104,7 @@ function ActionMenu({
   onTagToggle,
   onResendEmail,
   onSendSms,
+  onSendReminder,
 }: {
   record: DashboardRsvpRecord;
   disabled: boolean;
@@ -111,6 +114,7 @@ function ActionMenu({
   onTagToggle: (id: string, tag: RsvpTag) => void;
   onResendEmail: (id: string) => void;
   onSendSms: (id: string) => void;
+  onSendReminder: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<MenuPosition | null>(null);
@@ -209,6 +213,12 @@ function ActionMenu({
               muted={!canSms}
               onClick={() => { onSendSms(record.id); close(); }}
             />
+            <MenuItem
+              label={canSms ? "Send SMS reminder" : "Send reminder (no consent)"}
+              disabled={disabled || !canSms || record.status === "cancelled"}
+              muted={!canSms || record.status === "cancelled"}
+              onClick={() => { onSendReminder(record.id); close(); }}
+            />
           </div>
         </>,
         document.body,
@@ -280,6 +290,7 @@ function RsvpDetailModal({
   onEditNote,
   onResendEmail,
   onSendSms,
+  onSendReminder,
   busy,
 }: {
   record: DashboardRsvpRecord;
@@ -287,6 +298,7 @@ function RsvpDetailModal({
   onEditNote: (r: DashboardRsvpRecord) => void;
   onResendEmail: (id: string) => void;
   onSendSms: (id: string) => void;
+  onSendReminder: (id: string) => void;
   busy: boolean;
 }) {
   const headingId = `rsvp-detail-${record.id}`;
@@ -380,6 +392,15 @@ function RsvpDetailModal({
                 {!record.phone ? " · No phone on file" : ""}
               </dd>
             </div>
+            {record.smsReminderStatus ? (
+              <div className="flex flex-col gap-1 border-t border-mahogany/[0.05] pt-3">
+                <dt className="text-[0.65rem] font-bold uppercase tracking-wide text-mahogany/40">SMS reminder</dt>
+                <dd>
+                  {formatSmsDeliveryLabel(record.smsReminderStatus)}
+                  {record.smsReminderSentAt ? ` · ${formatRsvpDate(record.smsReminderSentAt)}` : ""}
+                </dd>
+              </div>
+            ) : null}
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
             <ToolbarButton disabled={busy || !record.emailConsent} onClick={() => onResendEmail(record.id)}>
@@ -387,6 +408,12 @@ function RsvpDetailModal({
             </ToolbarButton>
             <ToolbarButton disabled={busy || !canSms} onClick={() => onSendSms(record.id)}>
               Send SMS confirmation
+            </ToolbarButton>
+            <ToolbarButton
+              disabled={busy || !canSms || record.status === "cancelled"}
+              onClick={() => onSendReminder(record.id)}
+            >
+              Send SMS reminder
             </ToolbarButton>
           </div>
         </div>
@@ -453,6 +480,8 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
   const [noteTarget, setNoteTarget] = useState<DashboardRsvpRecord | null>(null);
   const [detailTarget, setDetailTarget] = useState<DashboardRsvpRecord | null>(null);
   const [registerGuestOpen, setRegisterGuestOpen] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const kpis = useMemo(() => computeRsvpKpis(records), [records]);
@@ -506,11 +535,21 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
     downloadCsvFile(`yoruba-day-rsvps-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows]);
   }
 
-  function runAction(fn: () => Promise<{ ok: boolean; error?: string }>) {
+  const reminderEligible = useMemo(
+    () =>
+      records.filter(
+        (r) => r.smsConsent && r.phone && r.status !== "cancelled" && r.smsReminderStatus !== "sent",
+      ).length,
+    [records],
+  );
+
+  function runAction(fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) {
     setActionError(null);
+    setActionNotice(null);
     startTransition(async () => {
       const result = await fn();
       if (!result.ok) setActionError(result.error ?? "Something went wrong.");
+      else if (result.message) setActionNotice(result.message);
     });
   }
 
@@ -522,11 +561,15 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
     onTagToggle: (id: string, tag: RsvpTag) => runAction(() => toggleRsvpTagAction(id, tag)),
     onResendEmail: (id: string) => runAction(() => resendRsvpConfirmationEmailAction(id)),
     onSendSms: (id: string) => runAction(() => sendRsvpConfirmationSmsAction(id)),
+    onSendReminder: (id: string) => runAction(() => sendRsvpReminderSmsAction(id)),
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <ToolbarButton onClick={() => setReminderOpen(true)} disabled={reminderEligible === 0 || isPending}>
+          Send SMS reminders
+        </ToolbarButton>
         <ToolbarButton primary onClick={() => setRegisterGuestOpen(true)}>
           + Register Guest
         </ToolbarButton>
@@ -547,6 +590,11 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
       {actionError ? (
         <div role="alert" className="rounded-xl border border-red-200/70 bg-red-50 px-4 py-3 font-sans text-sm text-red-900">
           {actionError}
+        </div>
+      ) : null}
+      {actionNotice ? (
+        <div role="status" className="rounded-xl border border-emerald-200/80 bg-emerald-50 px-4 py-3 font-sans text-sm text-emerald-950">
+          {actionNotice}
         </div>
       ) : null}
 
@@ -745,8 +793,30 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
           onEditNote={setNoteTarget}
           onResendEmail={actionMenuHandlers.onResendEmail}
           onSendSms={actionMenuHandlers.onSendSms}
+          onSendReminder={actionMenuHandlers.onSendReminder}
           busy={isPending}
         />
+      ) : null}
+
+      {reminderOpen ? (
+        <ModalShell title="Send SMS reminders" showTitle onClose={() => setReminderOpen(false)} className="max-w-md">
+          <p className="mt-3 font-sans text-sm leading-relaxed text-mahogany/70">
+            Send the event reminder to {reminderEligible} registrant{reminderEligible === 1 ? "" : "s"} who opted in to SMS and have not already received it. Each run sends up to 40. Cancelled registrations are skipped.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <ToolbarButton onClick={() => setReminderOpen(false)}>Cancel</ToolbarButton>
+            <ToolbarButton
+              primary
+              disabled={isPending || reminderEligible === 0}
+              onClick={() => {
+                setReminderOpen(false);
+                runAction(() => sendEventReminderSmsAction());
+              }}
+            >
+              {isPending ? "Sending…" : "Send reminders"}
+            </ToolbarButton>
+          </div>
+        </ModalShell>
       ) : null}
 
       {registerGuestOpen ? <RegisterGuestDialog onClose={() => setRegisterGuestOpen(false)} /> : null}

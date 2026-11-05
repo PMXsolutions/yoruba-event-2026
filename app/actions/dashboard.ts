@@ -8,12 +8,14 @@ import { checkRateLimit, clientKeyFromHeaders } from "@/lib/security/rate-limit"
 import { logActivity } from "@/lib/activity/log";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import {
+  createSponsorRecord,
   submitSponsorEnquiry,
   updateSponsorNotes,
   updateSponsorStatus,
 } from "@/platform/engines/sponsors/queries";
 import { SPONSOR_STATUSES } from "@/platform/engines/sponsors/schema";
 import {
+  createVolunteerRecord,
   submitVolunteerRegistration,
   updateVolunteerAssignment,
   updateVolunteerStatus,
@@ -43,6 +45,25 @@ export async function submitSponsorAction(raw: unknown) {
   if (result.ok) {
     const event = getActiveEventConfig();
     await logActivity({ eventSlug: event.slug, action: "sponsor.created", entityType: "sponsor" });
+  }
+  return result;
+}
+
+export async function createSponsorAction(raw: unknown) {
+  const auth = await requireAuth("sponsor.write");
+  if (!auth.ok) return { ok: false as const, error: auth.message };
+  const result = await createSponsorRecord(raw);
+  if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "sponsor.created",
+      entityType: "sponsor",
+      actorId: auth.user.id,
+      metadata: { source: "dashboard" },
+    });
+    revalidatePath("/dashboard/sponsors");
+    revalidatePath("/dashboard");
   }
   return result;
 }
@@ -85,6 +106,25 @@ export async function submitVolunteerAction(raw: unknown) {
       action: "volunteer.created",
       entityType: "volunteer",
     });
+  }
+  return result;
+}
+
+export async function createVolunteerAction(raw: unknown) {
+  const auth = await requireAuth("volunteer.write");
+  if (!auth.ok) return { ok: false as const, error: auth.message };
+  const result = await createVolunteerRecord(raw);
+  if (result.ok) {
+    const event = getActiveEventConfig();
+    await logActivity({
+      eventSlug: event.slug,
+      action: "volunteer.created",
+      entityType: "volunteer",
+      actorId: auth.user.id,
+      metadata: { source: "dashboard" },
+    });
+    revalidatePath("/dashboard/volunteers");
+    revalidatePath("/dashboard");
   }
   return result;
 }

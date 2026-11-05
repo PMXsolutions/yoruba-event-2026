@@ -23,6 +23,7 @@ export type Permission =
   | "announcement.write"
   | "analytics.read"
   | "settings.read"
+  | "settings.write"
   | "user.manage";
 
 const ROLE_PERMISSIONS: Record<PlatformRole, readonly Permission[]> = {
@@ -43,6 +44,7 @@ const ROLE_PERMISSIONS: Record<PlatformRole, readonly Permission[]> = {
     "announcement.write",
     "analytics.read",
     "settings.read",
+    "settings.write",
     "user.manage",
   ],
   ADMIN: [
@@ -62,6 +64,7 @@ const ROLE_PERMISSIONS: Record<PlatformRole, readonly Permission[]> = {
     "announcement.write",
     "analytics.read",
     "settings.read",
+    "settings.write",
   ],
   COMMITTEE: [
     "rsvp.read",

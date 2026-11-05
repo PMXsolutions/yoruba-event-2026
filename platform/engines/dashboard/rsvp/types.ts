@@ -67,6 +67,9 @@ export type DashboardRsvpRecord = {
   emailSentAt: string | null;
   smsStatus: SmsDeliveryStatus;
   smsSentAt: string | null;
+  /** Null when the reminder columns are not in this database yet. */
+  smsReminderStatus: SmsDeliveryStatus | null;
+  smsReminderSentAt: string | null;
 };
 
 export type FetchDashboardRsvpsResult =

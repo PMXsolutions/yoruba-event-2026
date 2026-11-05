@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import {
+  createVolunteerAction,
   updateVolunteerProfileAction,
   updateVolunteerStatusAction,
 } from "@/app/actions/dashboard";
@@ -50,6 +51,19 @@ export function VolunteerManagementPanel({
   const [editTarget, setEditTarget] = useState<VolunteerRecord | null>(null);
   const [assignedRole, setAssignedRole] = useState("");
   const [committeeNotes, setCommitteeNotes] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    skills: "",
+    availability: "",
+    areaOfInterest: "",
+    notes: "",
+    assignedRole: "",
+    committeeNotes: "",
+    status: "new" as VolunteerStatus,
+  });
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -115,6 +129,38 @@ export function VolunteerManagementPanel({
     });
   }
 
+  function resetCreateForm() {
+    setForm({
+      fullName: "",
+      email: "",
+      phone: "",
+      skills: "",
+      availability: "",
+      areaOfInterest: "",
+      notes: "",
+      assignedRole: "",
+      committeeNotes: "",
+      status: "new",
+    });
+  }
+
+  function createVolunteer() {
+    setActionError(null);
+    startTransition(async () => {
+      const result = await createVolunteerAction(form);
+      if (!result.ok) {
+        const details =
+          "fieldErrors" in result && result.fieldErrors
+            ? Object.values(result.fieldErrors).filter(Boolean).join(" ")
+            : "";
+        setActionError([result.error, details].filter(Boolean).join(" "));
+        return;
+      }
+      setCreateOpen(false);
+      resetCreateForm();
+    });
+  }
+
   function saveProfile() {
     if (!editTarget) return;
     setActionError(null);
@@ -129,8 +175,23 @@ export function VolunteerManagementPanel({
     });
   }
 
+  const inputClass =
+    "mt-1.5 w-full rounded-xl border border-mahogany/10 bg-cream/30 px-4 py-2.5 font-sans text-sm text-mahogany outline-none focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10";
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <ToolbarButton
+          primary
+          onClick={() => {
+            resetCreateForm();
+            setCreateOpen(true);
+          }}
+        >
+          + Add volunteer
+        </ToolbarButton>
+      </div>
+
       <StatGrid stats={stats} />
 
       {actionError ? (
@@ -183,7 +244,7 @@ export function VolunteerManagementPanel({
             title={records.length === 0 ? "No volunteers have registered yet." : "No matching volunteers"}
             message={
               records.length === 0
-                ? "Volunteer sign-ups from the public site will appear here."
+                ? "Add a volunteer here, or wait for a sign-up from the public site."
                 : "Try adjusting your search or filters."
             }
           />
@@ -255,6 +316,63 @@ export function VolunteerManagementPanel({
           </TableScroll>
         )}
       </section>
+
+      {createOpen ? (
+        <ModalShell title="Add volunteer" showTitle onClose={() => setCreateOpen(false)} className="max-w-xl">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Name
+              <input className={inputClass} value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Email
+              <input type="email" className={inputClass} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Phone
+              <input className={inputClass} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Area of interest
+              <input className={inputClass} value={form.areaOfInterest} onChange={(e) => setForm((f) => ({ ...f, areaOfInterest: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Assigned role
+              <input className={inputClass} value={form.assignedRole} onChange={(e) => setForm((f) => ({ ...f, assignedRole: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Skills
+              <input className={inputClass} value={form.skills} placeholder="Comma-separated" onChange={(e) => setForm((f) => ({ ...f, skills: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Availability
+              <input className={inputClass} value={form.availability} onChange={(e) => setForm((f) => ({ ...f, availability: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Status
+              <select className={inputClass} value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as VolunteerStatus }))}>
+                {VOLUNTEER_STATUSES.map((status) => (
+                  <option key={status} value={status}>{formatVolunteerStatus(status)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Notes
+              <textarea className={`${inputClass} resize-y`} rows={3} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Committee notes
+              <textarea className={`${inputClass} resize-y`} rows={3} value={form.committeeNotes} onChange={(e) => setForm((f) => ({ ...f, committeeNotes: e.target.value }))} />
+            </label>
+          </div>
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <ToolbarButton onClick={() => setCreateOpen(false)}>Cancel</ToolbarButton>
+            <ToolbarButton primary disabled={isPending} onClick={createVolunteer}>
+              {isPending ? "Saving…" : "Add volunteer"}
+            </ToolbarButton>
+          </div>
+        </ModalShell>
+      ) : null}
 
       {editTarget ? (
         <ModalShell title="Volunteer assignment" showTitle onClose={() => setEditTarget(null)}>

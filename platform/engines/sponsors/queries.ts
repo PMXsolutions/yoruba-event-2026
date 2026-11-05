@@ -76,29 +76,75 @@ export async function submitSponsorEnquiry(raw: unknown): Promise<SubmitSponsorR
   }
 
   try {
-    const d = parsed.data;
-    await dbExec(
-      `INSERT INTO sponsors (
-         event_slug, company_name, contact_person, email, phone, website, package, message, logo_url, status
-       ) VALUES (
-         @slug, @companyName, @contactPerson, @email, @phone, @website, @package, @message, @logoUrl, N'new'
-       )`,
-      {
-        slug: event.slug,
-        companyName: d.companyName,
-        contactPerson: d.contactPerson,
-        email: d.email.toLowerCase(),
-        phone: d.phone ?? null,
-        website: d.website ?? null,
-        package: d.package,
-        message: d.message ?? null,
-        logoUrl: d.logoUrl ?? null,
-      },
-    );
+    await insertSponsor(event.slug, parsed.data, "new", null);
     return { ok: true };
   } catch (error) {
     console.error("[sponsors] Insert failed:", errorMessage(error));
     return { ok: false, error: "Something went wrong while submitting your enquiry. Please try again." };
+  }
+}
+
+async function insertSponsor(
+  slug: string,
+  d: SponsorFormValues,
+  status: SponsorStatus,
+  committeeNotes: string | null,
+) {
+  await dbExec(
+    `INSERT INTO sponsors (
+       event_slug, company_name, contact_person, email, phone, website, package, message, logo_url, status, committee_notes
+     ) VALUES (
+       @slug, @companyName, @contactPerson, @email, @phone, @website, @package, @message, @logoUrl, @status, @committeeNotes
+     )`,
+    {
+      slug,
+      companyName: d.companyName,
+      contactPerson: d.contactPerson,
+      email: d.email.toLowerCase(),
+      phone: d.phone ?? null,
+      website: d.website ?? null,
+      package: d.package,
+      message: d.message ?? null,
+      logoUrl: d.logoUrl ?? null,
+      status,
+      committeeNotes,
+    },
+  );
+}
+
+/** Committee-created sponsor. Public enquiries keep using submitSponsorEnquiry. */
+export async function createSponsorRecord(raw: unknown): Promise<SubmitSponsorResult> {
+  await assertPermission("sponsor.write");
+  const event = getActiveEventConfig();
+  const packages = event.sponsorTiers.map((t) => t.name);
+  const parsed = createSponsorFormSchema(packages).safeParse(raw);
+  if (!parsed.success) {
+    const fieldErrors: Partial<Record<keyof SponsorFormValues, string>> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string" && !(key in fieldErrors)) {
+        fieldErrors[key as keyof SponsorFormValues] = issue.message;
+      }
+    }
+    return { ok: false, error: "Please correct the highlighted fields.", fieldErrors };
+  }
+
+  const body = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const status =
+    typeof body.status === "string" && (SPONSOR_STATUSES as readonly string[]).includes(body.status)
+      ? (body.status as SponsorStatus)
+      : "new";
+  const notes = typeof body.committeeNotes === "string" ? body.committeeNotes.trim().slice(0, 4000) : "";
+
+  const env = getDatabaseEnvPresence();
+  if (!env.ready) return { ok: false, error: "Database is not configured." };
+
+  try {
+    await insertSponsor(event.slug, parsed.data, status, notes || null);
+    return { ok: true };
+  } catch (error) {
+    console.error("[sponsors] Admin insert failed:", errorMessage(error));
+    return { ok: false, error: "Could not add this sponsor." };
   }
 }
 

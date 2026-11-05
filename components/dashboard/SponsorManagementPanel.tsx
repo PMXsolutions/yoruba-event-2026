@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import {
+  createSponsorAction,
   updateSponsorNotesAction,
   updateSponsorStatusAction,
 } from "@/app/actions/dashboard";
@@ -37,11 +38,25 @@ function formatDateShort(iso: string): string {
   }
 }
 
+const emptySponsor = {
+  companyName: "",
+  contactPerson: "",
+  email: "",
+  phone: "",
+  website: "",
+  package: "",
+  message: "",
+  committeeNotes: "",
+  status: "new" as SponsorStatus,
+};
+
 export function SponsorManagementPanel({
   records,
+  packages,
   error,
 }: {
   records: SponsorRecord[];
+  packages: string[];
   error?: string;
 }) {
   const [search, setSearch] = useState("");
@@ -49,6 +64,8 @@ export function SponsorManagementPanel({
   const [actionError, setActionError] = useState<string | null>(error ?? null);
   const [noteTarget, setNoteTarget] = useState<SponsorRecord | null>(null);
   const [note, setNote] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({ ...emptySponsor, package: packages[0] ?? "" });
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -110,6 +127,23 @@ export function SponsorManagementPanel({
     });
   }
 
+  function createSponsor() {
+    setActionError(null);
+    startTransition(async () => {
+      const result = await createSponsorAction(form);
+      if (!result.ok) {
+        const details =
+          "fieldErrors" in result && result.fieldErrors
+            ? Object.values(result.fieldErrors).filter(Boolean).join(" ")
+            : "";
+        setActionError([result.error, details].filter(Boolean).join(" "));
+        return;
+      }
+      setCreateOpen(false);
+      setForm({ ...emptySponsor, package: packages[0] ?? "" });
+    });
+  }
+
   function saveNotes() {
     if (!noteTarget) return;
     setActionError(null);
@@ -120,8 +154,23 @@ export function SponsorManagementPanel({
     });
   }
 
+  const inputClass =
+    "mt-1.5 w-full rounded-xl border border-mahogany/10 bg-cream/30 px-4 py-2.5 font-sans text-sm text-mahogany outline-none focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10";
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <ToolbarButton
+          primary
+          onClick={() => {
+            setForm({ ...emptySponsor, package: packages[0] ?? "" });
+            setCreateOpen(true);
+          }}
+        >
+          + Add sponsor
+        </ToolbarButton>
+      </div>
+
       <StatGrid stats={stats} />
 
       {actionError ? (
@@ -174,7 +223,7 @@ export function SponsorManagementPanel({
             title={records.length === 0 ? "No sponsors have been registered yet." : "No matching sponsors"}
             message={
               records.length === 0
-                ? "Sponsor enquiries from the public site will appear here for committee follow-up."
+                ? "Add a sponsor here, or wait for an enquiry from the public site."
                 : "Try adjusting your search or filters."
             }
           />
@@ -248,6 +297,63 @@ export function SponsorManagementPanel({
           </TableScroll>
         )}
       </section>
+
+      {createOpen ? (
+        <ModalShell title="Add sponsor" showTitle onClose={() => setCreateOpen(false)} className="max-w-xl">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Company
+              <input className={inputClass} value={form.companyName} onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Contact person
+              <input className={inputClass} value={form.contactPerson} onChange={(e) => setForm((f) => ({ ...f, contactPerson: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Email
+              <input type="email" className={inputClass} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Phone
+              <input className={inputClass} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Website
+              <input className={inputClass} value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Package
+              <select className={inputClass} value={form.package} onChange={(e) => setForm((f) => ({ ...f, package: e.target.value }))}>
+                {packages.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
+              Status
+              <select className={inputClass} value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as SponsorStatus }))}>
+                {SPONSOR_STATUSES.map((status) => (
+                  <option key={status} value={status}>{formatSponsorStatus(status)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Message
+              <textarea className={`${inputClass} resize-y`} rows={3} value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} />
+            </label>
+            <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
+              Committee notes
+              <textarea className={`${inputClass} resize-y`} rows={3} value={form.committeeNotes} onChange={(e) => setForm((f) => ({ ...f, committeeNotes: e.target.value }))} />
+            </label>
+          </div>
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <ToolbarButton onClick={() => setCreateOpen(false)}>Cancel</ToolbarButton>
+            <ToolbarButton primary disabled={isPending} onClick={createSponsor}>
+              {isPending ? "Saving…" : "Add sponsor"}
+            </ToolbarButton>
+          </div>
+        </ModalShell>
+      ) : null}
 
       {noteTarget ? (
         <ModalShell title="Committee Notes" showTitle onClose={() => setNoteTarget(null)}>
