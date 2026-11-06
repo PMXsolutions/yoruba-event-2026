@@ -9,9 +9,9 @@ export const yorubaDayCanberra2026: EventConfig = {
   name: "Yoruba Day Canberra 2026",
   tagline:
     "An elevated yet open-hearted gathering on Ngunnawal country—honouring Yoruba language, music, dress, and cuisine while weaving elders, parents, and youth together in community unity.",
-  eventIso: "2026-11-22T14:00:00+11:00",
-  heroDateLine: "22 November 2026",
-  heroDateDisplay: "22 November 2026",
+  eventIso: "2026-11-21T14:00:00+11:00",
+  heroDateLine: "21 November 2026",
+  heroDateDisplay: "21 November 2026",
   heroPlaceLine: "Canberra, ACT",
   location: "Canberra, ACT",
   venue: {
@@ -20,8 +20,8 @@ export const yorubaDayCanberra2026: EventConfig = {
     mapsUrl: "https://maps.google.com/?q=Canberra+ACT+Australia",
   },
   calendar: {
-    startIso: "2026-11-22T14:00:00+11:00",
-    endIso: "2026-11-22T22:00:00+11:00",
+    startIso: "2026-11-21T14:00:00+11:00",
+    endIso: "2026-11-21T22:00:00+11:00",
     timezone: "Australia/Sydney",
   },
   presenter: "Yoruba Association Canberra",
@@ -121,7 +121,7 @@ export const yorubaDayCanberra2026: EventConfig = {
   seo: {
     title: "Yoruba Day Canberra 2026 | Premium Cultural Celebration",
     description:
-      "22 November 2026 in Canberra, ACT—Yoruba Day celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity. Presented by Yoruba Association Canberra.",
+      "21 November 2026 in Canberra, ACT—Yoruba Day celebrates Aso Oke, talking drum, Eyo showcase, cuisine, music, and community unity. Presented by Yoruba Association Canberra.",
     canonicalUrl: "https://yoruba-event-2026-eight.vercel.app",
   },
 };

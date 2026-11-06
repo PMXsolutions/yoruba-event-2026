@@ -15,7 +15,7 @@ Stakeholder walkthrough for the production committee portal.
 
 ## Public site (5 min)
 
-1. Open `/` — hero shows **Yoruba Day Canberra 2026**, **22 November 2026**, Canberra
+1. Open `/` — hero shows **Yoruba Day Canberra 2026**, **21 November 2026**, Canberra
 2. Click **Save the Date** — download .ics / Google / Outlook
 3. Register Interest — submit RSVP; note registration reference
 4. Submit a sponsorship enquiry and a volunteer registration

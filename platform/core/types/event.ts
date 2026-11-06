@@ -77,7 +77,7 @@ export type EventConfig = {
   eventIso: string;
   /** Human-readable date line for hero eyebrow */
   heroDateLine: string;
-  /** Full date display e.g. "22 November 2026" */
+  /** Full date display e.g. "21 November 2026" */
   heroDateDisplay: string;
   heroPlaceLine: string;
   location: string;
