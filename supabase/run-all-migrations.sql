@@ -139,9 +139,9 @@ INSERT INTO public.events (
   'yoruba-day-canberra-2026',
   'Yoruba Day Canberra 2026',
   'An elevated celebration of Yoruba culture in Canberra',
-  '2026-11-22',
-  '2026-11-22T14:00:00+11:00',
-  '2026-11-22T22:00:00+11:00',
+  '2026-11-21',
+  '2026-11-21T14:00:00+11:00',
+  '2026-11-21T22:00:00+11:00',
   'Australia/Sydney',
   'Canberra, ACT',
   'Canberra, ACT, Australia',
@@ -150,6 +150,15 @@ INSERT INTO public.events (
   'https://yorubadaycanberra.org'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+-- Early seeds used Sunday 22 November. The event is Saturday 21 November 2026.
+UPDATE public.events
+SET event_date = '2026-11-21',
+    start_time = '2026-11-21T14:00:00+11:00',
+    end_time = '2026-11-21T22:00:00+11:00',
+    updated_at = now()
+WHERE slug = 'yoruba-day-canberra-2026'
+  AND event_date = '2026-11-22';
 
 -- ── RSVP production columns ─────────────────────────────────────────
 ALTER TABLE public.rsvps

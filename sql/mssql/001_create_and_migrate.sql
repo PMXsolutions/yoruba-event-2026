@@ -299,9 +299,9 @@ WHEN NOT MATCHED THEN
     N'yoruba-day-canberra-2026',
     N'Yoruba Day Canberra 2026',
     N'An elevated celebration of Yoruba culture in Canberra',
-    '2026-11-22',
-    '2026-11-22T14:00:00+11:00',
-    '2026-11-22T22:00:00+11:00',
+    '2026-11-21',
+    '2026-11-21T14:00:00+11:00',
+    '2026-11-21T22:00:00+11:00',
     N'Australia/Sydney',
     N'Canberra, ACT',
     N'Canberra, ACT, Australia',
@@ -309,6 +309,20 @@ WHEN NOT MATCHED THEN
     N'info@yorubadaycanberra.org',
     N'https://yorubadaycanberra.org',
     1
+  );
+GO
+
+-- Early seeds used Sunday 22 November. The event is Saturday 21 November 2026.
+-- This only rewrites a row that still has that earlier date.
+UPDATE dbo.events
+SET event_date = '2026-11-21',
+    start_time = '2026-11-21T14:00:00+11:00',
+    end_time = '2026-11-21T22:00:00+11:00',
+    updated_at = SYSDATETIMEOFFSET()
+WHERE slug = N'yoruba-day-canberra-2026'
+  AND (
+    event_date = '2026-11-22'
+    OR CONVERT(date, start_time) = '2026-11-22'
   );
 GO
 

@@ -46,7 +46,7 @@ test("reminder template keeps known placeholders only", () => {
   const text = format.renderSmsTemplate(format.DEFAULT_SMS_REMINDER_TEMPLATE, {
     firstName: "Ada",
     eventName: "Yoruba Day Canberra 2026",
-    date: "22 November 2026",
+    date: "21 November 2026",
     location: "Canberra, ACT",
     website: "https://yorubaassociationact.org",
   });
