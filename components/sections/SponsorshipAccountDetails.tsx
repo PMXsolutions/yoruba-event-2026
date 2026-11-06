@@ -42,7 +42,7 @@ export function SponsorshipAccountDetails({
   ];
 
   return (
-    <div className={compact ? "" : "mx-auto mt-10 max-w-3xl"}>
+    <div id={compact ? undefined : "donations"} className={compact ? "" : "mx-auto mb-12 max-w-3xl scroll-mt-28"}>
       {compact ? null : (
         <>
           <p className="font-sans text-[0.62rem] font-bold uppercase tracking-[0.22em] text-gold-deep">

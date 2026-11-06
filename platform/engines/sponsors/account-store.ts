@@ -7,7 +7,7 @@ import { dbExec, dbOne } from "@/lib/db/query";
 import { asIso } from "@/lib/db/values";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import {
-  toPublicSponsorshipAccount,
+  resolvePublicSponsorshipAccount,
   type PublicSponsorshipAccount,
   type SponsorshipAccount,
   type SponsorshipAccountInput,
@@ -23,8 +23,16 @@ type AccountRow = {
   updated_at: string | Date | null;
 };
 
-function asBool(value: boolean | number | null | undefined): boolean {
-  return value === true || value === 1;
+function asBool(value: unknown): boolean {
+  if (value === true || value === 1) return true;
+  if (typeof value === "string") {
+    const text = value.trim().toLowerCase();
+    return text === "1" || text === "true";
+  }
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
+    return value.length > 0 && value[0] !== 0;
+  }
+  return false;
 }
 
 function mapRow(row: AccountRow): SponsorshipAccount {
@@ -52,17 +60,20 @@ async function readAccount(eventSlug: string): Promise<SponsorshipAccount | null
   return row ? mapRow(row) : null;
 }
 
-/** Public sponsorship page. Hidden accounts and a missing table show nothing. */
+/**
+ * Public sponsorship page. The association account is shown when nothing is
+ * saved yet, or when the database cannot be read. A committee member can
+ * replace those details, or hide them, from the sponsor dashboard.
+ */
 export async function fetchPublicSponsorshipAccount(): Promise<PublicSponsorshipAccount | null> {
   await connection();
-  if (!getDatabaseEnvPresence().ready) return null;
+  if (!getDatabaseEnvPresence().ready) return resolvePublicSponsorshipAccount(null);
   try {
     const account = await readAccount(getActiveEventConfig().slug);
-    if (!account || !account.visible) return null;
-    return toPublicSponsorshipAccount(account);
+    return resolvePublicSponsorshipAccount(account);
   } catch (error) {
     console.warn("[sponsors] Receiving account is unavailable:", errorMessage(error));
-    return null;
+    return resolvePublicSponsorshipAccount(null);
   }
 }
 

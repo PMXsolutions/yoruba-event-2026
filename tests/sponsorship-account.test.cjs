@@ -35,6 +35,41 @@ test("association bank details normalise to the stored digits", () => {
   assert.equal(pub.accountName, "Yoruba Association in ACT");
 });
 
+test("the public page shows the association account until one is saved", () => {
+  const pub = account.resolvePublicSponsorshipAccount(null);
+  assert.equal(pub.accountName, "Yoruba Association in ACT");
+  assert.equal(pub.bsbDisplay, "062-904");
+  assert.equal(pub.bsbDigits, "062904");
+  assert.equal(pub.accountNumber, "10585388");
+});
+
+test("a saved account replaces the default, and a hidden account stays off the page", () => {
+  const saved = account.resolvePublicSponsorshipAccount({
+    accountName: "Updated name",
+    bsb: "062904",
+    accountNumber: "111111",
+    bankName: "Example Bank",
+    instructions: "Use the invoice number.",
+    visible: true,
+    updatedAt: null,
+  });
+  assert.equal(saved.accountName, "Updated name");
+  assert.equal(saved.accountNumber, "111111");
+  assert.equal(saved.bankName, "Example Bank");
+  assert.equal(
+    account.resolvePublicSponsorshipAccount({
+      accountName: "Hidden",
+      bsb: "062904",
+      accountNumber: "10585388",
+      bankName: null,
+      instructions: null,
+      visible: false,
+      updatedAt: null,
+    }),
+    null,
+  );
+});
+
 test("account details reject an incomplete BSB or account number", () => {
   assert.equal(
     account.parseSponsorshipAccountInput({
