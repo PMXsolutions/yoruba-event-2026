@@ -254,6 +254,16 @@ test('the Windows package refuses pages whose JavaScript is missing', () => {
     const broken = spawnSync(process.execPath, ['scripts/prepare-windows-deploy.mjs', deploy, recycle, 'run-2'], { encoding: 'utf8' });
     assert.equal(broken.status, 1);
     assert.match(broken.stderr, /missing\.js/);
+    fs.rmSync(path.join(deploy, '.next/server/app/index.html'));
+    write('.next/server/app/page.js', 'dynamic homepage');
+    write('.next/server/app/login.html', '<script src="/_next/static/chunks/app.js"></script>');
+    const dynamicHome = spawnSync(process.execPath, ['scripts/prepare-windows-deploy.mjs', deploy, recycle, 'run-4'], { encoding: 'utf8' });
+    assert.equal(dynamicHome.status, 0, dynamicHome.stderr);
+    fs.rmSync(path.join(deploy, '.next/server/app/page.js'));
+    const noHome = spawnSync(process.execPath, ['scripts/prepare-windows-deploy.mjs', deploy, recycle, 'run-5'], { encoding: 'utf8' });
+    assert.equal(noHome.status, 1);
+    assert.match(noHome.stderr, /page\.js/);
+    write('.next/server/app/page.js', 'dynamic homepage');
     fs.mkdirSync(path.join(deploy, 'node_modules'));
     write('.next/server/app/index.html', '<script src="/_next/static/chunks/app.js"></script>');
     const withModules = spawnSync(process.execPath, ['scripts/prepare-windows-deploy.mjs', deploy, recycle, 'run-3'], { encoding: 'utf8' });

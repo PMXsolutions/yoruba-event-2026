@@ -36,9 +36,16 @@ for (const relativePath of [
   ".env",
   "web.config",
   ".next/BUILD_ID",
-  ".next/server/app/index.html",
 ]) {
   assertFile(relativePath);
+}
+
+// A static homepage is prerendered to index.html. A request-time homepage,
+// such as the sponsorship page, is packaged as the server module page.js.
+const staticHomepage = path.join(deployDir, ".next/server/app/index.html");
+const dynamicHomepage = path.join(deployDir, ".next/server/app/page.js");
+if (!fs.existsSync(staticHomepage) && !fs.existsSync(dynamicHomepage)) {
+  fail("missing .next/server/app/index.html or .next/server/app/page.js");
 }
 
 if (!fs.existsSync(path.join(deployDir, ".next", "static"))) {
