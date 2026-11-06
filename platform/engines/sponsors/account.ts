@@ -25,6 +25,30 @@ export type PublicSponsorshipAccount = {
 export const DEFAULT_SPONSORSHIP_INSTRUCTIONS =
   "Transfer sponsorship payments and donations to this account. Use your name or organisation as the payment reference.";
 
+/** Shown on the public page until the committee saves a different account. */
+export const DEFAULT_SPONSORSHIP_ACCOUNT: SponsorshipAccount = {
+  accountName: "Yoruba Association in ACT",
+  bsb: "062904",
+  accountNumber: "10585388",
+  bankName: null,
+  instructions: DEFAULT_SPONSORSHIP_INSTRUCTIONS,
+  visible: true,
+  updatedAt: null,
+};
+
+/**
+ * A saved visible account replaces the association default.
+ * A saved hidden account stays off the public page.
+ * No saved row still shows the association account.
+ */
+export function resolvePublicSponsorshipAccount(
+  account: SponsorshipAccount | null,
+): PublicSponsorshipAccount | null {
+  if (!account) return toPublicSponsorshipAccount(DEFAULT_SPONSORSHIP_ACCOUNT);
+  if (!account.visible) return null;
+  return toPublicSponsorshipAccount(account);
+}
+
 export function normalizeBsb(value: string): string | null {
   const digits = value.replace(/\D/g, "");
   if (digits.length !== 6) return null;

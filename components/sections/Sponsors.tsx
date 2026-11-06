@@ -41,9 +41,11 @@ export function Sponsors({ account }: { account?: PublicSponsorshipAccount | nul
           subtitle="Stand alongside a community-led celebration of Yoruba excellence in Canberra—visible, meaningful, and crafted with warmth for guests and partners alike."
         />
         <p className="mx-auto mb-10 max-w-2xl rounded-2xl border border-gold/25 bg-cream/80 px-6 py-4 text-center font-sans text-sm leading-relaxed text-mahogany/75 shadow-[var(--shadow-card-light)] sm:mb-12 sm:text-[0.95rem]">
-          {LAUNCH_COPY.sponsorshipAnnouncedSoon} Enquire below to express early interest—our team
-          will share the sponsorship deck when packages are finalised.
+          {LAUNCH_COPY.sponsorshipAnnouncedSoon} Sponsorship and donations are paid by bank transfer.
+          Enquire below to express early interest—our team will share the sponsorship deck when
+          packages are finalised.
         </p>
+        {account ? <SponsorshipAccountDetails account={account} /> : null}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-7">
           {SPONSOR_TIERS.map((s, index) => (
             <motion.article
@@ -94,7 +96,6 @@ export function Sponsors({ account }: { account?: PublicSponsorshipAccount | nul
             </motion.article>
           ))}
         </div>
-        {account ? <SponsorshipAccountDetails account={account} /> : null}
         <SponsorEnquiryForm account={account} />
       </div>
     </AnimatedSection>
