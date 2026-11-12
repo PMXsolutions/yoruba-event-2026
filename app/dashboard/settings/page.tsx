@@ -12,6 +12,7 @@ import { getEmailEnvPresence } from "@/platform/engines/notifications/email/env-
 import { EMAIL_TEMPLATE_CATALOG } from "@/platform/engines/notifications/email/templates/catalog";
 import { getPublicSmsSettings } from "@/platform/engines/notifications/sms/settings-store";
 import { SmsSettingsPanel } from "@/components/dashboard/SmsSettingsPanel";
+import { DailyCommunicationsPanel } from "@/components/dashboard/DailyCommunicationsPanel";
 import packageJson from "@/package.json";
 
 export const dynamic = "force-dynamic";
@@ -127,6 +128,7 @@ export default async function DashboardSettingsPage() {
         </DashboardCard>
       </div>
 
+      {canWriteSms && <DailyCommunicationsPanel />}
       <SmsSettingsPanel
         settings={canWriteSms ? sms : { ...sms, username: "" }}
         canWrite={canWriteSms}
@@ -164,7 +166,7 @@ export default async function DashboardSettingsPage() {
 
       <DashboardCard
         title="Email templates"
-        description="Reusable communication templates — only Register Interest Confirmation is auto-active"
+        description="Register Interest Confirmation and scheduled Event Reminder are active"
       >
         <ul className="space-y-2 font-sans text-sm text-mahogany/70">
           {EMAIL_TEMPLATE_CATALOG.map((t) => (

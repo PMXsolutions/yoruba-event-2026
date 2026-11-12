@@ -24,6 +24,10 @@ export type SendEmailResult =
 export async function sendRsvpConfirmationEmail(
   params: RsvpConfirmationEmailParams,
 ): Promise<SendEmailResult> {
+  return sendNotificationEmail(params.record.email, buildRsvpConfirmationEmail(params));
+}
+
+export async function sendNotificationEmail(to: string, email: {subject:string;html:string;text:string}): Promise<SendEmailResult> {
   const env = getEmailEnvPresence();
   if (!env.ready) {
     console.info(
@@ -33,7 +37,7 @@ export async function sendRsvpConfirmationEmail(
     return { ok: false, reason: "NOT_CONFIGURED", message: "Email not configured" };
   }
 
-  const { subject, html, text } = buildRsvpConfirmationEmail(params);
+  const { subject, html, text } = email;
   console.info(
     "[notification-engine] Confirmation email dispatch",
     emailConfigLogSummary(),
@@ -42,7 +46,7 @@ export async function sendRsvpConfirmationEmail(
 
   if (env.transport === "smtp") {
     return sendViaSmtp({
-      to: params.record.email,
+      to,
       subject,
       html,
       text,
@@ -70,7 +74,7 @@ export async function sendRsvpConfirmationEmail(
       },
       body: JSON.stringify({
         from,
-        to: [params.record.email],
+        to: [to],
         subject,
         html,
         text,

@@ -9,18 +9,18 @@ export const yorubaDayCanberra2026: EventConfig = {
   name: "Yoruba Day Canberra 2026",
   tagline:
     "An elevated yet open-hearted gathering on Ngunnawal country—honouring Yoruba language, music, dress, and cuisine while weaving elders, parents, and youth together in community unity.",
-  eventIso: "2026-11-21T14:00:00+11:00",
+  eventIso: "2026-11-21T15:00:00+11:00",
   heroDateLine: "21 November 2026",
   heroDateDisplay: "21 November 2026",
   heroPlaceLine: "Canberra, ACT",
   location: "Canberra, ACT",
   venue: {
-    name: "Canberra, ACT",
-    fullAddress: "Canberra, ACT, Australia",
-    mapsUrl: "https://maps.google.com/?q=Canberra+ACT+Australia",
+    name: "Fitzroy Hall, Exhibition Park",
+    fullAddress: "Fitzroy Hall, Exhibition Park, Canberra, ACT",
+    mapsUrl: "https://maps.google.com/?q=Fitzroy+Hall+Exhibition+Park+Canberra",
   },
   calendar: {
-    startIso: "2026-11-21T14:00:00+11:00",
+    startIso: "2026-11-21T15:00:00+11:00",
     endIso: "2026-11-21T22:00:00+11:00",
     timezone: "Australia/Sydney",
   },

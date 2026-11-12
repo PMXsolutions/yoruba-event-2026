@@ -44,8 +44,8 @@ export const EMAIL_TEMPLATE_CATALOG: readonly TemplateMeta[] = [
   {
     id: "event-reminder",
     name: "Event Reminder",
-    description: "Pre-event reminder with logistics.",
-    autoActive: false,
+    description: "Daily opted-in attendee reminder at 10 am Sydney through 21 November 2026.",
+    autoActive: true,
   },
   {
     id: "volunteer-confirmation",
@@ -142,12 +142,20 @@ export function buildSeatQrAssignmentEmail(event: EventConfig): BuiltEmail {
 }
 
 export function buildEventReminderEmail(event: EventConfig): BuiltEmail {
-  return stubEmail(
-    event,
-    "Event Reminder",
-    `A friendly reminder that ${event.name} is approaching. Logistics and arrival details will be filled in when reminders are enabled.`,
-    "Reminder",
-  );
+  const palette = resolveEmailPalette(event);
+  const website = "https://yorubadaycanberra.com";
+  const subject = `${event.name} — we look forward to welcoming you`;
+  const text = [event.name, "Thank you for registering!", "Saturday 21 November 2026 at 3 pm", "Fitzroy Hall, Exhibition Park, Canberra", "Dress code: native attire in white and blue, all white or all blue.", "Your RSVP helps us plan seating and catering. You do not need to register again.", "Please share the registration link with family and friends from every community. Each attending household should register; only registered attendees will be allocated seats.", website].join("\n\n");
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:24px 12px;background:${palette.cream};color:${palette.bodyText};font-family:Arial,sans-serif">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:auto;border:1px solid ${palette.border};background:${palette.surface}">
+<tr><td style="padding:32px 24px;background:${palette.espresso};text-align:center">${emailLogoHtml(event)}<p style="color:${palette.gold};letter-spacing:3px;font-size:12px">CULTURE · COMMUNITY · CELEBRATION</p><h1 style="color:${palette.cream};font:32px Georgia,serif">${escapeHtml(event.name)}</h1></td></tr>
+<tr><td style="padding:32px"><h2 style="font:28px Georgia,serif;color:${palette.espresso};margin-top:0">We look forward to welcoming you.</h2><p style="line-height:1.7">Thank you for registering! Your RSVP helps us plan seating and catering. <strong>You do not need to register again.</strong></p>
+<table role="presentation" width="100%" style="background:${palette.cream};border-left:4px solid ${palette.gold}"><tr><td style="padding:20px;line-height:1.8"><strong>Saturday 21 November 2026 · 3 pm</strong><br>Fitzroy Hall, Exhibition Park, Canberra<br>Native attire: white and blue, all white or all blue.</td></tr></table>
+<h2 style="font:24px Georgia,serif">A celebration to share.</h2><p style="line-height:1.7">Invite your family and friends from every community. Please share the link so they can RSVP too. Only registered attendees will be allocated seats.</p>
+<p style="margin:28px 0"><a href="${website}" style="display:inline-block;padding:16px 24px;background:${palette.espresso};color:${palette.cream};text-decoration:none;border-bottom:3px solid ${palette.gold}">Share the RSVP link</a></p><p style="font-size:13px;word-break:break-word">${website}</p>
+<p style="line-height:1.7">With warm wishes,<br>Yoruba Association in the ACT</p></td></tr></table></body></html>`;
+  return { subject, html, text };
 }
 
 export function buildVolunteerConfirmationEmail(event: EventConfig): BuiltEmail {

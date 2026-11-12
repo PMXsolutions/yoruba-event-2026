@@ -1,0 +1,29 @@
+name: Daily event communications
+on:
+  schedule:
+    # November Sydney is UTC+11. Server timer sends at 10am and 6pm;
+    # this wake-up also recovers an idle/recycled IIS process.
+    - cron: '0,10,20,30,40,50 23,7 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: yoruba-daily-communications
+  cancel-in-progress: false
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run due communications
+        env:
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+        run: |
+          node <<'JS'
+          const crypto=require('node:crypto');
+          const now=new Date();
+          if(now>new Date('2026-11-21T09:00:00Z')) {console.log('Campaign ended. No messages sent.');process.exit(0);}
+          if(!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length<32) throw Error('Missing scheduler credential');
+          const timestamp=String(Date.now());
+          const signature=crypto.createHmac('sha256',process.env.SESSION_SECRET).update(`yoruba-daily:${timestamp}`).digest('hex');
+          fetch('https://yorubaassociationact.org/api/communications/run',{method:'POST',headers:{'x-comms-time':timestamp,'x-comms-signature':signature},signal:AbortSignal.timeout(240000)}).then(async r=>{const text=await r.text();if(!r.ok)throw Error(`Scheduler HTTP ${r.status}`);console.log(text);}).catch(e=>{console.error(e.message);process.exitCode=1;});
+          JS

@@ -9,6 +9,8 @@ export async function register() {
     await applyDatabaseSchema();
     const { ensureCommitteeAdmin } = await import("@/lib/auth/ensure-admin");
     await ensureCommitteeAdmin();
+    const { startDailyCommunications } = await import("@/platform/engines/notifications/daily/runner");
+    startDailyCommunications();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[mssql] Startup schema or admin bootstrap failed:", message);

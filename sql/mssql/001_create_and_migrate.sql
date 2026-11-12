@@ -402,3 +402,20 @@ WHEN NOT MATCHED THEN
     1
   );
 GO
+
+-- Daily event communications: durable claims prevent concurrent/restart duplicate sends.
+IF OBJECT_ID(N'dbo.daily_communications', N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.daily_communications (
+  event_slug NVARCHAR(120) NOT NULL,
+  send_day NVARCHAR(10) NOT NULL,
+  kind NVARCHAR(24) NOT NULL,
+  recipient_key NVARCHAR(64) NOT NULL,
+  status NVARCHAR(24) NOT NULL,
+  provider_id NVARCHAR(200) NULL,
+  created_at DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  updated_at DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+  CONSTRAINT PK_daily_communications PRIMARY KEY(event_slug, send_day, kind, recipient_key)
+ );
+END
+GO
