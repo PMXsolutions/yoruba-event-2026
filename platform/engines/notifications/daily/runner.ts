@@ -12,6 +12,14 @@ import { buildSmsReminder } from "@/platform/engines/notifications/sms/reminders
 import { CAMPAIGN, RELEASE, schedule, recipientKey } from "./policy";
 import { buildCommitteeReport, type Counts, type Task } from "./report";
 
+export async function currentCommitteeReport(day = schedule().day) {
+    const [counts] = await dbQuery<Counts>(`SELECT COUNT(CASE WHEN status<>N'cancelled' THEN 1 END) AS registrations,COALESCE(SUM(CASE WHEN status<>N'cancelled' THEN number_of_attendees ELSE 0 END),0) AS guests,COUNT(CASE WHEN status=N'confirmed' THEN 1 END) AS confirmed,COUNT(CASE WHEN status<>N'cancelled' AND CONVERT(date,created_at AT TIME ZONE 'AUS Eastern Standard Time')=TRY_CONVERT(date,@day) THEN 1 END) AS newRegistrations,COUNT(CASE WHEN status=N'cancelled' THEN 1 END) AS cancelled FROM rsvps WHERE event_slug=@slug`,{slug:CAMPAIGN,day:day});
+    const tasks = await dbQuery<Task>(`SELECT t.title,t.status,t.priority,p.full_name AS owner,CONVERT(varchar(10),t.due_date,23) AS due FROM tasks t LEFT JOIN profiles p ON p.id=t.assigned_to WHERE t.event_slug=@slug AND t.status<>N'completed' ORDER BY t.due_date,t.title`,{slug:CAMPAIGN});
+    const deliveries=await deliveryStatus(day);
+    const report=buildCommitteeReport(day,counts,tasks,`Today's reminder processing: ${deliveries.map(d=>`${d.kind}: ${d.total} ${d.status}`).join("; ") || "No sends recorded"}. Accepted means provider acceptance, not confirmed inbox/handset delivery.`);
+    return report;
+}
+
 type Recipient = { id: string; full_name: string; email: string; phone: string | null; email_consent: boolean; sms_consent: boolean; status: string };
 export async function deliveryStatus(day = schedule().day) {
   return dbQuery<{kind:string;status:string;total:number}>(`SELECT kind,status,COUNT(*) AS total FROM daily_communications WHERE event_slug=@slug AND send_day=@day GROUP BY kind,status`, {slug:CAMPAIGN,day});
@@ -71,11 +79,10 @@ export async function runDailyCommunications(now = new Date(), dryRun = false) {
   }
   if(clock.committeeDue || dryRun) {
     const recipients = await dbQuery<{email:string}>(`SELECT DISTINCT LOWER(LTRIM(RTRIM(email))) AS email FROM profiles WHERE is_active=1 AND role IN (N'COMMITTEE',N'ADMIN',N'SUPER_ADMIN') AND email<>N'admin@promaxevent.com'`,{});
+    const copies=await dbQuery<{email:string}>(`SELECT email FROM committee_report_copies WHERE event_slug=@slug`,{slug:CAMPAIGN});
+    for(const copy of copies) if(!recipients.some(r=>r.email===copy.email)) recipients.push(copy);
     result.committeeRecipients=recipients.length;
-    const [counts] = await dbQuery<Counts>(`SELECT COUNT(CASE WHEN status<>N'cancelled' THEN 1 END) AS registrations,COALESCE(SUM(CASE WHEN status<>N'cancelled' THEN number_of_attendees ELSE 0 END),0) AS guests,COUNT(CASE WHEN status=N'confirmed' THEN 1 END) AS confirmed,COUNT(CASE WHEN status<>N'cancelled' AND CONVERT(date,created_at AT TIME ZONE 'AUS Eastern Standard Time')=TRY_CONVERT(date,@day) THEN 1 END) AS newRegistrations,COUNT(CASE WHEN status=N'cancelled' THEN 1 END) AS cancelled FROM rsvps WHERE event_slug=@slug`,{slug:CAMPAIGN,day:clock.day});
-    const tasks = await dbQuery<Task>(`SELECT t.title,t.status,t.priority,p.full_name AS owner,CONVERT(varchar(10),t.due_date,23) AS due FROM tasks t LEFT JOIN profiles p ON p.id=t.assigned_to WHERE t.event_slug=@slug AND t.status<>N'completed' ORDER BY t.due_date,t.title`,{slug:CAMPAIGN});
-    const deliveries=await deliveryStatus(clock.day);
-    const report=buildCommitteeReport(clock.day,counts,tasks,`Today's reminder processing: ${deliveries.map(d=>`${d.kind}: ${d.total} ${d.status}`).join("; ") || "No sends recorded"}. Accepted means provider acceptance, not confirmed inbox/handset delivery.`);
+    const report=await currentCommitteeReport(clock.day);
     for(const r of recipients) if(emailReady) await deliver("committee-email",r.email,()=>sendNotificationEmail(r.email,report));
   }
   return {...result,emailReady,emailEnabled,smsReady:sms.ready,smsEnabled:sms.enabled && sms.remindersEnabled};

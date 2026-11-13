@@ -419,3 +419,8 @@ BEGIN
  );
 END
 GO
+
+IF OBJECT_ID(N'dbo.committee_report_copies',N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.committee_report_copies(event_slug nvarchar(100) NOT NULL,email nvarchar(254) NOT NULL,CONSTRAINT PK_committee_report_copies PRIMARY KEY(event_slug,email));
+END;
