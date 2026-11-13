@@ -5,25 +5,7 @@ import Image from "next/image";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
-const PHOTOS = [
-  { src: "/gallery/01.jpg", alt: "Guests in traditional dress on stage at a previous Yoruba Day." },
-  { src: "/gallery/02.jpg", alt: "Dancing in the hall at a previous Yoruba Day." },
-  { src: "/gallery/03.jpg", alt: "Performers on stage at a previous Yoruba Day." },
-  { src: "/gallery/04.jpg", alt: "A celebratory moment on the dance floor at a previous Yoruba Day." },
-  { src: "/gallery/05.jpg", alt: "Dancers on stage at a previous Yoruba Day." },
-  { src: "/gallery/06.jpg", alt: "Performers before the curtain at a previous Yoruba Day." },
-  { src: "/gallery/07.jpg", alt: "Music and dance on stage at a previous Yoruba Day." },
-  { src: "/gallery/08.jpg", alt: "Guests sharing a moment on stage at a previous Yoruba Day." },
-  { src: "/gallery/09.jpg", alt: "Guests in gele and aso oke at a previous Yoruba Day." },
-  { src: "/gallery/10.jpg", alt: "Guests in blue traditional dress at a previous Yoruba Day." },
-  { src: "/gallery/11.jpg", alt: "Musicians at a previous Yoruba Day." },
-  { src: "/gallery/12.jpg", alt: "A performer with the band at a previous Yoruba Day." },
-  { src: "/gallery/13.jpg", alt: "Families gathered in the hall at a previous Yoruba Day." },
-  { src: "/gallery/14.jpg", alt: "Guests in white and striped aso oke at a previous Yoruba Day." },
-  { src: "/gallery/15.jpg", alt: "The community around a celebration cake at a previous Yoruba Day." },
-  { src: "/gallery/16.jpg", alt: "Addressing guests in the hall at a previous Yoruba Day." },
-  { src: "/gallery/17.jpg", alt: "A joyful moment at a previous Yoruba Day." },
-] as const;
+import { EXISTING_PHOTOS as PHOTOS } from "@/lib/gallery/existing";
 
 export function PreviousEdition() {
   const [index, setIndex] = useState(0);
@@ -57,6 +39,7 @@ export function PreviousEdition() {
           subtitle="Photographs from the previous celebration."
         />
 
+        <p className="mb-8 text-center"><a href="/gallery" className="inline-block rounded-full border border-gold/40 px-7 py-3 text-cream">Explore the full gallery ↗</a></p>
         <div
           className="mx-auto max-w-4xl"
           onMouseEnter={() => setPaused(true)}

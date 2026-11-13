@@ -430,3 +430,30 @@ BEGIN
  CREATE TABLE dbo.committee_access_requests(id uniqueidentifier NOT NULL PRIMARY KEY,full_name nvarchar(120) NOT NULL,email nvarchar(254) NOT NULL UNIQUE,workstream nvarchar(200) NOT NULL,status nvarchar(20) NOT NULL DEFAULT N'pending',created_at datetimeoffset NOT NULL DEFAULT SYSDATETIMEOFFSET(),reviewed_at datetimeoffset NULL,reviewed_by uniqueidentifier NULL,CONSTRAINT CK_committee_request_status CHECK(status IN(N'pending',N'approved',N'declined')));
 END;
 GO
+
+-- Moderated gallery: files are private database objects until explicitly approved.
+IF OBJECT_ID(N'dbo.gallery_links', N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.gallery_links (
+ id uniqueidentifier NOT NULL PRIMARY KEY, event_slug nvarchar(160) NOT NULL,
+ label nvarchar(120) NOT NULL, token_hash char(64) NOT NULL UNIQUE,
+ expires_at datetimeoffset NOT NULL, revoked bit NOT NULL DEFAULT 0,
+ created_by uniqueidentifier NOT NULL, created_at datetimeoffset NOT NULL DEFAULT SYSDATETIMEOFFSET()
+ );
+END
+GO
+IF OBJECT_ID(N'dbo.gallery_media', N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.gallery_media (
+ id uniqueidentifier NOT NULL PRIMARY KEY, event_slug nvarchar(160) NOT NULL,
+ link_id uniqueidentifier NOT NULL, title nvarchar(160) NOT NULL, collection nvarchar(80) NOT NULL,
+ mime nvarchar(40) NOT NULL, kind nvarchar(10) NOT NULL, content_hash char(64) NOT NULL,
+ content varbinary(max) NOT NULL, byte_size int NOT NULL,
+ status nvarchar(16) NOT NULL DEFAULT N'pending' CHECK(status IN ('pending','approved','rejected')),
+ created_at datetimeoffset NOT NULL DEFAULT SYSDATETIMEOFFSET(), reviewed_at datetimeoffset NULL,
+ reviewed_by uniqueidentifier NULL,
+ CONSTRAINT FK_gallery_link FOREIGN KEY(link_id) REFERENCES dbo.gallery_links(id),
+ CONSTRAINT UQ_gallery_content UNIQUE(event_slug,content_hash)
+ );
+END
+GO
