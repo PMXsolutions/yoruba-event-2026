@@ -25,7 +25,7 @@ export async function POST(request:Request) {
   if(!parsed.data.email) return Response.json({error:"Test email required"},{status:400});
   const to=parsed.data.email.trim().toLowerCase();
   const report=await currentCommitteeReport(day); report.subject="TEST — Current figures — "+report.subject;
-  await send("test-report-live",to,()=>sendNotificationEmail(to,report));
+  await send("test-report-live-v2",to,()=>sendNotificationEmail(to,report));
   return Response.json(results);
  }
  if(parsed.data.email){
