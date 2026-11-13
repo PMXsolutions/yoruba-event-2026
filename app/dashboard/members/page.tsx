@@ -19,6 +19,7 @@ export default async function MembersPage() {
     full_name: string | null;
     role: string;
     is_active: boolean;
+    setup_complete: boolean;
   }[] = [];
   let events: {
     id: string;
@@ -36,7 +37,8 @@ export default async function MembersPage() {
       full_name: string | null;
       role: string;
       is_active: boolean | number;
-    }>(`SELECT id, email, full_name, role, is_active FROM profiles ORDER BY full_name`);
+      setup_complete: boolean | number;
+    }>(`SELECT id, email, full_name, role, is_active, CASE WHEN password_hash IS NOT NULL THEN 1 ELSE 0 END AS setup_complete FROM profiles ORDER BY full_name`);
     const eventRows = await dbQuery<{
       id: string;
       action: string;
@@ -51,6 +53,7 @@ export default async function MembersPage() {
     members = memberRows.map((member) => ({
       ...member,
       is_active: member.is_active === true || member.is_active === 1,
+      setup_complete: member.setup_complete === true || member.setup_complete === 1,
     }));
     events = eventRows.map((event) => ({
       ...event,

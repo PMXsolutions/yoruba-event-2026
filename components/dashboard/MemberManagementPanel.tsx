@@ -7,6 +7,7 @@ type Member = {
     full_name: string | null;
     role: string;
     is_active: boolean;
+    setup_complete: boolean;
 };
 type Event = {
     id: string;
@@ -32,7 +33,7 @@ function MemberRow({ member, currentId, run, pending }: {
     const [active, setActive] = useState(member.is_active);
     const own = member.id === currentId;
     return <article className="grid gap-4 border-t border-mahogany/10 py-5 lg:grid-cols-[1fr_1fr_auto]">
-    <div className="min-w-0"><p className="font-semibold">{member.full_name || member.email}{own ? " (you)" : ""}</p><p className="break-all text-sm text-mahogany/65">{member.email}</p><p className="mt-1 text-xs">{member.is_active ? "Access active" : "Access inactive"}</p></div>
+    <div className="min-w-0"><p className="font-semibold">{member.full_name || member.email}{own ? " (you)" : ""}</p><p className="break-all text-sm text-mahogany/65">{member.email}</p><p className="mt-1 text-xs">{member.is_active ? "Access active" : "Access inactive"}</p><p className="mt-1 text-sm">{member.setup_complete ? "Password setup complete" : "Awaiting password setup"}</p></div>
     <div className="space-y-2"><label className="block text-xs">Role<select className={field} aria-label={`Role for ${member.email}`} disabled={own || pending} value={role} onChange={e => setRole(e.target.value)}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={active} disabled={own || pending} onChange={e => setActive(e.target.checked)}/>Allow portal access</label></div>
     <div className="flex flex-wrap items-center gap-2"><button className={button} disabled={own || pending || (role === member.role && active === member.is_active)} onClick={() => { if (window.confirm(`Save ${labels[role]} access for ${member.email}? Portal access will be ${active ? "active" : "inactive"}.`))
         run(() => changeMemberAccess({ id: member.id, role, active })); }}>Save access</button><button className={button} disabled={pending || !member.is_active} onClick={() => run(() => inviteMember({ name: member.full_name || member.email, email: member.email }))}>Resend setup email</button></div>

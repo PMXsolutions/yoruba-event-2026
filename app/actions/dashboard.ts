@@ -199,7 +199,7 @@ export async function createTaskAction(raw: unknown) {
 export async function updateTaskAction(id: string, raw: unknown) {
   const auth = await requireAuth("task.write");
   if (!auth.ok) return { ok: false as const, error: auth.message };
-  if (!idSchema.safeParse(id).success) return { ok: false as const, error: "Invalid record." };
+  if (!z.string().guid().safeParse(id).success) return { ok: false as const, error: "Invalid record." };
 
   const patch: Record<string, unknown> = {};
   if (raw && typeof raw === "object") {
