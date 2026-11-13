@@ -83,6 +83,7 @@ export async function createTask(
   const event = getActiveEventConfig();
   const d = parsed.data;
   try {
+    if(d.assignedTo && !await validOwner(d.assignedTo)) return {ok:false,error:"Choose an active committee member."};
     const created = await dbOne<{ id: string }>(
       `INSERT INTO tasks (event_slug, title, description, status, priority, due_date, assigned_to, created_by)
        OUTPUT INSERTED.id
@@ -111,8 +112,9 @@ export async function updateTask(
   raw: Partial<TaskFormValues>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
+    if(raw.assignedTo!==undefined && !await validOwner(raw.assignedTo)) return {ok:false,error:"Choose an active committee member."};
     const sets: string[] = ["updated_at = SYSDATETIMEOFFSET()"];
-    const params: Record<string, unknown> = { id };
+    const params: Record<string, unknown> = { id, slug:getActiveEventConfig().slug };
     if (raw.title !== undefined) {
       sets.push("title = @title");
       params.title = raw.title.trim();
@@ -137,11 +139,21 @@ export async function updateTask(
       sets.push("assigned_to = @assignedTo");
       params.assignedTo = isUuid(raw.assignedTo) ? raw.assignedTo : null;
     }
-    const updated = await dbExec(`UPDATE tasks SET ${sets.join(", ")} WHERE id = @id`, params);
+    const updated = await dbExec(`UPDATE tasks SET ${sets.join(", ")} WHERE id = @id AND event_slug=@slug`, params);
     if (updated === 0) return { ok: false, error: "Could not update task." };
     return { ok: true };
   } catch (error) {
     console.error("[tasks] Update failed:", errorMessage(error));
     return { ok: false, error: "Could not update task." };
   }
+}
+
+export async function fetchTaskOwners() {
+ await assertPermission("task.read");
+ return dbQuery<{id:string;full_name:string}>(`SELECT id,full_name FROM profiles WHERE is_active=1 AND role IN (N'COMMITTEE',N'ADMIN',N'SUPER_ADMIN') AND email<>N'admin@promaxevent.com' ORDER BY full_name`,{});
+}
+async function validOwner(id:string) {
+ if(!id) return true;
+ if(!isUuid(id)) return false;
+ return Boolean(await dbOne(`SELECT id FROM profiles WHERE id=@id AND is_active=1 AND role IN (N'COMMITTEE',N'ADMIN',N'SUPER_ADMIN')`,{id}));
 }

@@ -39,9 +39,11 @@ function formatDateShort(iso: string | null): string {
 
 export function TaskManagementPanel({
   records,
+  owners,
   error,
 }: {
   records: TaskRecord[];
+  owners: {id:string;full_name:string}[];
   error?: string;
 }) {
   const [search, setSearch] = useState("");
@@ -52,6 +54,7 @@ export function TaskManagementPanel({
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [status, setStatus] = useState<TaskStatus>("todo");
+  const [assignedTo,setAssignedTo]=useState("");
   const [dueDate, setDueDate] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -79,6 +82,7 @@ export function TaskManagementPanel({
   }, [records]);
 
   function resetForm() {
+    setAssignedTo("");
     setTitle("");
     setDescription("");
     setPriority("medium");
@@ -91,6 +95,7 @@ export function TaskManagementPanel({
     startTransition(async () => {
       const result = await createTaskAction({
         title,
+        assignedTo,
         description: description || undefined,
         priority,
         status,
@@ -104,6 +109,10 @@ export function TaskManagementPanel({
     });
   }
 
+  function updateOwner(id:string,assignedTo:string){
+    setActionError(null);
+    startTransition(async()=>{const result=await updateTaskAction(id,{assignedTo});if(!result.ok)setActionError(result.error??"Could not save owner.");});
+  }
   function updateStatus(id: string, next: TaskStatus) {
     setActionError(null);
     startTransition(async () => {
@@ -192,7 +201,7 @@ export function TaskManagementPanel({
             <table className="w-full table-fixed text-left font-sans text-sm">
               <thead>
                 <tr className="bg-cream/40">
-                  {["Task", "Due", "Priority", "Status"].map((h) => (
+                  {["Task", "Owner", "Due", "Priority", "Status"].map((h) => (
                     <th
                       key={h}
                       scope="col"
@@ -212,6 +221,7 @@ export function TaskManagementPanel({
                         <p className="mt-0.5 line-clamp-2 text-xs text-mahogany/50">{r.description}</p>
                       ) : null}
                     </td>
+                    <td className="px-5 py-4"><select aria-label={`Owner for ${r.title}`} value={r.assignedTo??""} disabled={isPending} onChange={e=>updateOwner(r.id,e.target.value)} className="max-w-full rounded-lg border border-mahogany/10 p-2 text-xs"><option value="">Unassigned</option>{owners.map(o=><option key={o.id} value={o.id}>{o.full_name}</option>)}</select></td>
                     <td className="whitespace-nowrap px-5 py-4 text-mahogany/65 sm:px-6">
                       {formatDateShort(r.dueDate)}
                     </td>
@@ -276,6 +286,7 @@ export function TaskManagementPanel({
               className="mt-1.5 w-full resize-y rounded-xl border border-mahogany/10 bg-cream/30 px-4 py-3 font-sans text-sm text-mahogany outline-none focus:border-gold/35 focus:bg-white focus:ring-2 focus:ring-gold/10"
             />
           </label>
+          <label className="mt-4 block text-sm">Owner<select className="mt-2 block w-full rounded-xl border p-3" value={assignedTo} onChange={e=>setAssignedTo(e.target.value)}><option value="">Unassigned</option>{owners.map(o=><option key={o.id} value={o.id}>{o.full_name}</option>)}</select></label>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <label className="block font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
               Status

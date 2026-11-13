@@ -1,6 +1,6 @@
 import { EmptyState, IntegrationBanner } from "@/components/dashboard/dashboard-ui";
 import { TaskManagementPanel } from "@/components/dashboard/TaskManagementPanel";
-import { fetchTasks } from "@/platform/engines/tasks/queries";
+import { fetchTasks, fetchTaskOwners } from "@/platform/engines/tasks/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -21,5 +21,5 @@ export default async function DashboardTasksPage() {
     );
   }
 
-  return <TaskManagementPanel records={result.records} />;
+  return <TaskManagementPanel records={result.records} owners={await fetchTaskOwners()} />;
 }
