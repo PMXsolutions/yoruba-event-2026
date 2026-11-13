@@ -1,3 +1,5 @@
+import { AccessRequests } from "@/components/dashboard/AccessRequests";
+import { listAccessRequests } from "@/app/actions/access-requests";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/rbac";
 import { dbQuery } from "@/lib/db/query";
@@ -63,5 +65,5 @@ export default async function MembersPage() {
     return <p role="alert">Unable to load members. Please refresh and try again.</p>;
   }
 
-  return <MemberManagementPanel members={members} currentId={auth.user.id} events={events} />;
+  return <><AccessRequests requests={await listAccessRequests()} /><MemberManagementPanel members={members} currentId={auth.user.id} events={events} /></>;
 }

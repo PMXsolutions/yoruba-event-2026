@@ -424,3 +424,9 @@ IF OBJECT_ID(N'dbo.committee_report_copies',N'U') IS NULL
 BEGIN
  CREATE TABLE dbo.committee_report_copies(event_slug nvarchar(100) NOT NULL,email nvarchar(254) NOT NULL,CONSTRAINT PK_committee_report_copies PRIMARY KEY(event_slug,email));
 END;
+
+IF OBJECT_ID(N'dbo.committee_access_requests',N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.committee_access_requests(id uniqueidentifier NOT NULL PRIMARY KEY,full_name nvarchar(120) NOT NULL,email nvarchar(254) NOT NULL UNIQUE,workstream nvarchar(200) NOT NULL,status nvarchar(20) NOT NULL DEFAULT N'pending',created_at datetimeoffset NOT NULL DEFAULT SYSDATETIMEOFFSET(),reviewed_at datetimeoffset NULL,reviewed_by uniqueidentifier NULL,CONSTRAINT CK_committee_request_status CHECK(status IN(N'pending',N'approved',N'declined')));
+END;
+GO

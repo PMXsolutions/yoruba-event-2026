@@ -182,6 +182,7 @@ export default function LoginPage() {
       >
         <LoginForm />
       </Suspense>
+      <Link href="/request-committee-access" className="relative z-10 mt-6 text-gold-bright underline">New committee member? Request access</Link>
     </div>
   );
 }
