@@ -48,6 +48,7 @@ const emptySponsor = {
   package: "",
   message: "",
   committeeNotes: "",
+  logoUrl: "",
   status: "new" as SponsorStatus,
 };
 
@@ -286,7 +287,7 @@ export function SponsorManagementPanel({
                         </select>
                         <ToolbarButton onClick={() => {
                           setEditingId(r.id);
-                          setForm({...emptySponsor, ...r, phone:r.phone??"", website:r.website??"", message:r.message??"", committeeNotes:r.committeeNotes??""});
+                          setForm({...emptySponsor, ...r, phone:r.phone??"", website:r.website??"", message:r.message??"", logoUrl:r.logoUrl??"", committeeNotes:r.committeeNotes??""});
                           setActionError(null); setCreateOpen(true);
                         }}>Edit</ToolbarButton>
                         <ToolbarButton
