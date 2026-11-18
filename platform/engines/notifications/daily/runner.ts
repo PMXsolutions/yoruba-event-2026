@@ -73,7 +73,7 @@ export async function runDailyCommunications(now = new Date(), dryRun = false) {
       const phone = normalizeSmsRecipient(r.phone,sms.defaultCountryCode);
       if(r.sms_consent && phone && !phones.has(phone)) {
         phones.add(phone);result.eligibleSms++;
-        if(sms.enabled && sms.remindersEnabled && sms.ready) await deliver("attendee-sms",phone,()=>sendSmsMessage({to:phone,body:buildSmsReminder(event,r.full_name,sms.reminderTemplate),eventSlug:CAMPAIGN}));
+        if(sms.enabled && sms.remindersEnabled && sms.ready) await deliver("attendee-sms",phone,()=>sendSmsMessage({to:phone,body:buildSmsReminder(event,r.full_name,"Hi {firstName}, Yoruba Day reminder: Sat 21 Nov, 3pm, Fitzroy Hall, Exhibition Park Canberra. Native attire: white/blue, all white or all blue. No need to register again. Association members only: outstanding dues $150 families, $100 singles/students. Paid? Thank you; ignore dues reminder. Dues are not guest admission fees. Donations optional. Yoruba Association in ACT BSB062904 Account10585388; reference name+Dues or Donation. {website}"),eventSlug:CAMPAIGN}));
       }
     }
   }
