@@ -68,3 +68,12 @@ export type SponsorRecord = {
 export function formatSponsorStatus(status: SponsorStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
+
+/** Internal records may be incomplete; public enquiries still require contacts. */
+export function createCommitteeSponsorSchema(packages: readonly string[]) {
+  return createSponsorFormSchema(packages).extend({
+    contactPerson: z.string().trim().max(200).default(""),
+    email: z.union([z.literal(""), z.string().trim().email().max(320)]).default(""),
+    package: z.string().trim().refine(p => p === "" || packages.includes(p), "Select a valid package.").default(""),
+  });
+}

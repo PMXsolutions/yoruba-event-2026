@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import {
   createSponsorAction,
+  editSponsorAction,
   updateSponsorNotesAction,
   updateSponsorStatusAction,
 } from "@/app/actions/dashboard";
@@ -65,7 +66,8 @@ export function SponsorManagementPanel({
   const [noteTarget, setNoteTarget] = useState<SponsorRecord | null>(null);
   const [note, setNote] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ ...emptySponsor, package: packages[0] ?? "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...emptySponsor, package: "" });
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -130,7 +132,7 @@ export function SponsorManagementPanel({
   function createSponsor() {
     setActionError(null);
     startTransition(async () => {
-      const result = await createSponsorAction(form);
+      const result = editingId ? await editSponsorAction(editingId, form) : await createSponsorAction(form);
       if (!result.ok) {
         const details =
           "fieldErrors" in result && result.fieldErrors
@@ -140,7 +142,8 @@ export function SponsorManagementPanel({
         return;
       }
       setCreateOpen(false);
-      setForm({ ...emptySponsor, package: packages[0] ?? "" });
+      setEditingId(null);
+      setForm({ ...emptySponsor, package: "" });
     });
   }
 
@@ -163,7 +166,8 @@ export function SponsorManagementPanel({
         <ToolbarButton
           primary
           onClick={() => {
-            setForm({ ...emptySponsor, package: packages[0] ?? "" });
+            setForm({ ...emptySponsor, package: "" });
+            setEditingId(null);
             setCreateOpen(true);
           }}
         >
@@ -280,6 +284,11 @@ export function SponsorManagementPanel({
                             </option>
                           ))}
                         </select>
+                        <ToolbarButton onClick={() => {
+                          setEditingId(r.id);
+                          setForm({...emptySponsor, ...r, phone:r.phone??"", website:r.website??"", message:r.message??"", committeeNotes:r.committeeNotes??""});
+                          setActionError(null); setCreateOpen(true);
+                        }}>Edit</ToolbarButton>
                         <ToolbarButton
                           onClick={() => {
                             setNoteTarget(r);
@@ -299,18 +308,20 @@ export function SponsorManagementPanel({
       </section>
 
       {createOpen ? (
-        <ModalShell title="Add sponsor" showTitle onClose={() => setCreateOpen(false)} className="max-w-xl">
+        <ModalShell title={editingId ? "Edit donor / sponsor" : "Add donor / sponsor"} showTitle onClose={() => setCreateOpen(false)} className="max-w-xl">
+          <p className="mt-3 text-sm">Save the name now; add contact details and a package later. No acknowledgement is sent when saving.</p>
+          {actionError ? <p role="alert">{actionError}</p> : null}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
-              Company
+              Donor / company name
               <input className={inputClass} value={form.companyName} onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))} />
             </label>
             <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
-              Contact person
+              Contact person (optional)
               <input className={inputClass} value={form.contactPerson} onChange={(e) => setForm((f) => ({ ...f, contactPerson: e.target.value }))} />
             </label>
             <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
-              Email
+              Email (optional)
               <input type="email" className={inputClass} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </label>
             <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45">
@@ -324,6 +335,7 @@ export function SponsorManagementPanel({
             <label className="font-sans text-xs font-semibold uppercase tracking-wide text-mahogany/45 sm:col-span-2">
               Package
               <select className={inputClass} value={form.package} onChange={(e) => setForm((f) => ({ ...f, package: e.target.value }))}>
+                <option value="">Not assigned / donation</option>
                 {packages.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
@@ -349,7 +361,7 @@ export function SponsorManagementPanel({
           <div className="mt-5 flex flex-wrap justify-end gap-2">
             <ToolbarButton onClick={() => setCreateOpen(false)}>Cancel</ToolbarButton>
             <ToolbarButton primary disabled={isPending} onClick={createSponsor}>
-              {isPending ? "Saving…" : "Add sponsor"}
+              {isPending ? "Saving…" : editingId ? "Save changes" : "Add sponsor"}
             </ToolbarButton>
           </div>
         </ModalShell>

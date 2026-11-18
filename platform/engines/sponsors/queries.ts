@@ -8,6 +8,7 @@ import { asIso } from "@/lib/db/values";
 import { getActiveEventConfig } from "@/platform/core/config/active-event";
 import {
   createSponsorFormSchema,
+  createCommitteeSponsorSchema,
   type SponsorFormValues,
   type SponsorRecord,
   type SponsorStatus,
@@ -117,7 +118,7 @@ export async function createSponsorRecord(raw: unknown): Promise<SubmitSponsorRe
   await assertPermission("sponsor.write");
   const event = getActiveEventConfig();
   const packages = event.sponsorTiers.map((t) => t.name);
-  const parsed = createSponsorFormSchema(packages).safeParse(raw);
+  const parsed = createCommitteeSponsorSchema(packages).safeParse(raw);
   if (!parsed.success) {
     const fieldErrors: Partial<Record<keyof SponsorFormValues, string>> = {};
     for (const issue of parsed.error.issues) {
@@ -202,4 +203,23 @@ export async function updateSponsorNotes(
   } catch {
     return { ok: false, error: "Could not save notes." };
   }
+}
+
+export async function editSponsorRecord(id: string, raw: unknown): Promise<SubmitSponsorResult> {
+  await assertPermission("sponsor.write");
+  const event = getActiveEventConfig();
+  const parsed = createCommitteeSponsorSchema(event.sponsorTiers.map(t => t.name)).safeParse(raw);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues.map(i => i.message).join(" ") };
+  const d = parsed.data;
+  const body = raw as Record<string, unknown>;
+  try {
+    await dbExec(`UPDATE sponsors SET company_name=@company, contact_person=@contact, email=@email,
+      phone=@phone, website=@website, package=@package, message=@message, committee_notes=@notes,
+      updated_at=SYSDATETIMEOFFSET() WHERE id=@id AND event_slug=@slug`, {
+      id, slug:event.slug, company:d.companyName, contact:d.contactPerson, email:d.email.toLowerCase(),
+      phone:d.phone??null, website:d.website??null, package:d.package, message:d.message??null,
+      notes:typeof body.committeeNotes === "string" ? body.committeeNotes.slice(0,4000) : null,
+    });
+    return {ok:true};
+  } catch { return {ok:false,error:"Could not update sponsor."}; }
 }

@@ -11,6 +11,7 @@ import { parseSponsorshipAccountInput } from "@/platform/engines/sponsors/accoun
 import { saveSponsorshipAccount } from "@/platform/engines/sponsors/account-store";
 import {
   createSponsorRecord,
+  editSponsorRecord,
   submitSponsorEnquiry,
   updateSponsorNotes,
   updateSponsorStatus,
@@ -99,7 +100,7 @@ export async function saveSponsorshipAccountAction(raw: unknown) {
 export async function updateSponsorStatusAction(id: string, status: string) {
   const auth = await requireAuth("sponsor.write");
   if (!auth.ok) return { ok: false as const, error: auth.message };
-  if (!idSchema.safeParse(id).success) return { ok: false as const, error: "Invalid record." };
+  if (!z.string().guid().safeParse(id).success) return { ok: false as const, error: "Invalid record." };
   if (!(SPONSOR_STATUSES as readonly string[]).includes(status)) {
     return { ok: false as const, error: "Invalid status." };
   }
@@ -114,7 +115,7 @@ export async function updateSponsorStatusAction(id: string, status: string) {
 export async function updateSponsorNotesAction(id: string, notes: string) {
   const auth = await requireAuth("sponsor.write");
   if (!auth.ok) return { ok: false as const, error: auth.message };
-  if (!idSchema.safeParse(id).success) return { ok: false as const, error: "Invalid record." };
+  if (!z.string().guid().safeParse(id).success) return { ok: false as const, error: "Invalid record." };
   const result = await updateSponsorNotes(id, notes);
   if (result.ok) revalidatePath("/dashboard/sponsors");
   return result;
@@ -284,4 +285,13 @@ export async function publishAnnouncementAction(id: string, published: boolean) 
 export async function signOutAction() {
   const { signOut } = await import("@/app/actions/auth");
   await signOut();
+}
+
+export async function editSponsorAction(id: string, raw: unknown) {
+  const auth = await requireAuth("sponsor.write");
+  if (!auth.ok) return {ok:false as const,error:auth.message};
+  if (!z.string().guid().safeParse(id).success) return {ok:false as const,error:"Invalid record."};
+  const result = await editSponsorRecord(id,raw);
+  if(result.ok) revalidatePath("/dashboard/sponsors");
+  return result;
 }
