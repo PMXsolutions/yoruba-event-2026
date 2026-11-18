@@ -143,7 +143,7 @@ export function buildSeatQrAssignmentEmail(event: EventConfig): BuiltEmail {
 
 export function buildEventReminderEmail(event: EventConfig): BuiltEmail {
   const palette = resolveEmailPalette(event);
-  const website = "https://yorubadaycanberra.com";
+  const website = "https://yorubaassociationact.org";
   const subject = `${event.name} — event reminder for Saturday 21 November`;
   const text = [event.name, "Your Yoruba Day event reminder", "Saturday 21 November 2026 at 3 pm", "Fitzroy Hall, Exhibition Park, Canberra", "Dress code: native attire in white and blue, all white or all blue.", "Your RSVP helps us plan seating and catering. You do not need to register again.", "Association members only: outstanding dues are $150 for families and $100 for singles/students. If you have paid, thank you—please disregard this payment reminder. Dues are not an admission fee for guests.", "Donations are optional. Yoruba Association in ACT: BSB 062904, Account 10585388. Reference: your name + Dues or Donation.", "I look forward to celebrating with families and friends from every community.", website].join("\n\n");
   const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
