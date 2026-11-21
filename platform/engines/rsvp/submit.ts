@@ -117,7 +117,7 @@ export async function submitRsvpToDatabase(
     return {
       ok: false,
       error:
-        "Registration of interest is temporarily closed. Please check back soon or contact us by email.",
+        "RSVPs are now closed. Existing registrations remain valid. Please check your seating confirmation or speak to an usher on arrival.",
       errorCode: "REGISTRATION_CLOSED",
     };
   }

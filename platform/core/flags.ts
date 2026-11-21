@@ -1,3 +1,4 @@
+import { REGISTRATION_CLOSED } from "./registration-status";
 /**
  * Central production feature flags for Promax Event Platform.
  * Defaults match controlled public launch mode.
@@ -36,7 +37,7 @@ export function getFeatureFlags(): PlatformFeatureFlags {
     envFlag("SMS_ENABLED", false) || envFlag("NOTIFY_SMS_ENABLED", false);
 
   return {
-    publicRegistrationOpen: envFlag("PUBLIC_REGISTRATION_OPEN", true),
+    publicRegistrationOpen: !REGISTRATION_CLOSED && envFlag("PUBLIC_REGISTRATION_OPEN", true),
     emailConfirmationsEnabled: envFlag("EMAIL_CONFIRMATIONS_ENABLED", true),
     smsEnabled,
     dashboardAuthRequired: process.env.NODE_ENV === "production" || envFlag("DASHBOARD_AUTH_REQUIRED", true),

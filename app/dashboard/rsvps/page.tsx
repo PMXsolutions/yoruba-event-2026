@@ -21,5 +21,5 @@ export default async function DashboardRsvpsPage() {
     );
   }
 
-  return <RsvpManagementPanel records={result.records} />;
+  return <><a className="inline-block rounded bg-amber-800 px-4 py-2 text-white mb-4" href="/dashboard/seating">Seating assignments and confirmation delivery</a><RsvpManagementPanel records={result.records} /></>;
 }

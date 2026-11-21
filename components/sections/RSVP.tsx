@@ -1,5 +1,6 @@
 "use client";
 
+import { REGISTRATION_CLOSED, REGISTRATION_CLOSED_MESSAGE } from "@/platform/core/registration-status";
 import { type FormEvent, useState } from "react";
 import { motion } from "framer-motion";
 import { submitRsvp } from "@/app/actions/rsvp";
@@ -127,6 +128,8 @@ export function RSVP() {
       setIsPending(false);
     }
   }
+
+  if (REGISTRATION_CLOSED) return <section id="rsvp" className="scroll-mt-24 bg-espresso px-6 py-20 text-center text-cream"><h2 className="font-serif text-4xl text-gold">RSVPs are now closed</h2><p className="mx-auto mt-6 max-w-2xl text-lg">{REGISTRATION_CLOSED_MESSAGE}</p></section>;
 
   return (
     <AnimatedSection
