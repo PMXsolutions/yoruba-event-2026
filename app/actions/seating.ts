@@ -3,7 +3,8 @@ import {requireAuth} from "@/lib/auth/rbac";
 import {getActiveEventConfig} from "@/platform/core/config/active-event";
 import {fetchDashboardRsvps} from "@/platform/engines/dashboard/rsvp/queries";
 import approved from "@/platform/engines/seating/approved.json";
-import {tableLabel,seatingSms,seatingEmail} from "@/platform/engines/seating/messages";
+import {brandedSeatingEmail} from "@/platform/engines/seating/branded-email";
+import {tableLabel,seatingSms} from "@/platform/engines/seating/messages";
 import {campaign,deliveries,claim,complete,ensureSeatingStore} from "@/platform/engines/seating/store";
 import {dbExec, dbQuery} from "@/lib/db/query";
 import {sendNotificationEmail} from "@/platform/engines/notifications/email/resend-client";
@@ -26,11 +27,12 @@ export async function seatingReport() {
   return {id:r.id,name:r.fullName,guests:r.numberOfAttendees,tables:a?tableLabel(a):"Unassigned",valid:!!valid,assigned:assigned.some(x=>x.rsvp_id.toLowerCase()===r.id.toLowerCase()),
    email:channel("email")?.status??(!r.emailConsent?"no consent":!r.email?"missing address":"waiting"),
    sms:channel("sms")?.status??(!r.smsConsent?"no consent":!r.phone?"missing number":"waiting"),
+   branded:channel("email-v2")?.status??(!r.emailConsent?"no consent":!r.email?"missing address":"waiting"),
    emailDetail:channel("email")?.detail,smsDetail:channel("sms")?.detail,
    contacted:r.contactedAt,hold:valid?null:"Booking not in approved plan, changed count/name, or cancelled"};
  });
 }
-export async function sendSeatingBooking(id:string) {
+export async function sendSeatingBooking(id:string,brandedOnly=false) {
  const auth=await requireAuth("rsvp.write"); if(!auth.ok) throw new Error(auth.message);
  const fetched=await fetchDashboardRsvps();if(!fetched.ok) throw new Error(fetched.message);
  const r=fetched.records.find(x=>x.id===id); if(!r) throw new Error("Booking not found");
@@ -41,15 +43,16 @@ export async function sendSeatingBooking(id:string) {
  const note=`[Seating 21 Nov] ${a.size} guests; Table${a.allocations.length>1?'s':''} ${tableLabel(a)}.`;
  await dbExec(`UPDATE rsvps SET committee_notes=CONCAT(COALESCE(committee_notes,''),CHAR(10),@note),updated_at=SYSDATETIMEOFFSET() WHERE id=@id AND event_slug=@slug AND CHARINDEX(@note,COALESCE(committee_notes,''))=0 AND LEN(COALESCE(committee_notes,''))+LEN(@note)<3999`,{slug,id,note});
  const issues:string[]=[];
- const email=seatingEmail(a);
+ const email=brandedSeatingEmail(a,getActiveEventConfig(),brandedOnly);
+ const emailChannel=brandedOnly?"email-v2":"email";
  if(r.emailConsent&&r.email) {
   if(!getEmailEnvPresence().ready) issues.push("Email not configured");
-  else if(await claim(slug,id,"email",r.email,email.text)) {
+  else if(await claim(slug,id,emailChannel,r.email,email.text)) {
    const result=await sendNotificationEmail(r.email,email);
-   await complete(slug,id,"email",result.ok,result.ok?result.id??null:null,result.ok?null:result.message);
+   await complete(slug,id,emailChannel,result.ok,result.ok?result.id??null:null,result.ok?null:result.message);
   }
  }
- if(r.smsConsent&&r.phone) {
+ if(!brandedOnly&&r.smsConsent&&r.phone) {
   const settings=await resolveSmsSettings();
   if(!settings.enabled||!settings.ready) issues.push("SMS disabled or not configured");
   else if(!normalizeSmsRecipient(r.phone,settings.defaultCountryCode)) issues.push("Invalid phone number");
@@ -59,7 +62,7 @@ export async function sendSeatingBooking(id:string) {
   }
  }
  // Both requested channels must be accepted before contacted is recorded. Keep existing confirmation status.
- await dbExec(`UPDATE rsvps SET contacted_at=COALESCE(contacted_at,SYSDATETIMEOFFSET()),status=CASE WHEN status='new' THEN 'contacted' ELSE status END,updated_at=SYSDATETIMEOFFSET() WHERE id=@id AND event_slug=@slug AND status<>'cancelled' AND (SELECT COUNT(*) FROM dbo.seating_deliveries WHERE event_slug=@slug AND rsvp_id=@id AND campaign=@campaign AND status='sent')=2`,{slug,id,campaign});
+ await dbExec(`UPDATE rsvps SET contacted_at=COALESCE(contacted_at,SYSDATETIMEOFFSET()),status=CASE WHEN status='new' THEN 'contacted' ELSE status END,updated_at=SYSDATETIMEOFFSET() WHERE id=@id AND event_slug=@slug AND status<>'cancelled' AND EXISTS(SELECT 1 FROM dbo.seating_deliveries WHERE event_slug=@slug AND rsvp_id=@id AND campaign=@campaign AND channel IN ('email','email-v2') AND status='sent') AND EXISTS(SELECT 1 FROM dbo.seating_deliveries WHERE event_slug=@slug AND rsvp_id=@id AND campaign=@campaign AND channel='sms' AND status='sent')`,{slug,id,campaign});
  revalidatePath('/dashboard/rsvps');revalidatePath('/dashboard');
  return {issues};
 }

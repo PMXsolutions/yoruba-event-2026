@@ -3,7 +3,7 @@ export function tableLabel(a: Assignment) {
   return a.allocations.map(x => `${String(x.table).padStart(2,"0")} (${x.guests} guest${x.guests===1?"":"s"})`).join(" and ");
 }
 export function seatingSms(a: Assignment) {
-  return `Yoruba Day seating confirmed for ${a.name}: ${a.size} guests. Table${a.allocations.length>1?"s":""} ${tableLabel(a)}. Sat 21 Nov, 3pm, Fitzroy Hall, Exhibition Park Canberra. Please share with your guests; arriving separately, give ushers your booking name. I look forward to welcoming you! Joshua`;
+  return `Yoruba Day seating confirmed for ${a.name}: ${a.size} guests. Ref: ${a.ref}. Table${a.allocations.length>1?"s":""} ${tableLabel(a)}. Sat 21 Nov, 3pm, Fitzroy Hall, Exhibition Park Canberra. Please share with your guests; arriving separately, give ushers your booking name. I look forward to welcoming you! Joshua`;
 }
 const escape = (s:string) => s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 export function seatingEmail(a: Assignment) {
