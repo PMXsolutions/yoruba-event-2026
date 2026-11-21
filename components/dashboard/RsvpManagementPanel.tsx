@@ -10,6 +10,7 @@ import {
   toggleRsvpTagAction,
   updateRsvpCommitteeNoteAction,
   updateRsvpStatusAction,
+  updateRsvpGuestCountAction,
 } from "@/app/actions/dashboard-rsvp";
 import {
   EmptyState,
@@ -99,6 +100,7 @@ function ActionMenu({
   record,
   disabled,
   onView,
+  onEditGuests,
   onEditNote,
   onStatusChange,
   onTagToggle,
@@ -109,6 +111,7 @@ function ActionMenu({
   record: DashboardRsvpRecord;
   disabled: boolean;
   onView: (r: DashboardRsvpRecord) => void;
+  onEditGuests: (r: DashboardRsvpRecord) => void;
   onEditNote: (r: DashboardRsvpRecord) => void;
   onStatusChange: (id: string, status: RsvpStatus) => void;
   onTagToggle: (id: string, tag: RsvpTag) => void;
@@ -177,7 +180,7 @@ function ActionMenu({
             className="fixed z-[70] w-52 overflow-y-auto rounded-xl border border-mahogany/[0.08] bg-white py-1 shadow-lg"
           >
             <MenuItem label="View Details" onClick={() => { onView(record); close(); }} />
-            <MenuItem label="Edit RSVP" disabled muted />
+            <MenuItem label="Edit guest count" disabled={disabled} onClick={() => { onEditGuests(record); close(); }} />
             <MenuItem
               label={record.committeeNotes ? "Edit Committee Note" : "Add Committee Note"}
               disabled={disabled}
@@ -265,6 +268,32 @@ function CommitteeNoteDialog({
       </div>
     </ModalShell>
   );
+}
+
+function GuestCountDialog({ record, onClose, onSaved }: { record: DashboardRsvpRecord; onClose: () => void; onSaved: () => void }) {
+  const [count, setCount] = useState(String(record.numberOfAttendees));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return <ModalShell title="Edit guest count" showTitle onClose={() => { if (!saving) onClose(); }}>
+    <p className="mt-3">{record.fullName} · {record.registrationReference}</p>
+    <form onSubmit={async (event) => {
+      event.preventDefault(); setSaving(true); setError(null);
+      try {
+        const result = await updateRsvpGuestCountAction(record.id, Number(count), record.numberOfAttendees);
+        if (result.ok) onSaved(); else setError(result.error);
+      } catch { setError("Could not save. Refresh the booking to check its current count before retrying."); }
+      finally { setSaving(false); }
+    }}>
+      <label className="mt-4 block" htmlFor="guest-count">Total guests, including the registrant</label>
+      <input id="guest-count" type="number" min="1" max="1000" step="1" required value={count} disabled={saving} onChange={e => setCount(e.target.value)} className="mt-2 w-full rounded border p-3" />
+      <p className="mt-3 text-sm">This updates the booking and totals. No email or SMS will be sent.</p>
+      {error ? <p role="alert" className="mt-3 text-red-700">{error}</p> : null}
+      <div className="mt-5 flex justify-end gap-3">
+        <button type="button" disabled={saving} onClick={onClose}>Cancel</button>
+        <button type="submit" disabled={saving} className="rounded bg-mahogany px-4 py-2 text-white">{saving ? "Saving…" : "Save guest count"}</button>
+      </div>
+    </form>
+  </ModalShell>;
 }
 
 function RegisterGuestDialog({ onClose }: { onClose: () => void }) {
@@ -477,6 +506,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
   const [ticketFilter, setTicketFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<TagFilter>("all");
   const [actionError, setActionError] = useState<string | null>(error ?? null);
+  const [guestTarget, setGuestTarget] = useState<DashboardRsvpRecord | null>(null);
   const [noteTarget, setNoteTarget] = useState<DashboardRsvpRecord | null>(null);
   const [detailTarget, setDetailTarget] = useState<DashboardRsvpRecord | null>(null);
   const [registerGuestOpen, setRegisterGuestOpen] = useState(false);
@@ -555,6 +585,7 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
 
   const actionMenuHandlers = {
     onView: setDetailTarget,
+    onEditGuests: setGuestTarget,
     onEditNote: setNoteTarget,
     onStatusChange: (id: string, status: RsvpStatus) =>
       runAction(() => updateRsvpStatusAction(id, status)),
@@ -769,6 +800,8 @@ export function RsvpManagementPanel({ records, error }: RsvpManagementPanelProps
           </>
         )}
       </section>
+
+      {guestTarget ? <GuestCountDialog record={guestTarget} onClose={() => setGuestTarget(null)} onSaved={() => { setGuestTarget(null); setActionNotice("Guest count updated. No messages sent."); }} /> : null}
 
       {noteTarget ? (
         <CommitteeNoteDialog

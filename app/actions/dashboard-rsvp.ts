@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
+  updateDashboardRsvpGuestCount,
   toggleDashboardRsvpTag,
   updateDashboardRsvpCommitteeNote,
   updateDashboardRsvpStatus,
@@ -292,4 +293,19 @@ export async function sendEventReminderSmsAction(): Promise<
   const waiting = result.remaining > 0 ? ` ${result.remaining} still waiting — run reminders again to continue.` : "";
   const failed = result.failed > 0 ? ` ${result.failed} could not be sent.` : "";
   return { ok: true, message: `Sent ${result.sent} SMS reminder${result.sent === 1 ? "" : "s"}.${failed}${waiting}` };
+}
+
+export async function updateRsvpGuestCountAction(id: string, count: number, expectedCount: number): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireAuth("rsvp.write");
+  if (!auth.ok) return { ok: false, error: auth.message };
+  if (!idSchema.safeParse(id).success || !Number.isInteger(count) || count < 1 || count > 1000 || !Number.isInteger(expectedCount)) {
+    return { ok: false, error: "Enter a whole guest count between 1 and 1,000." };
+  }
+  const result = await updateDashboardRsvpGuestCount(id, count, expectedCount);
+  if (result.ok) {
+    await logActivity({ eventSlug: getActiveEventConfig().slug, action: "rsvp.guest_count_updated", entityType: "rsvp", entityId: id, actorId: auth.user.id, metadata: { previousCount: expectedCount, count } });
+    revalidatePath("/dashboard/rsvps");
+    revalidatePath("/dashboard");
+  }
+  return result;
 }

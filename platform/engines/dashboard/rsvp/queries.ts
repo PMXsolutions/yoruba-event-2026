@@ -335,3 +335,19 @@ export async function toggleDashboardRsvpTag(
     return { ok: false, error: "Could not update tags." };
   }
 }
+
+export async function updateDashboardRsvpGuestCount(id: string, count: number, expectedCount: number): Promise<{ ok: true } | { ok: false; error: string }> {
+  await assertPermission("rsvp.write");
+  if (!Number.isInteger(count) || count < 1 || count > 1000 || !Number.isInteger(expectedCount)) return { ok: false, error: "Invalid guest count." };
+  try {
+    const updated = await dbExec(
+      `UPDATE rsvps SET number_of_attendees = @count, updated_at = SYSDATETIMEOFFSET() WHERE id = @id AND event_slug = @slug AND number_of_attendees = @expectedCount`,
+      { id, count, expectedCount, slug: getActiveEventConfig().slug },
+    );
+    if (updated !== 1) return { ok: false, error: "This booking changed or is no longer available. Refresh and try again." };
+    return { ok: true };
+  } catch (error) {
+    console.error("[dashboard-rsvp] Guest count update failed:", error);
+    return { ok: false, error: "Could not update guest count." };
+  }
+}
