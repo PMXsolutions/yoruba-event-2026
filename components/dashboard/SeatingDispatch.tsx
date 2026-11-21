@@ -7,7 +7,7 @@ export function SeatingDispatch({initial}:{initial:Row[]}) {
  async function run() {
   setBusy(true);
   try {
-   for(const r of rows.filter(r=>r.valid&&(r.email==='waiting'||r.sms==='waiting'))) {
+   for(const r of rows.filter(r=>r.valid&&(!r.assigned||r.email==='waiting'||r.sms==='waiting'))) {
     setMessage(`Sending seating details to ${r.name}…`);
     const result=await sendSeatingBooking(r.id);
     setRows(await seatingReport());
@@ -20,7 +20,7 @@ export function SeatingDispatch({initial}:{initial:Row[]}) {
  return <section style={{padding:24,background:'#faf6ef',color:'#24150f'}}>
  <h1 className="text-2xl font-bold">Seating confirmations — 21 November</h1>
  <p>Approved plan: 34 tables, 8 chairs each; tables 1–3 reserved. Tables 28 and 34 are neighbours.</p>
- <p className="my-4 font-semibold">{rows.length} bookings · {rows.reduce((n,r)=>n+r.guests,0)} guests · Email sent: {rows.filter(r=>r.email==='sent').length} · SMS sent: {rows.filter(r=>r.sms==='sent').length} · Both sent: {rows.filter(r=>r.email==='sent'&&r.sms==='sent').length}</p>
+ <p className="my-4 font-semibold">{rows.length} bookings · {rows.reduce((n,r)=>n+r.guests,0)} guests · Email sent: {rows.filter(r=>r.email==='sent').length} · SMS sent: {rows.filter(r=>r.sms==='sent').length} · Assignments saved: {rows.filter(r=>r.assigned).length} · Both sent: {rows.filter(r=>r.email==='sent'&&r.sms==='sent').length}</p>
  <p>Each booking lead receives their total guest count and table allocation. Guests arriving separately give the lead&apos;s name to ushers. Consent is respected; unassigned or changed bookings are held.</p>
  <button className="my-4 rounded bg-amber-800 px-5 py-3 text-white disabled:opacity-50" disabled={busy} onClick={run}>{busy?'Sending…':'Send remaining seating SMS and emails'}</button>
  <p role="status">{message}</p>

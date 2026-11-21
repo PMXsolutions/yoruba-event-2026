@@ -5,7 +5,7 @@ import {fetchDashboardRsvps} from "@/platform/engines/dashboard/rsvp/queries";
 import approved from "@/platform/engines/seating/approved.json";
 import {tableLabel,seatingSms,seatingEmail} from "@/platform/engines/seating/messages";
 import {campaign,deliveries,claim,complete,ensureSeatingStore} from "@/platform/engines/seating/store";
-import {dbExec} from "@/lib/db/query";
+import {dbExec, dbQuery} from "@/lib/db/query";
 import {sendNotificationEmail} from "@/platform/engines/notifications/email/resend-client";
 import {getEmailEnvPresence} from "@/platform/engines/notifications/email/env-status";
 import {sendSmsMessage} from "@/platform/engines/notifications/sms/twilio-client";
@@ -18,11 +18,12 @@ export async function seatingReport() {
  const fetched=await fetchDashboardRsvps(); if(!fetched.ok) throw new Error(fetched.message);
  const slug=getActiveEventConfig().slug;
  const sent=await deliveries(slug);
+ const assigned=await dbQuery<{rsvp_id:string}>(`SELECT rsvp_id FROM dbo.seating_assignments WHERE event_slug=@slug AND campaign=@campaign`,{slug,campaign});
  return fetched.records.map(r=>{
   const a=approved.find(a=>a.ref===r.registrationReference);
-  const valid=a && a.size===r.numberOfAttendees && a.name.trim().toLowerCase()===r.fullName.trim().toLowerCase() && r.status!=="cancelled";
+  const valid=a && a.size===r.numberOfAttendees && a.name.trim().replace(/\s+/g," ").toLowerCase()===r.fullName.trim().replace(/\s+/g," ").toLowerCase() && r.status!=="cancelled";
   const channel=(ch:string)=>sent.find(d=>d.rsvp_id.toLowerCase()===r.id.toLowerCase()&&d.channel===ch);
-  return {id:r.id,name:r.fullName,guests:r.numberOfAttendees,tables:a?tableLabel(a):"Unassigned",valid:!!valid,
+  return {id:r.id,name:r.fullName,guests:r.numberOfAttendees,tables:a?tableLabel(a):"Unassigned",valid:!!valid,assigned:assigned.some(x=>x.rsvp_id.toLowerCase()===r.id.toLowerCase()),
    email:channel("email")?.status??(!r.emailConsent?"no consent":!r.email?"missing address":"waiting"),
    sms:channel("sms")?.status??(!r.smsConsent?"no consent":!r.phone?"missing number":"waiting"),
    emailDetail:channel("email")?.detail,smsDetail:channel("sms")?.detail,
@@ -34,7 +35,7 @@ export async function sendSeatingBooking(id:string) {
  const fetched=await fetchDashboardRsvps();if(!fetched.ok) throw new Error(fetched.message);
  const r=fetched.records.find(x=>x.id===id); if(!r) throw new Error("Booking not found");
  const a=approved.find(x=>x.ref===r.registrationReference);
- if(!a||a.size!==r.numberOfAttendees||a.name.trim().toLowerCase()!==r.fullName.trim().toLowerCase()||r.status==='cancelled') throw new Error("Booking needs seating review; nothing sent");
+ if(!a||a.size!==r.numberOfAttendees||a.name.trim().replace(/\s+/g," ").toLowerCase()!==r.fullName.trim().replace(/\s+/g," ").toLowerCase()||r.status==='cancelled') throw new Error("Booking needs seating review; nothing sent");
  const slug=getActiveEventConfig().slug; await ensureSeatingStore();
  await dbExec(`IF NOT EXISTS(SELECT 1 FROM dbo.seating_assignments WHERE event_slug=@slug AND rsvp_id=@id AND campaign=@campaign) INSERT dbo.seating_assignments(event_slug,rsvp_id,campaign,reference,guest_count,tables_json) VALUES(@slug,@id,@campaign,@ref,@count,@tables)`,{slug,id,campaign,ref:a.ref,count:a.size,tables:JSON.stringify(a.allocations)});
  const note=`[Seating 21 Nov] ${a.size} guests; Table${a.allocations.length>1?'s':''} ${tableLabel(a)}.`;
