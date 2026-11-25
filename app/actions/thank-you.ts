@@ -31,3 +31,20 @@ export async function sendThankYou(id:string,only:"both"|"email"|"sms"="both"){
  if(only!=="sms"&&r.emailConsent&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)){if(!getEmailEnvPresence().ready)throw new Error('Email not configured');await deliver('thanks-email',address,()=>sendNotificationEmail(address,thankYouEmail(r.fullName,event)));}
  if(only!=="email"&&r.smsConsent&&phone){if(!settings.enabled||!settings.ready)throw new Error('SMS unavailable');await deliver('thanks-sms',phone,()=>sendSmsMessage({to:phone,body:sms,eventSlug:event.slug}));}
 }
+
+// Manual alternate transport: reserve first, then record the Gmail provider IDs.
+// Existing SMTP rejections were reviewed (421 server busy); unknown claims stay held.
+export async function prepareGmailFallback(){
+ const rs=await records(),event=getActiveEventConfig();const out:{email:string;name:string;key:string;html:string;subject:string}[]=[];const seen=new Set<string>();
+ for(const r of rs){const email=r.email.trim().toLowerCase();if(r.status==='cancelled'||!r.emailConsent||!/^\S+@\S+\.\S+$/.test(email)||seen.has(email))continue;seen.add(email);const key=recipientKey(email);
+ const [prior]=await dbQuery<{status:string}>(`SELECT status FROM daily_communications WHERE event_slug=@slug AND send_day=@day AND kind='thanks-email' AND recipient_key=@key`,{slug:event.slug,day,key});
+ if(prior&&!['review_required','external_pending'].includes(prior.status))continue;
+ if(!prior&&!await claim(day,'thanks-email',email))continue;
+ await finish(day,'thanks-email',email,'external_pending');
+ const m=thankYouEmail(r.fullName,event);out.push({email,name:r.fullName,key,html:m.html,subject:m.subject});
+ }return out;
+}
+export async function recordGmailResults(raw:string){
+ await records();const results=JSON.parse(raw) as {email:string;messageId:string}[];if(!Array.isArray(results)||results.length>100)throw new Error('Invalid results');
+ let saved=0;for(const r of results){if(!/^[a-f0-9]{12,32}$/.test(r.messageId)||typeof r.email!=='string')throw new Error('Invalid receipt');const key=recipientKey(r.email);const [row]=await dbQuery<{status:string}>(`SELECT status FROM daily_communications WHERE event_slug=@slug AND send_day=@day AND kind='thanks-email' AND recipient_key=@key`,{slug:getActiveEventConfig().slug,day,key});if(row?.status==='sent')continue;if(row?.status!=='external_pending')throw new Error('Recipient was not reserved');await finish(day,'thanks-email',r.email,'sent','gmail:'+r.messageId);saved++;}return saved;
+}
