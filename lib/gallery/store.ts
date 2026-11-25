@@ -36,3 +36,7 @@ export async function saveMedia(token:string,title:string,collection:string,medi
 }
 export async function reviewMedia(id:string,status:string,actor:string){return dbExec('UPDATE gallery_media SET status=@status,reviewed_by=@actor,reviewed_at=SYSDATETIMEOFFSET() WHERE id=@id AND event_slug=@event',{id,status,actor,event:getActiveEventSlug()});}
 export async function revokeLink(id:string){return dbExec('UPDATE gallery_links SET revoked=1 WHERE id=@id AND event_slug=@event',{id,event:getActiveEventSlug()});}
+
+export async function reviewMediaBatch(ids:string[],status:string,actor:string){
+ return dbExec(`UPDATE gallery_media SET status=@status,reviewed_by=@actor,reviewed_at=SYSDATETIMEOFFSET() WHERE event_slug=@event AND id IN (SELECT CONVERT(uniqueidentifier,[value]) FROM OPENJSON(@ids))`,{ids:JSON.stringify(ids),status,actor,event:getActiveEventSlug()});
+}
