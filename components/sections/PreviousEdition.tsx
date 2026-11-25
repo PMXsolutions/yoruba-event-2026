@@ -5,22 +5,22 @@ import Image from "next/image";
 import { AnimatedSection } from "@/components/motion/AnimatedSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
-import { EXISTING_PHOTOS as PHOTOS } from "@/lib/gallery/existing";
 
-export function PreviousEdition() {
+
+export function PreviousEdition({photos: PHOTOS}: {photos: {src:string;alt:string}[]}) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const photo = PHOTOS[index];
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || PHOTOS.length < 2) return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (media.matches) return;
     const id = window.setInterval(() => {
       setIndex((current) => (current + 1) % PHOTOS.length);
     }, 5500);
     return () => window.clearInterval(id);
-  }, [paused]);
+  }, [paused, PHOTOS.length]);
 
   function show(next: number) {
     setIndex((next + PHOTOS.length) % PHOTOS.length);
@@ -34,13 +34,13 @@ export function PreviousEdition() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(201,162,39,0.12),transparent_55%)]" />
       <div className="relative mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
         <SectionHeading
-          eyebrow="Last edition"
-          title="Moments from Yoruba Day"
-          subtitle="Photographs from the previous celebration."
+          eyebrow="Yoruba Day 2026"
+          title="Our latest celebration"
+          subtitle="Memories from 21 November 2026, Canberra."
         />
 
         <p className="mb-8 text-center"><a href="/gallery" className="inline-block rounded-full border border-gold/40 px-7 py-3 text-cream">Explore the full gallery ↗</a></p>
-        <div
+        {photo && <div
           className="mx-auto max-w-4xl"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
@@ -50,6 +50,7 @@ export function PreviousEdition() {
           <div className="relative overflow-hidden rounded-[1.75rem] border border-gold/20 bg-mahogany shadow-[var(--shadow-card-dark)]">
             <div className="relative aspect-[3/2]">
               <Image
+                unoptimized
                 key={photo.src}
                 src={photo.src}
                 alt={photo.alt}
@@ -81,7 +82,7 @@ export function PreviousEdition() {
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </AnimatedSection>
   );
