@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 export const PHOTO_LIMIT=8*1024*1024, VIDEO_LIMIT=20*1024*1024;
-export const EVENT_LIMIT=500*1024*1024, LINK_LIMIT=250*1024*1024;
+export const EVENT_LIMIT=2*1024*1024*1024, LINK_LIMIT=1024*1024*1024;
 export const tokenHash=(token:string)=>createHash('sha256').update(token).digest('hex');
 export function validToken(token:string){return /^[a-f0-9]{64}$/.test(token);}
 /** Remove JPEG EXIF/IPTC/comments without changing pixels. Reject malformed segments. */

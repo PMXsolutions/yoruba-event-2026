@@ -18,7 +18,7 @@ function alreadyPublished(data:Buffer){if(!existingHashes)existingHashes=new Set
 export async function saveMedia(token:string,title:string,collection:string,media:{data:Buffer;mime:string;kind:string}){
  if(alreadyPublished(media.data))return 'duplicate';
  const transaction=new sql.Transaction(await getPool());await transaction.begin();
- try{const request=new sql.Request(transaction);request.input('hash',sql.Char(64),tokenHash(token));request.input('event',sql.NVarChar(160),getActiveEventSlug());request.input('title',sql.NVarChar(160),title);request.input('collection',sql.NVarChar(80),collection);request.input('mime',sql.NVarChar(40),media.mime);request.input('kind',sql.NVarChar(10),media.kind);request.input('size',sql.Int,media.data.length);request.input('content',sql.VarBinary(sql.MAX),media.data);request.input('digest',sql.Char(64),createHash('sha256').update(media.data).digest('hex'));request.input('id',sql.UniqueIdentifier,randomUUID());request.input('eventLimit',sql.Int,EVENT_LIMIT);request.input('linkLimit',sql.Int,LINK_LIMIT);
+ try{const request=new sql.Request(transaction);request.input('hash',sql.Char(64),tokenHash(token));request.input('event',sql.NVarChar(160),getActiveEventSlug());request.input('title',sql.NVarChar(160),title);request.input('collection',sql.NVarChar(80),collection);request.input('mime',sql.NVarChar(40),media.mime);request.input('kind',sql.NVarChar(10),media.kind);request.input('size',sql.Int,media.data.length);request.input('content',sql.VarBinary(sql.MAX),media.data);request.input('digest',sql.Char(64),createHash('sha256').update(media.data).digest('hex'));request.input('id',sql.UniqueIdentifier,randomUUID());request.input('eventLimit',sql.BigInt,EVENT_LIMIT);request.input('linkLimit',sql.BigInt,LINK_LIMIT);
  const result=await request.query(`
  DECLARE @lockResult int;
  EXEC @lockResult=sp_getapplock @Resource=N'gallery-upload',@LockMode=N'Exclusive',@LockOwner=N'Transaction',@LockTimeout=10000;
@@ -28,7 +28,7 @@ export async function saveMedia(token:string,title:string,collection:string,medi
  IF EXISTS(SELECT 1 FROM gallery_media WHERE event_slug=@event AND content_hash=@digest) BEGIN SELECT N'duplicate' AS outcome; END
  ELSE BEGIN
  IF (SELECT COALESCE(SUM(CONVERT(bigint,byte_size)),0) FROM gallery_media WHERE event_slug=@event)+@size>@eventLimit THROW 50000,'Gallery storage limit reached. Contact the organiser.',1;
- IF (SELECT COALESCE(SUM(CONVERT(bigint,byte_size)),0) FROM gallery_media WHERE link_id=@link)+@size>@linkLimit OR (SELECT COUNT(*) FROM gallery_media WHERE link_id=@link)>=100 THROW 50000,'Upload allowance reached. Contact the organiser.',1;
+ IF (SELECT COALESCE(SUM(CONVERT(bigint,byte_size)),0) FROM gallery_media WHERE link_id=@link)+@size>@linkLimit OR (SELECT COUNT(*) FROM gallery_media WHERE link_id=@link)>=1000 THROW 50000,'Upload allowance reached. Contact the organiser.',1;
  INSERT INTO gallery_media(id,event_slug,link_id,title,collection,mime,kind,content_hash,content,byte_size) VALUES(@id,@event,@link,@title,@collection,@mime,@kind,@digest,@content,@size);
  SELECT N'pending' AS outcome;
  END`);await transaction.commit();return result.recordset[0].outcome as string;

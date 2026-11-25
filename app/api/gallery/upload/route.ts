@@ -5,7 +5,8 @@ export const runtime='nodejs';
 export async function POST(request:Request){
  const token=request.headers.get('authorization')?.replace(/^Bearer /,'')||'';
  if(!await usableLink(token))return Response.json({error:'This link has expired or is unavailable. Ask the organiser for a new link.'},{status:403});
- if(!checkRateLimit(`gallery:${token}`,30,60000).allowed)return Response.json({error:'Please wait a minute before uploading more.'},{status:429});
+ const rate=checkRateLimit(`gallery:${token}`,30,60000);
+ if(!rate.allowed)return Response.json({error:'Pausing briefly before continuing.'},{status:429,headers:{'Retry-After':String(rate.retryAfterSeconds)}});
  try{
  const reader=request.body?.getReader();if(!reader)return Response.json({error:'Select a file.'},{status:400});
  const chunks:Uint8Array[]=[];let size=0;while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>VIDEO_LIMIT){await reader.cancel();return Response.json({error:'File exceeds 20 MB.'},{status:413});}chunks.push(value);}
